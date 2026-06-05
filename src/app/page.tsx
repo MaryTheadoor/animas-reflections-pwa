@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import HeaderBar from "@/components/layout/header-bar";
 import FeaturedProducts from "@/components/home/featured-products";
+import FundraisingTeaser from "@/components/home/fundraising-teaser";
 import {
   SITE,
   HERO,
@@ -67,6 +68,9 @@ export default function Home() {
 
       {/* Featured Products — Live from Catalog */}
       <FeaturedProducts />
+
+      {/* Fundraising Teaser */}
+      <FundraisingTeaser />
 
       {/* Our Story — Glass Card */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto w-full">
