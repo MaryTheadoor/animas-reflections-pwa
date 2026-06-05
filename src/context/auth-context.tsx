@@ -9,7 +9,8 @@ import {
   onAuthStateChanged,
   type User,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
 interface AuthContextValue {
@@ -23,6 +24,18 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function syncUserDoc(u: User) {
+  try {
+    await setDoc(doc(db, "users", u.uid), {
+      email: u.email,
+      displayName: u.displayName,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch {
+    // Silently fail — Firestore rules may block client write
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
+      if (u) syncUserDoc(u);
     });
     return unsub;
   }, []);

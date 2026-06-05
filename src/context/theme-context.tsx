@@ -12,17 +12,19 @@ const ThemeContext = createContext<ThemeContextValue>({
   toggle: () => {},
 });
 
+function getInitialTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  const saved = localStorage.getItem("theme") as "light" | "dark" | null;
+  if (saved) return saved;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">(getInitialTheme);
 
   useEffect(() => {
-    const saved = localStorage.getItem("theme") as "light" | "dark" | null;
-    const preferred = saved ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    // Initialize theme from localStorage on mount
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTheme(preferred);
-    document.documentElement.classList.toggle("dark", preferred === "dark");
-  }, []);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   const toggle = () => {
     const next = theme === "light" ? "dark" : "light";

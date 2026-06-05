@@ -43,12 +43,9 @@ export default function ProductCard({ item }: ProductCardProps) {
       </h3>
 
       {item.description && (
-        <p
-          className="text-xs text-teal/40 line-clamp-2 mb-3 leading-relaxed"
-          dangerouslySetInnerHTML={{
-            __html: item.description.replace(/<[^>]*>/g, "").substring(0, 120),
-          }}
-        />
+        <p className="text-xs text-teal/40 line-clamp-2 mb-3 leading-relaxed">
+          {item.description.replace(/<[^>]*>/g, "").substring(0, 120)}
+        </p>
       )}
 
       <div className="flex items-end justify-between mt-auto pt-3 border-t border-warm-sand/50">

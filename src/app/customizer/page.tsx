@@ -7,6 +7,7 @@ import { useCart } from "@/context/cart-context";
 import Customizer from "@/components/customizer/customizer";
 import FileUpload from "@/components/customizer/file-upload";
 import { ADDON_PRICE, SITE_NAME } from "@/lib/constants";
+import { USE_SYNTHETIC } from "@/hooks/useCatalog";
 import type { AddonType } from "@/types";
 
 // Placeholder product template — will be fetched from Firestore/Square in production
@@ -63,12 +64,13 @@ export default function CustomizerPage() {
       selected_view: activeView,
       design_url: designUrl,
       design_text: designText,
-      addons: Array.from(selectedAddons).map((type) => ({
-        type,
-        label: ADDONS.find((a) => a.type === type)?.label ?? type,
-        price: ADDON_PRICE,
-      })),
-    });
+        addons: Array.from(selectedAddons).map((type) => ({
+          type,
+          label: ADDONS.find((a) => a.type === type)?.label ?? type,
+          price: ADDON_PRICE,
+        })),
+        isSynthetic: USE_SYNTHETIC,
+      });
   };
 
   const addonsCost = selectedAddons.size * ADDON_PRICE;

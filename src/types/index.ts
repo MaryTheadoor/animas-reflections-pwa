@@ -51,6 +51,7 @@ export interface CartItem {
   design_url?: string;
   design_text?: string;
   addons: CartAddon[];
+  isSynthetic?: boolean;
 }
 
 export interface ShippingTier {
@@ -79,6 +80,8 @@ export interface SquareCatalogItem {
   categoryIds: string[];
   image_url?: string;
   variations: SquareVariation[];
+  colors?: string[];
+  tags?: string[];
 }
 
 export interface SquareVariation {

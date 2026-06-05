@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
+import { useAuth } from "@/context/auth-context";
 
 interface FileUploadProps {
   onUploadComplete: (url: string) => void;
@@ -17,12 +18,18 @@ export default function FileUpload({
   accept = "image/png,image/jpeg,image/webp",
   label = "Upload Your Design",
 }: FileUploadProps) {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!user) {
+      onError?.("Please sign in to upload a design");
+      return;
+    }
 
     if (file.size > 10 * 1024 * 1024) {
       onError?.("File must be under 10MB");
@@ -32,7 +39,7 @@ export default function FileUpload({
     setUploading(true);
     setProgress(0);
 
-    const filename = `uploads/${Date.now()}-${file.name}`;
+    const filename = `uploads/${user.uid}/${Date.now()}-${file.name}`;
     const fileRef = ref(storage, filename);
     const task = uploadBytesResumable(fileRef, file);
 

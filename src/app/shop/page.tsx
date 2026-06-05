@@ -15,57 +15,44 @@ interface CategoryNode {
 
 const CATEGORY_TREE: CategoryNode[] = [
   {
-    name: "Bands",
+    name: "Sub Brands",
     children: [
-      { name: "LITTLE STRANGER FAN BASED FUNDRAISING" },
-      { name: "Jordan Branch Music" },
-      { name: "GREEN BUDDHA" },
-      { name: "GREEN BUDDAH" },
-      { name: "Dunphy Stock FAM" },
-      { name: "ET Art" },
+      { id: "BISCUIT_HOCKEY", name: "Biscuit Hockey" },
+      { id: "I_M_OK_R_U", name: "I'M OK R U" },
     ],
   },
   {
-    name: "Teams",
+    name: "Teams & Sports",
     children: [
-      { name: "Durango Hockey" },
-      { name: "Durango High Hockey" },
-      { name: "Durango High School Alpine Ski Team" },
-      { name: "Durango Lacrosse" },
-      { name: "Durango Roller Girls" },
-    ],
-  },
-  { name: "Women In Aviation" },
-  { name: "Custom Designs" },
-  { name: "Custom Slaps" },
-  { name: "BISCUIT HOCKEY" },
-  { name: "I'M OK R U" },
-  { name: "Jewelry" },
-  { name: "Wood Signs" },
-  { name: "Fly High AA Fundraiser" },
-  { name: "Fundraiser For Stephanie Glenn's Mom" },
-  {
-    name: "Apparel Types",
-    children: [
-      { name: "T-Shirt" },
-      { name: "Hoodie" },
-      { name: "Tank" },
-      { name: "Zip Up Hoodie" },
-      { name: "Jacket" },
-      { name: "Hat" },
-      { name: "Pet Scarf" },
+      { id: "Durango_Lacrosse", name: "Durango Lacrosse" },
+      { id: "Durango_Hockey", name: "Durango Hockey" },
+      { id: "Durango_High_School_Alpine_Ski_Team", name: "Alpine Ski Team" },
+      { id: "Durango_Roller_Girls", name: "Roller Girls" },
     ],
   },
   {
-    name: "Accessories",
+    name: "Bands & Music",
     children: [
-      { name: "Ornaments" },
-      { name: "Glass Cutting Boards" },
-      { name: "Neoprene Drink Hugger" },
-      { name: "Bottle Opener Key Chain" },
-      { name: "Pen / Mobile Phone Stand" },
-      { name: "Carpenter Pencil" },
-      { name: "XL Gear Bag" },
+      { id: "LITTLE_STRANGER", name: "LITTLE STRANGER" },
+      { id: "Jordan_Branch_Music", name: "Jordan Branch Music" },
+      { id: "GREEN_BUDDHA", name: "GREEN BUDDHA" },
+      { id: "Dunphy_Stock_FAM", name: "Dunphy Stock FAM" },
+      { id: "ET_Art", name: "ET Art" },
+      { id: "Fly_High_AA_Fundraiser", name: "Fly High AA" },
+      { id: "Women_In_Aviation", name: "Women In Aviation" },
+    ],
+  },
+  {
+    name: "Accessories & More",
+    children: [
+      { id: "Jewelry", name: "Jewelry" },
+      { id: "Wood_Signs", name: "Wood Signs" },
+      { id: "Ornaments", name: "Ornaments" },
+      { id: "Glass_Cutting_Boards", name: "Glass Cutting Boards" },
+      { id: "Neoprene_Drink_Hugger", name: "Drink Huggers" },
+      { id: "Custom_Slaps", name: "Custom Slaps" },
+      { id: "Pet_Scarf", name: "Pet Scarves" },
+      { id: "Hat", name: "Hats" },
     ],
   },
 ];
@@ -105,12 +92,17 @@ export default function ShopPage() {
       if (catId) {
         result = result.filter((i) => i.categoryIds.includes(catId));
       } else {
-        const q = activeCategory.toLowerCase();
-        result = result.filter(
-          (i) =>
-            i.name.toLowerCase().includes(q) ||
-            (i.description && i.description.toLowerCase().includes(q))
-        );
+        const isSyntheticId = categories.some((c) => c.id === activeCategory);
+        if (isSyntheticId) {
+          result = result.filter((i) => i.categoryIds.includes(activeCategory));
+        } else {
+          const q = activeCategory.toLowerCase();
+          result = result.filter(
+            (i) =>
+              i.name.toLowerCase().includes(q) ||
+              (i.description && i.description.toLowerCase().includes(q))
+          );
+        }
       }
     }
     if (search.trim()) {
@@ -129,13 +121,13 @@ export default function ShopPage() {
       result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     }
     return result;
-  }, [items, activeCategory, search, sortMode, getCategoryId]);
+  }, [items, activeCategory, search, sortMode, getCategoryId, categories]);
 
-  const CategoryPill = ({ name, isParent }: { name: string; isParent?: boolean }) => (
+  const CategoryPill = ({ name, catId, isParent }: { name: string; catId?: string; isParent?: boolean }) => (
     <button
-      onClick={() => setActiveCategory(name)}
+      onClick={() => setActiveCategory(catId ?? name)}
       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-        activeCategory === name
+        activeCategory === (catId ?? name)
           ? "bg-teal text-white"
           : isParent
             ? "bg-warm-sand text-teal font-bold"
@@ -150,12 +142,27 @@ export default function ShopPage() {
     <div className={`flex flex-wrap gap-1.5 ${isChild ? "ml-4" : ""}`}>
       {nodes.map((node) => (
         <div key={node.name} className="flex flex-wrap items-center gap-1.5">
-          <CategoryPill name={node.name} isParent={!isChild && !!node.children} />
+          <CategoryPill name={node.name} catId={node.id} isParent={!isChild && !!node.children} />
           {node.children && renderCategoryTree(node.children, true)}
         </div>
       ))}
     </div>
   );
+
+  const getActiveLabel = () => {
+    if (activeCategory === "All") return "All Products";
+    const findNode = (nodes: CategoryNode[]): string | null => {
+      for (const n of nodes) {
+        if ((n.id ?? n.name) === activeCategory) return n.name;
+        if (n.children) {
+          const found = findNode(n.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return findNode(CATEGORY_TREE) ?? activeCategory;
+  };
 
   return (
     <PageLayout>
@@ -170,12 +177,13 @@ export default function ShopPage() {
         {/* Search + Sort */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6 items-start sm:items-center">
           <div className="relative flex-1 max-w-md">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products..."
+              aria-label="Search products"
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-teal/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
             />
           </div>
@@ -219,7 +227,7 @@ export default function ShopPage() {
               </button>
               {activeCategory !== "All" && (
                 <span className="text-xs text-teal/40 ml-2">
-                  {activeCategory} ({filteredItems.length})
+                  {getActiveLabel()} ({filteredItems.length})
                 </span>
               )}
             </div>
@@ -265,7 +273,7 @@ export default function ShopPage() {
           <>
             <p className="text-xs text-teal/40 mb-4">
               Showing {filteredItems.length} of {items.length} products
-              {activeCategory !== "All" ? ` in "${activeCategory}"` : ""}
+              {activeCategory !== "All" ? ` in "${getActiveLabel()}"` : ""}
             </p>
             <div className="tile-grid-sites">
               {filteredItems.map((item) => (

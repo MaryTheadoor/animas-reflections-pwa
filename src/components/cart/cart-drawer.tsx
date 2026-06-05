@@ -14,8 +14,8 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
       <div className="relative w-full max-w-md bg-white shadow-xl flex flex-col h-full">
         <div className="flex items-center justify-between p-4 border-b border-warm-sand">
           <h2 className="font-bold font-display text-lg">Your Cart</h2>
-          <button onClick={onClose} className="text-teal/50 hover:text-teal transition-colors">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button onClick={onClose} className="text-teal/50 hover:text-teal transition-colors" aria-label="Close cart">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

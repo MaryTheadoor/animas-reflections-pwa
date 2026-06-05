@@ -305,17 +305,57 @@ function OrdersSection() {
 }
 
 function UsersSection() {
-  const [users, setUsers] = useState<{ uid: string; email: string; created: string }[]>([]);
+  const [users, setUsers] = useState<{ uid: string; email: string; created: string; updatedAt?: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getDocs(collection(db, "users")).then((snap) => {
-      setUsers(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as typeof users[0])));
-    }).catch(() => setUsers([])).finally(() => setLoading(false));
+    getDocs(collection(db, "users"))
+      .then((snap) => {
+        setUsers(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as typeof users[0])));
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <p className="text-sm text-teal/50">Loading users...</p>;
-  if (!users.length) return <p className="text-sm text-teal/40">No registered users yet. Manage authentication in <a href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">Firebase Console</a>.</p>;
+  if (error) {
+    return (
+      <div>
+        <p className="text-sm text-red-500 mb-2">Could not load users: {error}</p>
+        <p className="text-xs text-teal/40">
+          Manage authentication in{" "}
+          <a
+            href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gold hover:underline"
+          >
+            Firebase Console
+          </a>
+          . Update Firestore rules if needed.
+        </p>
+      </div>
+    );
+  }
+  if (!users.length) {
+    return (
+      <div>
+        <p className="text-sm text-teal/40">
+          No registered users found. Manage authentication in{" "}
+          <a
+            href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gold hover:underline"
+          >
+            Firebase Console
+          </a>
+          .
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -324,7 +364,13 @@ function UsersSection() {
         {users.map((u) => (
           <div key={u.uid} className="flex items-center justify-between text-sm p-2 bg-warm-sand/30 rounded-lg">
             <span className="font-medium">{u.email}</span>
-            <span className="text-xs text-teal/40">Joined {new Date(u.created).toLocaleDateString()}</span>
+            <span className="text-xs text-teal/40">
+              {u.updatedAt
+                ? `Last seen ${new Date(u.updatedAt).toLocaleDateString()}`
+                : u.created
+                  ? `Joined ${new Date(u.created).toLocaleDateString()}`
+                  : ""}
+            </span>
           </div>
         ))}
       </div>

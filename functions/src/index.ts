@@ -4,6 +4,8 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { SquareClient, SquareEnvironment, SquareError } from "square";
 import { defineString } from "firebase-functions/params";
+import { genkit, z } from "genkit";
+import { googleAI } from "@genkit-ai/googleai";
 
 initializeApp();
 
@@ -486,6 +488,151 @@ export const syncCatalog = onCall(
     } catch (err) {
       logger.error("Catalog sync failed", err);
       throw new Error(err instanceof Error ? err.message : "Catalog sync failed");
+    }
+  }
+);
+
+// ─── AI-Powered Product Search ──────────────────────────────────
+
+const ai = genkit({
+  plugins: [googleAI()],
+});
+
+const aiSearchSchema = z.object({
+  query: z.string().describe("The user's natural language search query"),
+  products: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    categoryNames: z.array(z.string()),
+    colors: z.array(z.string()).optional(),
+    minPrice: z.number(),
+  })).describe("The catalog of products to search through"),
+});
+
+const aiSearchFlow = ai.defineFlow(
+  {
+    name: "aiProductSearch",
+    inputSchema: aiSearchSchema,
+    outputSchema: z.object({
+      matchedIds: z.array(z.string()),
+      explanation: z.string(),
+    }),
+  },
+  async ({ query, products }) => {
+    const productList = products
+      .map((p) => {
+        const parts: string[] = [`ID:${p.id}`, p.name];
+        if (p.description) parts.push(`— ${p.description.substring(0, 150)}`);
+        if (p.colors?.length) parts.push(`colors: ${p.colors.join(", ")}`);
+        if (p.categoryNames.length) parts.push(`categories: ${p.categoryNames.join(", ")}`);
+        parts.push(`from $${p.minPrice.toFixed(2)}`);
+        return parts.join(" | ");
+      })
+      .join("\n");
+
+    const prompt = `You are a helpful product search assistant for Animas Reflections, a custom apparel and merchandise store in Durango, Colorado.
+
+Given a customer's search query, identify which products from the catalog below best match the intent. Consider:
+- Product names and descriptions (semantic meaning)
+- Colors mentioned (e.g., "red", "blue", "navy")
+- Product types (e.g., "t-shirt", "hoodie", "hat", "sticker", "jewelry")
+- Price ranges (e.g., "under $30", "cheap", "premium")
+- Use cases (e.g., "gift", "team", "hockey", "music")
+- Categories
+
+Customer query: "${query}"
+
+Catalog:
+${productList}
+
+Return ONLY the IDs of the matching products as a comma-separated list, followed by a newline and a brief (1-2 sentence) friendly explanation of what you found. If nothing matches, explain why and suggest alternatives.
+Format: 
+MATCHED_IDS: id1,id2,id3
+EXPLANATION: your explanation here`;
+
+    const result = await ai.generate({
+      model: "googleai/gemini-2.0-flash",
+      prompt,
+      config: { temperature: 0.3, maxOutputTokens: 500 },
+    });
+
+    const text = result.text.trim();
+    const idMatch = text.match(/MATCHED_IDS:\s*(.*)/);
+    const explanationMatch = text.match(/EXPLANATION:\s*([\s\S]*)/);
+
+    const matchedIds = idMatch
+      ? idMatch[1].split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    const validIds = new Set(products.map((p) => p.id));
+    const filteredIds = matchedIds.filter((id) => validIds.has(id));
+
+    const explanation = explanationMatch
+      ? explanationMatch[1].trim()
+      : `Found ${filteredIds.length} product(s) matching "${query}".`;
+
+    return { matchedIds: filteredIds, explanation };
+  }
+);
+
+export const aiSearch = onCall(
+  { cors: true, region: "us-central1", secrets: ["GEMINI_API_KEY"] },
+  async (request) => {
+    const { query } = request.data as { query: string };
+    if (!query?.trim()) {
+      throw new Error("Query is required");
+    }
+
+    logger.info("AI search invoked", { query: query.substring(0, 80) });
+
+    try {
+      const client = getSquareClient();
+      const response = await client.catalog.search({
+        objectTypes: ["ITEM"],
+        includeRelatedObjects: true,
+      });
+
+      const rawItems = ((response.objects || []) as unknown[]).filter((o) => {
+        const raw = o as Record<string, unknown>;
+        const data = raw.itemData as Record<string, unknown> | undefined;
+        return data?.ecom_visibility === "VISIBLE";
+      }) as Array<Record<string, unknown>>;
+
+      const products = rawItems.map((item) => {
+        const data = (item.itemData || {}) as Record<string, unknown>;
+        const variations = (data.variations || []) as Array<Record<string, unknown>>;
+        const prices = variations
+          .map((v) => {
+            const vd = (v.itemVariationData || {}) as Record<string, unknown>;
+            const pm = vd.priceMoney as { amount?: bigint } | undefined;
+            return pm?.amount ? Number(pm.amount) / 100 : 0;
+          })
+          .filter((p) => p > 0);
+
+        const categories = ((data.categories || []) as Array<{ id?: string }>)
+          .map((c) => c.id ?? "");
+
+        return {
+          id: item.id as string,
+          name: (data.name as string) ?? "",
+          description: (data.description as string) ?? "",
+          categoryNames: categories,
+          minPrice: prices.length > 0 ? Math.min(...prices) : 0,
+        };
+      });
+
+      if (products.length === 0) {
+        return { matchedIds: [], explanation: "No products are currently available in the catalog." };
+      }
+
+      const result = await aiSearchFlow({ query, products });
+      return result;
+    } catch (err) {
+      logger.error("AI search error", err);
+      throw new Error(
+        err instanceof Error ? `AI search failed: ${err.message}` : "AI search unavailable"
+      );
     }
   }
 );

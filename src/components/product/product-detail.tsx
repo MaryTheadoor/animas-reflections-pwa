@@ -22,8 +22,9 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
         <button
           onClick={onClose}
           className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center text-teal/50 hover:text-teal transition-colors shadow-sm"
+          aria-label="Close"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -37,12 +38,9 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
         <div className="overflow-y-auto p-4 sm:p-6 flex-1">
           <h2 className="text-lg sm:text-xl font-bold font-display mb-1">{item.name}</h2>
           {item.description && (
-            <div
-              className="text-sm text-teal/60 mb-4 leading-relaxed line-clamp-4"
-              dangerouslySetInnerHTML={{
-                __html: item.description.replace(/<[^>]*>/g, " ").substring(0, 300),
-              }}
-            />
+            <p className="text-sm text-teal/60 mb-4 leading-relaxed line-clamp-4">
+              {item.description.replace(/<[^>]*>/g, " ").substring(0, 300)}
+            </p>
           )}
 
           {item.variations.length > 1 && (

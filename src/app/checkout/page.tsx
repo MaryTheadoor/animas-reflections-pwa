@@ -140,12 +140,28 @@ export default function CheckoutPage() {
     }
   };
 
+  const hasSyntheticItems = cart.items.some((item) => item.isSynthetic);
+
   if (cart.items.length === 0 && !result) {
     return (
       <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
         <h1 className="text-4xl font-bold font-display mb-4">Your cart is empty</h1>
         <p className="text-teal/60 mb-6">Add some products to get started.</p>
         <Link href="/shop" className="px-8 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile">Browse Products</Link>
+      </div>
+    );
+  }
+
+  if (hasSyntheticItems) {
+    return (
+      <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
+        <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-8 max-w-md w-full">
+          <h1 className="text-2xl font-bold font-display mb-4">Demo Mode</h1>
+          <p className="text-teal/60 mb-6">
+            Checkout is disabled while browsing with sample products. Switch to live Square catalog to enable checkout.
+          </p>
+          <Link href="/shop" className="block w-full py-3 bg-teal text-white rounded-2xl font-semibold hover:bg-teal-light transition-colors text-center">Continue Browsing</Link>
+        </div>
       </div>
     );
   }

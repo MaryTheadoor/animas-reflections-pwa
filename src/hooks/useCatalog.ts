@@ -6,7 +6,7 @@ import { functions } from "@/lib/firebase";
 import { SYNTHETIC_PRODUCTS, SYNTHETIC_CATEGORIES } from "@/lib/synthetic-data";
 import type { SquareCatalogItem } from "@/types";
 
-const USE_SYNTHETIC = true;
+export const USE_SYNTHETIC = true;
 
 interface CatalogCategory {
   id: string;

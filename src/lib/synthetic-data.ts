@@ -7,6 +7,8 @@ export const SYNTHETIC_PRODUCTS: SquareCatalogItem[] = [
     description: "Premium watercolor-style hockey design on ultra-soft Vapor Apparel tee. Moisture-wicking 100% spun polyester that feels like cotton. Perfect for hockey moms, dads, and fans.",
     categoryIds: ["BISCUIT_HOCKEY"],
     image_url: "",
+    colors: ["blue", "white", "gray"],
+    tags: ["hockey", "goalie", "watercolor", "vapor apparel"],
     variations: [
       { id: "v1", name: "Small", price: 25.00, sku: "BH-GOALIE-S" },
       { id: "v2", name: "Medium", price: 25.00, sku: "BH-GOALIE-M" },
@@ -21,6 +23,8 @@ export const SYNTHETIC_PRODUCTS: SquareCatalogItem[] = [
     description: "Heavyweight 10oz sublimation hoodie with front pocket. Ash heather color with bold Forward Biscuit design. Warm fleece interior, odor and bacteria resistant.",
     categoryIds: ["BISCUIT_HOCKEY"],
     image_url: "",
+    colors: ["gray", "black", "navy"],
+    tags: ["hockey", "hoodie", "forward"],
     variations: [
       { id: "v6", name: "Small", price: 45.00, sku: "BH-FWD-S" },
       { id: "v7", name: "Medium", price: 45.00, sku: "BH-FWD-M" },
@@ -47,6 +51,8 @@ export const SYNTHETIC_PRODUCTS: SquareCatalogItem[] = [
     description: "From the I'M OK R U collection. Hidden positive messaging printed on soft spun polyester. A subtle reminder to pause, breathe, and release stress gracefully.",
     categoryIds: ["I_M_OK_R_U"],
     image_url: "",
+    colors: ["white", "cream", "sage"],
+    tags: ["wellness", "positive", "mindfulness"],
     variations: [
       { id: "v14", name: "Small", price: 24.00, sku: "IOKRU-BR-S" },
       { id: "v15", name: "Medium", price: 24.00, sku: "IOKRU-BR-M" },

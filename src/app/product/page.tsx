@@ -1,23 +1,14 @@
 "use client";
 
-import { Suspense, useState, useEffect, useMemo } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import PlaceholderImage from "@/components/ui/placeholder-image";
-import { doc, getDoc } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "@/lib/firebase";
+import { useCatalog } from "@/hooks/useCatalog";
 import { useCart } from "@/context/cart-context";
 import PageLayout from "@/components/layout/page-layout";
-import type { SquareCatalogItem } from "@/types";
-
-interface DesignAsset {
-  id: string;
-  name: string;
-  category: string;
-  image_url: string;
-}
+import { USE_SYNTHETIC } from "@/hooks/useCatalog";
 
 export default function ProductPage() {
   return (
@@ -30,45 +21,14 @@ export default function ProductPage() {
 function ProductContent() {
   const searchParams = useSearchParams();
   const productId = searchParams.get("id");
+  const { items, loading } = useCatalog();
   const { addItem } = useCart();
 
-  const [product, setProduct] = useState<SquareCatalogItem | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [designs, setDesigns] = useState<DesignAsset[]>([]);
+  const product = productId ? items.find((i) => i.id === productId) ?? null : null;
   const [selectedVariation, setSelectedVariation] = useState(0);
-  const [selectedDesign, setSelectedDesign] = useState<DesignAsset | null>(null);
   const [customText, setCustomText] = useState("");
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!productId) { setLoading(false); return; }
-
-    httpsCallable<object, { items: SquareCatalogItem[] }>(functions, "fetchSquareCatalog")({})
-      .then((r) => {
-        const found = (r.data.items ?? []).find((i) => i.id === productId);
-        setProduct(found ?? null);
-      })
-      .finally(() => setLoading(false));
-
-    getDoc(doc(db, "designs", "catalog"))
-      .then((snap) => {
-        if (snap.exists()) {
-          setDesigns((snap.data() as { items?: DesignAsset[] }).items ?? []);
-        }
-      })
-      .catch(() => {});
-  }, [productId]);
-
   const variation = product?.variations[selectedVariation];
-  const filteredDesigns = useMemo(() => {
-    if (!product) return designs;
-    // Filter designs that match product categories
-    return designs.filter((d) => {
-      const cat = d.category.toLowerCase();
-      const name = product.name.toLowerCase();
-      return name.includes(cat) || cat.includes("all") || designs.length <= 10;
-    });
-  }, [designs, product]);
 
   if (loading) {
     return (
@@ -118,16 +78,6 @@ function ProductContent() {
             ) : (
               <PlaceholderImage />
             )}
-            {/* Design overlay if selected */}
-            {selectedDesign && (
-              <Image
-                src={selectedDesign.image_url}
-                alt={selectedDesign.name}
-                width={200}
-                height={200}
-                className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[50%] h-auto opacity-90 mix-blend-multiply pointer-events-none"
-              />
-            )}
             {/* Text overlay */}
             {customText && (
               <div className="absolute top-[30%] left-1/2 -translate-x-1/2 text-xl font-bold text-teal/60 pointer-events-none">
@@ -140,12 +90,9 @@ function ProductContent() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-display mb-2">{product.name}</h1>
             {product.description && (
-              <div
-                className="text-sm text-teal/60 mb-4 leading-relaxed line-clamp-4"
-                dangerouslySetInnerHTML={{
-                  __html: product.description.replace(/<[^>]*>/g, " ").substring(0, 400),
-                }}
-              />
+              <p className="text-sm text-teal/60 mb-4 leading-relaxed line-clamp-4">
+                {product.description.replace(/<[^>]*>/g, " ").substring(0, 400)}
+              </p>
             )}
 
             {/* Price */}
@@ -181,39 +128,6 @@ function ProductContent() {
               </div>
             )}
 
-            {/* Pre-designed Graphics */}
-            {filteredDesigns.length > 0 && (
-              <div className="mb-6">
-                <span className="text-xs font-medium text-teal block mb-2">
-                  Choose a Design {selectedDesign ? `— "${selectedDesign.name}" selected` : ""}
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setSelectedDesign(null)}
-                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-                      !selectedDesign ? "bg-teal text-white" : "bg-warm-sand text-teal/60 hover:bg-warm-sand/80"
-                    }`}
-                  >
-                    None (Custom)
-                  </button>
-                  {filteredDesigns.slice(0, 12).map((d) => (
-                    <button
-                      key={d.id}
-                      onClick={() => setSelectedDesign(d)}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                        selectedDesign?.id === d.id
-                          ? "bg-teal text-white"
-                          : "bg-warm-sand text-teal/60 hover:bg-warm-sand/80"
-                      }`}
-                    >
-                      <Image src={d.image_url} alt={d.name} width={20} height={20} className="rounded" />
-                      {d.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Custom Text */}
             <div className="mb-6">
               <label className="text-xs font-medium text-teal block mb-1">
@@ -233,16 +147,16 @@ function ProductContent() {
               onClick={() => {
                 if (!variation) return;
                 addItem({
-                  id: `${product.id}_${Date.now()}`,
+                  id: crypto.randomUUID(),
                   product_id: product.id,
                   variation_id: variation.id,
                   name: `${product.name} — ${variation.name}`,
                   base_price: price,
                   quantity: 1,
                   selected_view: "front",
-                  design_url: selectedDesign?.image_url,
                   design_text: customText || undefined,
                   addons: [],
+                  isSynthetic: USE_SYNTHETIC,
                 });
               }}
               className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
