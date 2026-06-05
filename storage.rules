@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Design catalog assets - public read, admin write via Functions
+    match /designs/{allPaths=**} {
+      allow read: if true;
+      allow write: if false; // Uploads handled via Cloud Functions with admin SDK
+    }
+
+    // User-uploaded custom logos for orders - write allowed for authenticated
+    match /uploads/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Product template images - public read only
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

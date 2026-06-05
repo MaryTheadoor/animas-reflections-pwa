@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* ─── Animas Reflections Brand Theme ──────────────────────────────
+   Clean Modern-Rustic Aesthetic
+   Inspired by southwest Colorado sunsets & alpine forests
+   ────────────────────────────────────────────────────────────────── */
+
+@theme {
+  /* Primary Backgrounds */
+  --color-cream: #FAF6F0;
+  --color-warm-sand: #F5EBE6;
+
+  /* Primary Brand Tone (Deep Slate Teal) */
+  --color-teal: #1E4D4F;
+  --color-teal-light: #2A6B6E;
+
+  /* Secondary Accent (Sunset Moon Gold) */
+  --color-gold: #D97706;
+  --color-gold-light: #E68A00;
+
+  /* Highlight Contrast (Soft Plum) */
+  --color-plum: #935B8A;
+  --color-plum-light: #A86B9F;
+
+  /* Base */
+  --color-white: #FFFFFF;
+  --color-foreground: #1E4D4F;
+
+  /* Fonts */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+
+  /* Border Radius */
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px -2px rgba(30, 77, 79, 0.05);
+  --shadow-elevated: 0 8px 30px -4px rgba(30, 77, 79, 0.10);
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── S.I.T.E.S Tactile UI Layer ──────────────────────────────────
+   First-principles physical interaction patterns.
+   Solid structural depth. Press states that feel real.
+   Adapted from Nown.digital S.I.T.E.S protocol.
+   ────────────────────────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Tactile button base — solid depth with bottom border simulating height */
+  .btn-tactile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom-width: 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    transition: transform 0.1s ease, border-bottom-width 0.1s ease, box-shadow 0.1s ease;
+  }
+
+  .btn-tactile:active {
+    transform: translateY(3px);
+    border-bottom-width: 1px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-tactile.btn-gold-tactile {
+    background-color: #D97706;
+    border-color: #B05E04;
+    border-bottom-color: #8A4703;
+    color: white;
+  }
+
+  .btn-tactile.btn-teal-tactile {
+    background-color: #1E4D4F;
+    border-color: #163A3C;
+    border-bottom-color: #0E2628;
+    color: white;
+  }
+
+  /* S.I.T.E.S Self-Aware Tile Grid */
+  .tile-grid-sites {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* S.I.T.E.S Modular Tile */
+  .tile-sites {
+    container-type: inline-size;
+    background-color: #FFFFFF;
+    border: 1px solid #F5EBE6;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow:
+      0 10px 15px -3px rgba(30, 77, 79, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .tile-sites:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 14px 20px -4px rgba(30, 77, 79, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .tile-sites:active {
+    transform: translateY(1px);
+    box-shadow:
+      0 4px 6px rgba(30, 77, 79, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+}

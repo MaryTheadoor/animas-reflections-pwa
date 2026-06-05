@@ -1,0 +1,30 @@
+{
+  "name": "animas-reflections-functions",
+  "version": "1.0.0",
+  "private": true,
+  "main": "lib/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "lint": "eslint --ext .ts src/"
+  },
+  "dependencies": {
+    "firebase-admin": "^13",
+    "firebase-functions": "^6",
+    "square": "^42"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "eslint": "^9",
+    "typescript": "^5"
+  }
+}

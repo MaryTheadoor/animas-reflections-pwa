@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Admin-only write access (enforced via Firebase Auth in Functions)
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if false; // Write handled via Cloud Functions with admin SDK
+    }
+
+    // Design catalog - public read, admin write via Functions
+    match /designs/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Product template metadata - public read, admin write via Functions
+    match /products/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // User-submitted orders reference - write via Functions only
+    match /orders/{document=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
