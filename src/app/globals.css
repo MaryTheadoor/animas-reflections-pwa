@@ -5,22 +5,22 @@
 @theme {
   --color-cream: #FAF6F0;
   --color-warm-sand: #F5EBE6;
-  --color-primary: #1A365D;
-  --color-primary-light: #2B5A8C;
+  --color-primary: #8400FF;
+  --color-primary-light: #9D33FF;
   --color-gold: #D97706;
   --color-gold-light: #E68A00;
   --color-plum: #935B8A;
   --color-plum-light: #A86B9F;
   --color-white: #FFFFFF;
-  --color-foreground: #1A365D;
+  --color-foreground: #8400FF;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: Georgia, "Times New Roman", serif;
   --radius-xl: 0.75rem;
   --radius-2xl: 1rem;
   --radius-3xl: 1.5rem;
-  --shadow-card: 0 4px 24px -2px rgba(26, 54, 93, 0.08);
-  --shadow-elevated: 0 12px 40px -6px rgba(26, 54, 93, 0.12);
-  --shadow-float: 0 20px 50px -10px rgba(26, 54, 93, 0.15);
+  --shadow-card: 0 4px 24px -2px rgba(132, 0, 255, 0.08);
+  --shadow-elevated: 0 12px 40px -6px rgba(132, 0, 255, 0.12);
+  --shadow-float: 0 20px 50px -10px rgba(132, 0, 255, 0.15);
 }
 
 body {
@@ -36,8 +36,8 @@ body {
 html.dark body {
   --color-cream: #0F172A;
   --color-warm-sand: #1E293B;
-  --color-primary: #7B93B0;
-  --color-primary-light: #A0B4CC;
+  --color-primary: #B388FF;
+  --color-primary-light: #D1B3FF;
   --color-foreground: #F1F5F9;
   --color-white: #1E293B;
   background: #0F172A;
@@ -55,13 +55,15 @@ html.dark .nav-dock {
 }
 
 html.dark .nav-dock-link {
-  color: #7B93B0;
+  color: var(--color-gold);
+  opacity: 0.7;
 }
 
 html.dark .nav-dock-link:hover,
 html.dark .nav-dock-link.active {
   color: var(--color-gold);
-  background: rgba(217, 119, 6, 0.15);
+  opacity: 1;
+  background: rgba(217, 119, 6, 0.2);
 }
 
 html.dark .bg-ambient::before {
@@ -70,9 +72,13 @@ html.dark .bg-ambient::before {
 }
 
 html.dark .btn-primary-tactile {
-  background-color: #475569;
-  border-color: #334155;
-  border-bottom-color: #1E293B;
+  background-color: #8400FF;
+  border-color: #6A00CC;
+  border-bottom-color: #4D0099;
+}
+
+html.dark .nav-dock-theme {
+  border-left-color: rgba(132, 0, 255, 0.25);
 }
 
 /* ─── Ambient Background Texture ───────────────────────────────── */
@@ -113,7 +119,7 @@ html.dark .btn-primary-tactile {
     padding: 6px 16px;
     max-width: fit-content;
     margin: 4px auto;
-    box-shadow: 0 8px 32px rgba(30, 77, 79, 0.1);
+    box-shadow: 0 8px 32px rgba(132, 0, 255, 0.1);
   }
 }
 
@@ -155,12 +161,12 @@ html.dark .btn-primary-tactile {
 }
 
 .nav-dock-theme {
-  border-left: 1px solid rgba(30, 77, 79, 0.12);
+  border-left: 1px solid rgba(132, 0, 255, 0.15);
   padding-left: 8px;
   margin-left: 2px;
 }
 html.dark .nav-dock-theme {
-  border-left-color: rgba(100, 116, 139, 0.3);
+  border-left-color: rgba(132, 0, 255, 0.25);
 }
 
 .has-announcement .nav-dock {
@@ -203,9 +209,9 @@ html.dark .nav-dock-theme {
   color: white;
 }
 .btn-primary-tactile {
-  background-color: #1A365D;
-  border-color: #132744;
-  border-bottom-color: #0D1C33;
+  background-color: #8400FF;
+  border-color: #6A00CC;
+  border-bottom-color: #4D0099;
   color: white;
 }
 

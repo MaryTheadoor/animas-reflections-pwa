@@ -11,7 +11,7 @@ const vesperLibre = Vesper_Libre({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#1E4D4F",
+  themeColor: "#8400FF",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
