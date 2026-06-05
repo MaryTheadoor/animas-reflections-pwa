@@ -143,7 +143,7 @@ export const fetchSquareCatalog = onCall(
             name: itemData?.name ?? "",
             description: itemData?.description ?? "",
             categoryIds: (itemData?.categories ?? []).map((c) => c.id),
-            image_url: itemImage?.imageData?.url ?? images[0]?.imageData?.url ?? null,
+            image_url: itemImage?.imageData?.url ?? null,
             variations: validVariations,
           };
         })
@@ -543,7 +543,7 @@ EXPLANATION: your explanation here`;
 );
 
 export const aiSearch = onCall(
-  { cors: true, region: "us-central1", secrets: ["GEMINI_API_KEY"] },
+  { cors: true, region: "us-central1" },
   async (request) => {
     const { query } = request.data as { query: string };
     if (!query?.trim()) {
@@ -592,8 +592,16 @@ export const aiSearch = onCall(
         return { matchedIds: [], explanation: "No products are currently available in the catalog." };
       }
 
-      const result = await aiSearchFlow({ query, products });
-      return result;
+      try {
+        const result = await aiSearchFlow({ query, products });
+        return result;
+      } catch (aiError) {
+        logger.warn("Genkit AI unavailable", aiError);
+        return {
+          matchedIds: [],
+          explanation: "AI search is not configured. Set up a GEMINI_API_KEY secret to enable AI-powered search.",
+        };
+      }
     } catch (err) {
       logger.error("AI search error", err);
       throw new Error(

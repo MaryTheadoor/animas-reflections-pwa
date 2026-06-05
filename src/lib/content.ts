@@ -26,6 +26,7 @@ export const NAVIGATION = {
     { label: "Shop All", href: "/shop" },
     { label: "Cart", href: "/checkout" },
     { label: "Search", href: "/search" },
+    { label: "Fundraising", href: "/fundraising" },
     { label: "About Us", href: "/about" },
     { label: "Contact", href: "/contact" },
     { label: "Terms of Sale", href: "/terms" },
@@ -65,6 +66,45 @@ export const IM_OK_R_U = {
   heading: "I'M OK R U",
   subheading: "A Subsidiary of Animas Reflections",
   body: `Born on the Spring Solstice of 2021, a time symbolizing renewal and growth. After an arduous year in 2020, we all deserve a fresh start. During my personal journey, I found solace in small reminders to overcome negativity and despair. To share this positivity subtly yet meaningfully with others, I began designing shirts that carried hidden messages only discerning eyes could see. These messages serve as personal reminders for challenging days — to pause, breathe deeply, envision success and release stress gracefully. With practice and determination, we gain control over the inevitable pressures we encounter daily. Remember that our reactions shape our experiences; so take a moment to BREATHE & THINK before responding.`,
+} as const;
+
+export const FUNDRAISING = {
+  heading: "Fundraising",
+  subheading: "Turn Custom Merchandise Into Funding For Your Cause",
+  intro: `At Animas Reflections, we help teams, schools, nonprofits, and community organizations raise money through custom-designed merchandise. Whether you're funding a sports season, supporting a charitable cause, or rallying behind a community member, we make it easy to create products people love — and every sale puts money back into your mission.`,
+  howItWorks: [
+    {
+      title: "1. Tell Us About Your Cause",
+      body: "Reach out and let us know what you're raising funds for — a team, a school club, a medical fund, a charity event, or anything else. We'll discuss your goals, timeline, and budget.",
+    },
+    {
+      title: "2. Design Your Merchandise",
+      body: "Work with us to create custom designs that represent your cause. Choose from t-shirts, hoodies, hats, stickers, drinkware, and more. We can incorporate your logo, mascot, or custom artwork.",
+    },
+    {
+      title: "3. We Print & Fulfill",
+      body: "We handle production using professional sublimation and direct-to-film printing. Your supporters order online through your custom Square storefront or our website, and we ship directly to them.",
+    },
+    {
+      title: "4. Collect Your Funds",
+      body: "After the campaign ends, you receive the proceeds minus our production costs. It's that simple — no upfront inventory costs, no minimum orders, no risk.",
+    },
+  ],
+  whatWeOffer: [
+    "Custom online storefront for your fundraiser",
+    "Professional design assistance",
+    "Wide product selection (apparel, accessories, drinkware, stickers)",
+    "No upfront costs — pay-as-you-sell model",
+    "Direct shipping to supporters",
+    "Transparent pricing and profit tracking",
+    "Support for teams, schools, charities, and individuals",
+  ],
+  cta: {
+    text: "Start Your Fundraiser Today",
+    email: "AnimasReflections@gmail.com",
+    phone: "970-769-2779",
+  },
+  featuredCategories: ["LITTLE_STRANGER", "Fly_High_AA_Fundraiser"],
 } as const;
 
 export const FEATURED_PRODUCTS = {
