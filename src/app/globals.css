@@ -36,8 +36,8 @@ body {
 html.dark body {
   --color-cream: #0F172A;
   --color-warm-sand: #1E293B;
-  --color-primary: #B388FF;
-  --color-primary-light: #D1B3FF;
+  --color-primary: #F1F5F9;
+  --color-primary-light: #FFFFFF;
   --color-foreground: #F1F5F9;
   --color-white: #1E293B;
   background: #0F172A;

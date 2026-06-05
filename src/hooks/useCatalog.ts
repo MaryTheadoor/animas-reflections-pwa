@@ -7,7 +7,7 @@ import { functions, db } from "@/lib/firebase";
 import { SYNTHETIC_PRODUCTS, SYNTHETIC_CATEGORIES } from "@/lib/synthetic-data";
 import type { SquareCatalogItem, CompositeProduct, SyncStatus } from "@/types";
 
-export const USE_SYNTHETIC = true;
+export const USE_SYNTHETIC = false;
 
 const DATA_SOURCE: "synthetic" | "firestore" | "square" = USE_SYNTHETIC
   ? "synthetic"
