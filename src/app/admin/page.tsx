@@ -65,6 +65,9 @@ function DashboardContent() {
   const [uploading, setUploading] = useState(false);
   const [designCategory, setDesignCategory] = useState("");
   const [designName, setDesignName] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -75,8 +78,20 @@ function DashboardContent() {
       const snap = await getDoc(doc(db, "designs", "catalog"));
       if (snap.exists()) setDesigns((snap.data() as { items?: DesignAsset[] }).items ?? []);
     };
+    const loadSyncStatus = async () => {
+      const snap = await getDoc(doc(db, "config", "sync_status"));
+      if (snap.exists()) {
+        const data = snap.data() as { productCount?: number; categoryCount?: number; itemCount?: number };
+        setSyncResult({
+          products: data.productCount ?? 0,
+          categories: data.categoryCount ?? 0,
+          items: data.itemCount ?? 0,
+        });
+      }
+    };
     loadConfig();
     loadDesigns();
+    loadSyncStatus();
   }, []);
 
   const saveConfig = async () => {
@@ -110,6 +125,27 @@ function DashboardContent() {
     await setDoc(doc(db, "designs", "catalog"), { items: updated });
   };
 
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const callable = httpsCallable<object, { success: boolean; products: number; categories: number; items: number; errors: string[] }>(
+        functions,
+        "syncProducts"
+      );
+      const result = await callable({});
+      const data = result.data;
+      setSyncResult({ products: data.products, categories: data.categories, items: data.items });
+      if (data.errors.length > 0) {
+        setSyncError(data.errors.join(", "));
+      }
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-cream">
       <header className="bg-primary text-white px-6 py-4">
@@ -126,6 +162,47 @@ function DashboardContent() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+
+        {/* ── Square Sync ── */}
+        <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold font-display">Catalog Sync</h2>
+              <p className="text-sm text-primary/60 mt-1">
+                Pull products from Square and build composite product catalog
+              </p>
+            </div>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
+            >
+              {syncing ? "Syncing..." : "Sync Now"}
+            </button>
+          </div>
+          {syncResult && (
+            <div className="grid grid-cols-3 gap-4 text-center mb-4">
+              <div className="bg-warm-sand/50 rounded-xl p-3">
+                <p className="text-2xl font-bold text-primary">{syncResult.products}</p>
+                <p className="text-xs text-primary/50">Products</p>
+              </div>
+              <div className="bg-warm-sand/50 rounded-xl p-3">
+                <p className="text-2xl font-bold text-primary">{syncResult.categories}</p>
+                <p className="text-xs text-primary/50">Categories</p>
+              </div>
+              <div className="bg-warm-sand/50 rounded-xl p-3">
+                <p className="text-2xl font-bold text-primary">{syncResult.items}</p>
+                <p className="text-xs text-primary/50">Square Items</p>
+              </div>
+            </div>
+          )}
+          {syncError && (
+            <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{syncError}</div>
+          )}
+          <p className="text-xs text-primary/30">
+            Sync runs automatically daily at 4 AM Mountain Time. Click &quot;Sync Now&quot; to run manually.
+          </p>
+        </section>
 
         {/* ── Site Settings ── */}
         <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">

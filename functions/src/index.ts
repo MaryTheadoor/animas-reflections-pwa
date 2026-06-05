@@ -1,11 +1,13 @@
 import * as logger from "firebase-functions/logger";
 import { onCall, onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { SquareClient, SquareEnvironment, SquareError } from "square";
 import { defineString } from "firebase-functions/params";
 import { genkit, z } from "genkit";
 import { googleAI } from "@genkit-ai/googleai";
+import { syncProductsFromSquare, getSyncStatus } from "./sync.js";
 
 initializeApp();
 
@@ -413,84 +415,48 @@ export const fetchRecentOrders = onCall(
   }
 );
 
-// ─── AI-Powered Catalog Sync ──────────────────────────────────────
+// ─── Catalog Sync (Composite Products) ───────────────────────────
 
-interface VirtualProduct {
-  id: string;
-  name: string;
-  description: string;
-  squareItemIds: string[];
-  categoryIds: string[];
-  imageUrls: string[];
-  minPrice: number;
-  variations: { name: string; price: number; squareItemId: string }[];
-  updatedAt: string;
-}
-
-export const syncCatalog = onCall(
+export const syncProducts = onCall(
   { cors: true, region: "us-central1", timeoutSeconds: 300 },
   async () => {
-    logger.info("syncCatalog invoked");
+    logger.info("syncProducts invoked");
     try {
       const client = getSquareClient();
       const db = getFirestore();
-
-      const response = await client.catalog.search({ objectTypes: ["ITEM"] });
-      const rawItems = ((response.objects || []) as CatalogObjectRaw[])
-        .filter((o) => o.itemData?.ecom_visibility === "VISIBLE");
-
-      const aiItems = rawItems.flatMap((item) => {
-        const d = item.itemData;
-        if (!d?.variations?.length) return [];
-        return d.variations.map((v) => ({
-          id: item.id,
-          name: d.name ?? "",
-          description: d.description ?? "",
-          categoryIds: (d.categories ?? []).map((c) => c.id),
-          imageUrl: d.imageIds?.length ? d.imageIds[0] : null,
-          price: Number(v.itemVariationData?.priceMoney?.amount ?? 0) / 100,
-        }));
-      });
-
-      // Group items by simple name matching (AI grouping for small catalogs is unreliable)
-      const groupMap = new Map<string, typeof aiItems>();
-      aiItems.forEach((item) => {
-        const baseName = item.name.split(" - ")[0]?.split(" | ")[0]?.trim() ?? item.name;
-        const existing = groupMap.get(baseName);
-        if (existing) existing.push(item);
-        else groupMap.set(baseName, [item]);
-      });
-
-      const batch = db.batch();
-      let count = 0;
-
-      groupMap.forEach((members, name) => {
-        const docId = `vp_${count}_${Date.now()}`;
-        const uniqueIds = [...new Set(members.map((m) => m.id))];
-        const vp: VirtualProduct = {
-          id: docId,
-          name,
-          description: members[0].description?.substring(0, 500) ?? "",
-          squareItemIds: uniqueIds,
-          categoryIds: [...new Set(members.flatMap((m) => m.categoryIds))],
-          imageUrls: [...new Set(members.map((m) => m.imageUrl).filter(Boolean))].slice(0, 5) as string[],
-          minPrice: Math.min(...members.map((i) => i.price)),
-          variations: members.map((i) => ({ name: i.name, price: i.price, squareItemId: i.id })),
-          updatedAt: new Date().toISOString(),
-        };
-        batch.set(db.collection("virtual_products").doc(docId), vp);
-        count++;
-      });
-
-      await batch.commit();
-      logger.info("Catalog sync complete", { virtualProducts: count });
-      return { success: true, virtualProducts: count, originalItems: aiItems.length };
+      return await syncProductsFromSquare(client, db);
     } catch (err) {
-      logger.error("Catalog sync failed", err);
-      throw new Error(err instanceof Error ? err.message : "Catalog sync failed");
+      logger.error("Sync failed", err);
+      throw new Error(
+        err instanceof Error ? err.message : "Catalog sync failed"
+      );
     }
   }
 );
+
+export const fetchSyncStatus = onCall(
+  { cors: true, region: "us-central1" },
+  async () => {
+    const db = getFirestore();
+    return await getSyncStatus(db);
+  }
+);
+
+export const scheduledSync = onSchedule(
+  "0 4 * * *",
+  async () => {
+    logger.info("Scheduled sync triggered");
+    try {
+      const client = getSquareClient();
+      const db = getFirestore();
+      await syncProductsFromSquare(client, db);
+    } catch (err) {
+      logger.error("Scheduled sync failed", err);
+    }
+  }
+);
+
+// ─── AI-Powered Catalog Sync ──────────────────────────────────────
 
 // ─── AI-Powered Product Search ──────────────────────────────────
 

@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { collection, getDocs } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "@/lib/firebase";
+import { functions, db } from "@/lib/firebase";
 import { SYNTHETIC_PRODUCTS, SYNTHETIC_CATEGORIES } from "@/lib/synthetic-data";
-import type { SquareCatalogItem } from "@/types";
+import type { SquareCatalogItem, CompositeProduct, SyncStatus } from "@/types";
 
 export const USE_SYNTHETIC = true;
+
+const DATA_SOURCE: "synthetic" | "firestore" | "square" = USE_SYNTHETIC
+  ? "synthetic"
+  : "firestore";
 
 interface CatalogCategory {
   id: string;
@@ -19,6 +24,31 @@ interface UseCatalogResult {
   loading: boolean;
   error: string | null;
   refresh: () => void;
+  syncStatus: SyncStatus | null;
+}
+
+function compositeToCatalogItem(cp: CompositeProduct): SquareCatalogItem {
+  const flatVariations = cp.variantGroups.flatMap((group) =>
+    group.options.map((opt) => ({
+      id: opt.squareVariationId,
+      name: group.name === "Size" || group.name === "Option"
+        ? opt.label
+        : `${group.name}: ${opt.label}`,
+      price: opt.price,
+      sku: opt.sku,
+    }))
+  );
+
+  return {
+    id: cp.id,
+    name: cp.name,
+    description: cp.description,
+    categoryIds: cp.categoryIds,
+    image_url: cp.images[0] ?? "",
+    variations: flatVariations,
+    colors: cp.colors,
+    tags: [...cp.tags, cp.brand],
+  };
 }
 
 export function useCatalog(): UseCatalogResult {
@@ -26,18 +56,53 @@ export function useCatalog(): UseCatalogResult {
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
 
   const fetchCatalog = useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    if (USE_SYNTHETIC) {
-      // Simulate network delay for realistic loading state
+    if (DATA_SOURCE === "synthetic") {
       await new Promise((r) => setTimeout(r, 400));
       setItems(SYNTHETIC_PRODUCTS);
       setCategories(SYNTHETIC_CATEGORIES);
       setLoading(false);
       return;
+    }
+
+    if (DATA_SOURCE === "firestore") {
+      try {
+        const productsSnap = await getDocs(collection(db, "products"));
+        const compositeProducts: CompositeProduct[] = [];
+        productsSnap.forEach((doc) => {
+          const data = doc.data() as CompositeProduct;
+          if (data.name) compositeProducts.push(data);
+        });
+
+        if (compositeProducts.length > 0) {
+          const catalogItems = compositeProducts.map(compositeToCatalogItem);
+          setItems(catalogItems);
+
+          const catsSnap = await getDocs(collection(db, "categories"));
+          const cats: CatalogCategory[] = [];
+          catsSnap.forEach((doc) => {
+            const data = doc.data() as { name: string };
+            cats.push({ id: doc.id, name: data.name });
+          });
+          setCategories(cats);
+
+          const statusSnap = await getDocs(collection(db, "config"));
+          const statusDoc = statusSnap.docs.find((d) => d.id === "sync_status");
+          if (statusDoc) {
+            setSyncStatus(statusDoc.data() as SyncStatus);
+          }
+
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Firestore read failed, falling back to Square API", err);
+      }
     }
 
     try {
@@ -75,7 +140,7 @@ export function useCatalog(): UseCatalogResult {
     fetchCatalog();
   }, [fetchCatalog]);
 
-  return { items, categories, loading, error, refresh: fetchCatalog };
+  return { items, categories, loading, error, refresh: fetchCatalog, syncStatus };
 }
 
 export function getProductImageUrl(item: SquareCatalogItem): string {

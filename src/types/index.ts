@@ -29,6 +29,46 @@ export interface DesignAsset {
   created_at: string;
 }
 
+/* ─── Composite Product (Firestore) ─────────────────────────────── */
+
+export interface VariantGroup {
+  name: string;
+  options: VariantOption[];
+}
+
+export interface VariantOption {
+  label: string;
+  sku: string;
+  price: number;
+  squareItemId: string;
+  squareVariationId: string;
+}
+
+export interface CompositeProduct {
+  id: string;
+  name: string;
+  description: string;
+  categoryIds: string[];
+  brand: string;
+  colors: string[];
+  tags: string[];
+  images: string[];
+  minPrice: number;
+  maxPrice: number;
+  variantGroups: VariantGroup[];
+  updatedAt: string;
+  syncedAt: string;
+  itemCount: number;
+}
+
+export interface SyncStatus {
+  lastSync: string | null;
+  productCount: number;
+  categoryCount: number;
+  itemCount: number;
+  errors: string[];
+}
+
 /* ─── Cart & Order Types ────────────────────────────────────────── */
 
 export type AddonType = "back_print" | "sleeve_print" | "personalization";

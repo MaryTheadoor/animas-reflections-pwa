@@ -7,61 +7,11 @@ import PageLayout from "@/components/layout/page-layout";
 
 type SortMode = "default" | "price-asc" | "price-desc" | "name-asc";
 
-interface CategoryNode {
-  name: string;
-  id?: string;
-  children?: CategoryNode[];
-}
-
-const CATEGORY_TREE: CategoryNode[] = [
-  {
-    name: "Sub Brands",
-    children: [
-      { id: "BISCUIT_HOCKEY", name: "Biscuit Hockey" },
-      { id: "I_M_OK_R_U", name: "I'M OK R U" },
-    ],
-  },
-  {
-    name: "Teams & Sports",
-    children: [
-      { id: "Durango_Lacrosse", name: "Durango Lacrosse" },
-      { id: "Durango_Hockey", name: "Durango Hockey" },
-      { id: "Durango_High_School_Alpine_Ski_Team", name: "Alpine Ski Team" },
-      { id: "Durango_Roller_Girls", name: "Roller Girls" },
-    ],
-  },
-  {
-    name: "Bands & Music",
-    children: [
-      { id: "LITTLE_STRANGER", name: "LITTLE STRANGER" },
-      { id: "Jordan_Branch_Music", name: "Jordan Branch Music" },
-      { id: "GREEN_BUDDHA", name: "GREEN BUDDHA" },
-      { id: "Dunphy_Stock_FAM", name: "Dunphy Stock FAM" },
-      { id: "ET_Art", name: "ET Art" },
-      { id: "Fly_High_AA_Fundraiser", name: "Fly High AA" },
-      { id: "Women_In_Aviation", name: "Women In Aviation" },
-    ],
-  },
-  {
-    name: "Accessories & More",
-    children: [
-      { id: "Jewelry", name: "Jewelry" },
-      { id: "Wood_Signs", name: "Wood Signs" },
-      { id: "Ornaments", name: "Ornaments" },
-      { id: "Glass_Cutting_Boards", name: "Glass Cutting Boards" },
-      { id: "Neoprene_Drink_Hugger", name: "Drink Huggers" },
-      { id: "Custom_Slaps", name: "Custom Slaps" },
-      { id: "Pet_Scarf", name: "Pet Scarves" },
-      { id: "Hat", name: "Hats" },
-    ],
-  },
-];
-
 const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "default", label: "Default" },
-  { mode: "price-asc", label: "Price: Low → High" },
-  { mode: "price-desc", label: "Price: High → Low" },
-  { mode: "name-asc", label: "Name: A → Z" },
+  { mode: "price-asc", label: "Price: Low to High" },
+  { mode: "price-desc", label: "Price: High to Low" },
+  { mode: "name-asc", label: "Name: A to Z" },
 ];
 
 export default function ShopPage() {
@@ -69,19 +19,15 @@ export default function ShopPage() {
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("default");
-  const [showBrands, setShowBrands] = useState(true);
 
-  // Build category name → ID map from Square categories or fallback
   const catNameToId = useMemo(() => {
     const map = new Map<string, string>();
-    if (categories.length > 0) {
-      categories.forEach((c) => map.set(c.name.trim(), c.id));
-    }
+    categories.forEach((c) => map.set(c.name.trim().toLowerCase(), c.id));
     return map;
   }, [categories]);
 
   const getCategoryId = useCallback(
-    (name: string) => catNameToId.get(name) ?? null,
+    (name: string) => catNameToId.get(name.toLowerCase().trim()) ?? null,
     [catNameToId]
   );
 
@@ -100,7 +46,7 @@ export default function ShopPage() {
           result = result.filter(
             (i) =>
               i.name.toLowerCase().includes(q) ||
-              (i.description && i.description.toLowerCase().includes(q))
+              (i.description?.toLowerCase() ?? "").includes(q)
           );
         }
       }
@@ -110,7 +56,7 @@ export default function ShopPage() {
       result = result.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
-          (i.description && i.description.toLowerCase().includes(q))
+          (i.description?.toLowerCase() ?? "").includes(q)
       );
     }
     if (sortMode === "price-asc") {
@@ -123,46 +69,12 @@ export default function ShopPage() {
     return result;
   }, [items, activeCategory, search, sortMode, getCategoryId, categories]);
 
-  const CategoryPill = ({ name, catId, isParent }: { name: string; catId?: string; isParent?: boolean }) => (
-    <button
-      onClick={() => setActiveCategory(catId ?? name)}
-      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-        activeCategory === (catId ?? name)
-          ? "bg-primary text-white"
-          : isParent
-            ? "bg-warm-sand text-primary font-bold"
-            : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
-      }`}
-    >
-      {name}
-    </button>
-  );
-
-  const renderCategoryTree = (nodes: CategoryNode[], isChild = false) => (
-    <div className={`flex flex-wrap gap-1.5 ${isChild ? "ml-4" : ""}`}>
-      {nodes.map((node) => (
-        <div key={node.name} className="flex flex-wrap items-center gap-1.5">
-          <CategoryPill name={node.name} catId={node.id} isParent={!isChild && !!node.children} />
-          {node.children && renderCategoryTree(node.children, true)}
-        </div>
-      ))}
-    </div>
-  );
-
-  const getActiveLabel = () => {
-    if (activeCategory === "All") return "All Products";
-    const findNode = (nodes: CategoryNode[]): string | null => {
-      for (const n of nodes) {
-        if ((n.id ?? n.name) === activeCategory) return n.name;
-        if (n.children) {
-          const found = findNode(n.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    return findNode(CATEGORY_TREE) ?? activeCategory;
-  };
+  const activeLabel =
+    activeCategory === "All"
+      ? "All Products"
+      : categories.find((c) => c.id === activeCategory)?.name ??
+        categories.find((c) => c.name === activeCategory)?.name ??
+        activeCategory;
 
   return (
     <PageLayout>
@@ -170,7 +82,7 @@ export default function ShopPage() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold font-display mb-3">Shop All Products</h1>
           <p className="text-primary/60 max-w-xl mx-auto">
-            Browse {items.length} customizable products. Click any item to view details, choose options, and design your own.
+            Browse {items.length} products. Click any item to view details and choose options.
           </p>
         </div>
 
@@ -198,24 +110,19 @@ export default function ShopPage() {
           </select>
         </div>
 
-        {/* Categories */}
+        {/* Categories — dynamic from Firestore/Square */}
         <div className="space-y-3 mb-8">
-          {/* All + clear — mobile dropdown, desktop pills */}
           <div className="flex flex-wrap gap-1.5 items-center">
-            {/* Mobile dropdown */}
             <select
               value={activeCategory}
               onChange={(e) => setActiveCategory(e.target.value)}
               className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
             >
               <option value="All">All Products ({items.length})</option>
-              <optgroup label="Categories">
-                {CATEGORY_TREE.flatMap((n) => [n.name, ...(n.children?.map((c) => c.name) ?? [])]).map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </optgroup>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
             </select>
-            {/* Desktop pills */}
             <div className="hidden sm:flex flex-wrap gap-1.5 items-center w-full">
               <button
                 onClick={() => setActiveCategory("All")}
@@ -227,21 +134,25 @@ export default function ShopPage() {
               </button>
               {activeCategory !== "All" && (
                 <span className="text-xs text-primary/40 ml-2">
-                  {getActiveLabel()} ({filteredItems.length})
+                  {activeLabel} ({filteredItems.length})
                 </span>
               )}
             </div>
           </div>
-
-          {/* Desktop category sections */}
-          <div className="hidden sm:block space-y-3">
-            <div>
-              <button onClick={() => setShowBrands(!showBrands)}
-                className="flex items-center gap-1 text-xs font-bold font-display text-primary mb-2 hover:text-gold transition-colors">
-                {showBrands ? "−" : "+"} Categories
+          <div className="hidden sm:flex flex-wrap gap-1.5">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id === activeCategory ? "All" : cat.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  activeCategory === cat.id
+                    ? "bg-primary text-white"
+                    : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                }`}
+              >
+                {cat.name}
               </button>
-              {showBrands && renderCategoryTree(CATEGORY_TREE)}
-            </div>
+            ))}
           </div>
         </div>
 
@@ -273,7 +184,7 @@ export default function ShopPage() {
           <>
             <p className="text-xs text-primary/40 mb-4">
               Showing {filteredItems.length} of {items.length} products
-              {activeCategory !== "All" ? ` in "${getActiveLabel()}"` : ""}
+              {activeCategory !== "All" ? ` in "${activeLabel}"` : ""}
             </p>
             <div className="tile-grid-sites">
               {filteredItems.map((item) => (
