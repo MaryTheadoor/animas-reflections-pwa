@@ -20,7 +20,10 @@
   "dependencies": {
     "firebase-admin": "^13",
     "firebase-functions": "^6",
-    "square": "^42"
+    "square": "^42",
+    "@genkit-ai/firebase": "^1",
+    "@genkit-ai/googleai": "^1",
+    "genkit": "^1"
   },
   "devDependencies": {
     "@types/node": "^22",

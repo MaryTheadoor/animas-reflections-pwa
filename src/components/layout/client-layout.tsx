@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { CartProvider } from "@/context/cart-context";
+import { CartProvider, useCart } from "@/context/cart-context";
 import { AuthProvider } from "@/context/auth-context";
-import CartDrawer from "@/components/cart/cart-drawer";
-import DebugPanel from "@/components/ui/debug-panel";
+import { ThemeProvider } from "@/context/theme-context";
+import { CartDrawer } from "@/components/cart/cart-drawer";
 import type { ReactNode } from "react";
+
+function CartDrawerWrapper() {
+  const { cartOpen, setCartOpen } = useCart();
+  return <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />;
+}
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -15,12 +20,13 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthProvider>
-      <CartProvider>
-        {children}
-        <CartDrawer />
-        <DebugPanel />
-      </CartProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <CartProvider>
+          {children}
+          <CartDrawerWrapper />
+        </CartProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -5,6 +5,7 @@ import {
   useContext,
   useReducer,
   useCallback,
+  useState,
   type ReactNode,
 } from "react";
 import type { CartItem, CartAddon, AddonType } from "@/types";
@@ -93,12 +94,15 @@ interface CartContextValue {
   total: number;
   itemCount: number;
   setShippingTier: (tier: "stickers" | "apparel" | "free") => void;
+  cartOpen: boolean;
+  setCartOpen: (v: boolean) => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, dispatch] = useReducer(cartReducer, initialCart);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const addItem = useCallback((item: CartItem) => {
     dispatch({ type: "ADD_ITEM", item });
@@ -151,7 +155,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const itemCount = cart.items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <CartContext.Provider
+      <CartContext.Provider
       value={{
         cart,
         addItem,
@@ -165,6 +169,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         total,
         itemCount,
         setShippingTier,
+        cartOpen,
+        setCartOpen,
       }}
     >
       {children}

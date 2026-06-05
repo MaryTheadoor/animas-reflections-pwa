@@ -1,42 +1,26 @@
 @import "tailwindcss";
 
-/* ─── Animas Reflections Brand Theme ──────────────────────────────
-   Clean Modern-Rustic Aesthetic
-   Inspired by southwest Colorado sunsets & alpine forests
-   ────────────────────────────────────────────────────────────────── */
+/* ─── Animas Reflections Brand Theme ────────────────────────────── */
 
 @theme {
-  /* Primary Backgrounds */
   --color-cream: #FAF6F0;
   --color-warm-sand: #F5EBE6;
-
-  /* Primary Brand Tone (Deep Slate Teal) */
   --color-teal: #1E4D4F;
   --color-teal-light: #2A6B6E;
-
-  /* Secondary Accent (Sunset Moon Gold) */
   --color-gold: #D97706;
   --color-gold-light: #E68A00;
-
-  /* Highlight Contrast (Soft Plum) */
   --color-plum: #935B8A;
   --color-plum-light: #A86B9F;
-
-  /* Base */
   --color-white: #FFFFFF;
   --color-foreground: #1E4D4F;
-
-  /* Fonts */
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: Georgia, "Times New Roman", serif;
-
-  /* Border Radius */
   --radius-xl: 0.75rem;
   --radius-2xl: 1rem;
-
-  /* Shadows */
-  --shadow-card: 0 4px 20px -2px rgba(30, 77, 79, 0.05);
-  --shadow-elevated: 0 8px 30px -4px rgba(30, 77, 79, 0.10);
+  --radius-3xl: 1.5rem;
+  --shadow-card: 0 4px 24px -2px rgba(30, 77, 79, 0.08);
+  --shadow-elevated: 0 12px 40px -6px rgba(30, 77, 79, 0.12);
+  --shadow-float: 0 20px 50px -10px rgba(30, 77, 79, 0.15);
 }
 
 body {
@@ -47,74 +31,272 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── S.I.T.E.S Tactile UI Layer ──────────────────────────────────
-   First-principles physical interaction patterns.
-   Solid structural depth. Press states that feel real.
-   Adapted from Nown.digital S.I.T.E.S protocol.
-   ────────────────────────────────────────────────────────────────── */
+/* ─── Dark Mode ──────────────────────────────────────────────────── */
 
-@layer utilities {
-  /* Tactile button base — solid depth with bottom border simulating height */
-  .btn-tactile {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-bottom-width: 4px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.2);
-    transition: transform 0.1s ease, border-bottom-width 0.1s ease, box-shadow 0.1s ease;
-  }
+html.dark body {
+  --color-cream: #0F172A;
+  --color-warm-sand: #1E293B;
+  --color-teal: #94A3B8;
+  --color-teal-light: #CBD5E1;
+  --color-foreground: #F1F5F9;
+  --color-white: #1E293B;
+  background: #0F172A;
+}
 
-  .btn-tactile:active {
-    transform: translateY(3px);
-    border-bottom-width: 1px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
+html.dark .glass-card {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(100, 116, 139, 0.2);
+}
 
-  .btn-tactile.btn-gold-tactile {
-    background-color: #D97706;
-    border-color: #B05E04;
-    border-bottom-color: #8A4703;
-    color: white;
-  }
+html.dark .nav-dock {
+  background: rgba(30, 41, 59, 0.88);
+  border-color: rgba(100, 116, 139, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
 
-  .btn-tactile.btn-teal-tactile {
-    background-color: #1E4D4F;
-    border-color: #163A3C;
-    border-bottom-color: #0E2628;
-    color: white;
-  }
+html.dark .nav-dock-link {
+  color: #94A3B8;
+}
 
-  /* S.I.T.E.S Self-Aware Tile Grid */
-  .tile-grid-sites {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-  }
+html.dark .nav-dock-link:hover,
+html.dark .nav-dock-link.active {
+  color: var(--color-gold);
+  background: rgba(217, 119, 6, 0.15);
+}
 
-  /* S.I.T.E.S Modular Tile */
-  .tile-sites {
-    container-type: inline-size;
-    background-color: #FFFFFF;
-    border: 1px solid #F5EBE6;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    box-shadow:
-      0 10px 15px -3px rgba(30, 77, 79, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
+html.dark .bg-ambient::before {
+  background-image: radial-gradient(circle at center, #334155 1px, transparent 1px);
+  opacity: 0.4;
+}
 
-  .tile-sites:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 14px 20px -4px rgba(30, 77, 79, 0.12),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  }
+html.dark .btn-teal-tactile {
+  background-color: #475569;
+  border-color: #334155;
+  border-bottom-color: #1E293B;
+}
 
-  .tile-sites:active {
-    transform: translateY(1px);
-    box-shadow:
-      0 4px 6px rgba(30, 77, 79, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+/* ─── Ambient Background Texture ───────────────────────────────── */
+
+.bg-ambient { position: relative; }
+.bg-ambient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at center, #E8DFD6 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ─── Floating Dock Navigation ──────────────────────────────────── */
+
+.nav-dock {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(245, 235, 230, 0.8);
+  padding: 6px 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  justify-items: center;
+  align-items: center;
+  row-gap: 2px;
+}
+
+@media (min-width: 768px) {
+  .nav-dock {
+    border: 1px solid rgba(245, 235, 230, 0.8);
+    border-radius: 999px;
+    border-bottom: 1px solid rgba(245, 235, 230, 0.8);
+    display: flex;
+    gap: 4px;
+    padding: 6px 16px;
+    max-width: fit-content;
+    margin: 4px auto;
+    box-shadow: 0 8px 32px rgba(30, 77, 79, 0.1);
   }
 }
+
+.nav-dock-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: var(--color-teal);
+  opacity: 0.6;
+  padding: 4px 6px;
+  border-radius: 12px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  white-space: nowrap;
+}
+.nav-dock-link:hover,
+.nav-dock-link.active {
+  opacity: 1;
+  color: var(--color-gold);
+  background: rgba(217, 119, 6, 0.08);
+}
+.nav-dock-link svg {
+  width: 16px;
+  height: 16px;
+  margin-bottom: 1px;
+}
+
+@media (min-width: 768px) {
+  .nav-dock-link {
+    padding: 6px 10px;
+  }
+  .nav-dock-link svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.nav-dock-theme {
+  border-left: 1px solid rgba(30, 77, 79, 0.12);
+  padding-left: 8px;
+  margin-left: 2px;
+}
+html.dark .nav-dock-theme {
+  border-left-color: rgba(100, 116, 139, 0.3);
+}
+
+@media (min-width: 768px) {
+  .nav-dock {
+    border-bottom: none;
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    padding: 6px 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .nav-dock {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    top: 8px;
+    border: 1px solid rgba(245, 235, 230, 0.8);
+    border-radius: 999px;
+    padding: 6px 16px;
+    display: flex;
+    gap: 4px;
+    max-width: fit-content;
+    box-shadow: 0 8px 32px rgba(30, 77, 79, 0.1);
+  }
+}
+
+.has-announcement .nav-dock {
+  top: 36px;
+}
+
+.nav-dock-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: var(--color-teal);
+  opacity: 0.6;
+  padding: 4px 6px;
+  border-radius: 12px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  white-space: nowrap;
+}
+.nav-dock-link:hover,
+.nav-dock-link.active {
+  opacity: 1;
+  color: var(--color-gold);
+  background: rgba(217, 119, 6, 0.08);
+  transform: translateY(-2px);
+}
+.nav-dock-link svg {
+  width: 16px;
+  height: 16px;
+  margin-bottom: 1px;
+}
+
+@media (min-width: 768px) {
+  .nav-dock-link {
+    padding: 6px 12px;
+    font-size: 0.6rem;
+  }
+  .nav-dock-link svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.nav-dock-theme {
+  border-left: 1px solid rgba(30, 77, 79, 0.12);
+  padding-left: 8px;
+  margin-left: 2px;
+}
+html.dark .nav-dock-theme {
+  border-left-color: rgba(100, 116, 139, 0.3);
+}
+
+/* ─── Glassmorphism Cards ───────────────────────────────────────── */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 235, 230, 0.6);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-elevated); }
+.glass-card:active { transform: translateY(1px); }
+
+/* ─── S.I.T.E.S Tactile Buttons ──────────────────────────────────── */
+
+.btn-tactile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom-width: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  transition: transform 0.1s ease, border-bottom-width 0.1s ease, box-shadow 0.1s ease;
+}
+.btn-tactile:active {
+  transform: translateY(3px);
+  border-bottom-width: 1px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+.btn-gold-tactile {
+  background-color: #D97706;
+  border-color: #B05E04;
+  border-bottom-color: #8A4703;
+  color: white;
+}
+.btn-teal-tactile {
+  background-color: #1E4D4F;
+  border-color: #163A3C;
+  border-bottom-color: #0E2628;
+  color: white;
+}
+
+/* ─── Tile Grid ──────────────────────────────────────────────────── */
+
+.tile-grid-sites {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.tile-sites { container-type: inline-size; }
+
+/* ─── Animations ──────────────────────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fadeInUp 0.5s ease forwards; }
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-300 { animation-delay: 0.3s; }

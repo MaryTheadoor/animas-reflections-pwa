@@ -76,7 +76,7 @@ export interface SquareCatalogItem {
   id: string;
   name: string;
   description: string;
-  categoryId?: string;
+  categoryIds: string[];
   image_url?: string;
   variations: SquareVariation[];
 }

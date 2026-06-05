@@ -1,31 +1,36 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import PlaceholderImage from "@/components/ui/placeholder-image";
 import type { SquareCatalogItem } from "@/types";
 import { getProductImageUrl } from "@/hooks/useCatalog";
 
 interface ProductCardProps {
   item: SquareCatalogItem;
-  onSelect?: (item: SquareCatalogItem) => void;
 }
 
-export default function ProductCard({ item, onSelect }: ProductCardProps) {
+export default function ProductCard({ item }: ProductCardProps) {
   const minPrice = Math.min(...item.variations.map((v) => v.price));
   const imageUrl = getProductImageUrl(item);
 
   return (
-    <button
-      onClick={() => onSelect?.(item)}
-      className="tile-sites text-left w-full group cursor-pointer"
+    <Link
+      href={`/product?id=${item.id}`}
+      className="tile-sites text-left w-full group cursor-pointer block"
     >
       <div className="relative aspect-square bg-warm-sand rounded-xl overflow-hidden mb-4">
-        <Image
-          src={imageUrl}
-          alt={item.name}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-        />
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={item.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+        ) : (
+          <PlaceholderImage />
+        )}
         {item.variations.length > 1 && (
           <span className="absolute top-3 left-3 bg-teal text-white text-xs px-2 py-1 rounded-full shadow-sm">
             {item.variations.length} variants
@@ -50,10 +55,10 @@ export default function ProductCard({ item, onSelect }: ProductCardProps) {
         <p className="text-gold font-bold text-lg leading-none">
           {item.variations.length === 1 && item.variations[0].price > 0
             ? `$${item.variations[0].price.toFixed(2)}`
-            : `From $${minPrice.toFixed(2)}`}
+            : `Starting at $${minPrice.toFixed(2)}`}
         </p>
-        <span className="text-xs text-teal/30 font-medium">Customize &rarr;</span>
+        <p className="text-xs text-teal/30 font-medium">View Details &rarr;</p>
       </div>
-    </button>
+    </Link>
   );
 }

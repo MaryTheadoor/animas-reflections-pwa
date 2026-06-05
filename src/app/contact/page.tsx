@@ -1,62 +1,19 @@
-import Image from "next/image";
-import Link from "next/link";
-import { CONTACT, SITE, NAVIGATION, PAYMENT_METHODS, RETURN_POLICY } from "@/lib/content";
+import PageLayout from "@/components/layout/page-layout";
+import { CONTACT } from "@/lib/content";
 
 export default function ContactPage() {
   return (
-    <div className="flex flex-col flex-1">
-      <header className="sticky top-0 z-50 bg-cream/95 backdrop-blur-sm border-b border-warm-sand">
-        <nav className="flex items-center justify-between px-6 py-3 max-w-6xl mx-auto w-full">
-          <Link href="/" className="flex items-center gap-3">
-            <Image src="/logo.png" alt={SITE.name} width={48} height={48} className="rounded-xl" priority />
-            <span className="text-xl font-bold tracking-tight font-display hidden sm:inline">{SITE.name}</span>
-          </Link>
-          <Link href="/" className="text-sm font-medium hover:text-gold transition-colors">Back to Home</Link>
-        </nav>
-      </header>
-
-      <main className="flex-1">
-        <section className="py-20 px-6 max-w-2xl mx-auto w-full">
-          <h1 className="text-4xl font-bold font-display mb-2">{CONTACT.heading}</h1>
-          <p className="text-teal/60 text-lg mb-10">{CONTACT.subheading}</p>
-          <div className="space-y-8">
-            <div className="bg-warm-sand p-8 rounded-2xl">
-              <h3 className="font-bold mb-4">Get In Touch</h3>
-              <div className="space-y-3 text-teal/80">
-                <p><strong>Phone:</strong> <a href={`tel:${CONTACT.phone}`} className="hover:text-gold">{CONTACT.phone}</a></p>
-                <p><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`} className="hover:text-gold">{CONTACT.email}</a></p>
-                <p><strong>Location:</strong> {CONTACT.location}</p>
-              </div>
-            </div>
-            <p className="text-xs text-teal/40">{CONTACT.privacy_note}</p>
-          </div>
-        </section>
+    <PageLayout>
+      <main className="flex-1 max-w-2xl mx-auto w-full px-6 pt-8 sm:pt-12 pb-16 sm:pb-20">
+        <h1 className="text-4xl font-bold font-display mb-2">{CONTACT.heading}</h1>
+        <p className="text-teal/60 text-lg mb-10">{CONTACT.subheading}</p>
+        <div className="glass-card p-8 space-y-4">
+          <p className="text-teal/80"><strong>Phone:</strong> <a href={`tel:${CONTACT.phone}`} className="hover:text-gold">{CONTACT.phone}</a></p>
+          <p className="text-teal/80"><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`} className="hover:text-gold">{CONTACT.email}</a></p>
+          <p className="text-teal/80"><strong>Location:</strong> {CONTACT.location}</p>
+          <p className="text-xs text-teal/40 mt-4">{CONTACT.privacy_note}</p>
+        </div>
       </main>
-
-      <footer className="bg-white border-t border-warm-sand py-12 px-6">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
-          <div>
-            <h4 className="font-bold font-display mb-3">{SITE.name}</h4>
-            <p className="text-sm text-teal/60 leading-relaxed">{SITE.description}</p>
-          </div>
-          <div>
-            <h4 className="font-bold mb-3">Links</h4>
-            <div className="flex flex-col gap-2 text-sm">
-              {NAVIGATION.footer.map((link) => (
-                <Link key={link.href} href={link.href} className="text-teal/60 hover:text-gold transition-colors">{link.label}</Link>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h4 className="font-bold mb-3">Policies</h4>
-            <p className="text-sm text-teal/60 leading-relaxed">{RETURN_POLICY}</p>
-            <p className="text-xs text-teal/40 mt-3">We accept: {PAYMENT_METHODS.join(", ")}</p>
-          </div>
-        </div>
-        <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-warm-sand text-center text-sm text-teal/40">
-          <p>&copy; {new Date().getFullYear()} {SITE.name} &mdash; {SITE.location}. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
+    </PageLayout>
   );
 }

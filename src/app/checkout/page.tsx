@@ -11,15 +11,28 @@ import { SQUARE_APP_ID, SQUARE_LOCATION_ID } from "@/lib/constants";
 
 let squareInitialized = false;
 
+interface CustomerInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+const emptyCustomer: CustomerInfo = {
+  firstName: "", lastName: "", email: "", phone: "",
+  address: "", city: "", state: "", zip: "",
+};
+
 export default function CheckoutPage() {
   const { cart, subtotal, addonsTotal, shipping, total, clearCart } = useCart();
+  const [customer, setCustomer] = useState<CustomerInfo>(emptyCustomer);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    orderId: string;
-    paymentId: string;
-    paymentStatus: string;
-  } | null>(null);
+  const [result, setResult] = useState<{ orderId: string; paymentId: string; paymentStatus: string } | null>(null);
   const [cardReady, setCardReady] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const squareCardRef = useRef<unknown>(null);
@@ -38,112 +51,84 @@ export default function CheckoutPage() {
           document.head.appendChild(script);
         });
       }
-
-      const payments = (
-        window as unknown as Record<string, unknown>
-      ).Square as {
-        payments: (
-          appId: string,
-          locationId: string
-        ) => Promise<{
-          card: () => Promise<{ attach: (selector: string) => Promise<void> }>;
-        }>;
+      const SquareSDK = (window as unknown as Record<string, unknown>).Square as {
+        payments: (appId: string, locId: string) => Promise<{ card: () => Promise<{ attach: (s: string) => Promise<void> }> }>;
       };
-
-      if (!payments) {
-        throw new Error("Square SDK not loaded");
-      }
-
-      const paymentInstance = await payments.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
-      const card = await paymentInstance.card();
+      const instance = await SquareSDK.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
+      const card = await instance.card();
       await card.attach("#card-container");
       squareCardRef.current = card;
       squareInitialized = true;
       setCardReady(true);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Payment system unavailable"
-      );
+      setError(err instanceof Error ? err.message : "Payment system unavailable");
     }
   }, []);
 
   useEffect(() => {
-    const container = cardRef.current;
-    if (container && !squareInitialized) {
-      initSquare();
-    }
+    // Initializes Square SDK on mount
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!squareInitialized) initSquare();
     return () => {
-      if (squareCardRef.current) {
-        const card = squareCardRef.current as { destroy?: () => void };
-        card.destroy?.();
-        squareCardRef.current = null;
-        squareInitialized = false;
-      }
+      if (squareCardRef.current) (squareCardRef.current as { destroy?: () => void }).destroy?.();
+      squareCardRef.current = null;
+      squareInitialized = false;
     };
-    // Only run on mount — initializes Square SDK
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePayment = async () => {
-    if (!squareCardRef.current) {
-      setError("Payment form not ready");
-      return;
-    }
+  const updateCustomer = (field: keyof CustomerInfo, value: string) => {
+    setCustomer((prev) => ({ ...prev, [field]: value }));
+  };
 
+  const customerValid = customer.firstName && customer.email && customer.address && customer.city && customer.zip;
+
+  const handlePayment = async () => {
+    if (!squareCardRef.current || !customerValid) return;
     setProcessing(true);
     setError(null);
-
     try {
       const card = squareCardRef.current as {
-        tokenize: () => Promise<{
-          status: string;
-          errors?: { message: string }[];
-          token?: string;
-        }>;
+        tokenize: () => Promise<{ status: string; errors?: { message: string }[]; token?: string }>;
       };
-
       const tokenResult = await card.tokenize();
-
       if (tokenResult.status !== "OK" || !tokenResult.token) {
-        throw new Error(
-          tokenResult.errors?.[0]?.message ?? "Card verification failed"
-        );
+        throw new Error(tokenResult.errors?.[0]?.message ?? "Card verification failed");
       }
 
-      const createOrder = httpsCallable(functions, "createSquareOrderAndPay");
+      const lineItems = cart.items.map((item) => ({
+        catalogObjectId: item.variation_id,
+        quantity: item.quantity,
+        note: [
+          item.design_url ? `Design: ${item.design_url}` : "",
+          item.design_text ? `Text: ${item.design_text}` : "",
+          item.addons.length ? `Add-ons: ${item.addons.map((a) => a.label).join(", ")}` : "",
+        ].filter(Boolean).join(" | "),
+      }));
 
+      const createOrder = httpsCallable(functions, "createSquareOrderAndPay");
       const orderResult = await createOrder({
-        lineItems: cart.items.map((item) => ({
-          catalogObjectId: item.variation_id,
-          quantity: item.quantity,
-          note: [
-            item.design_url ? `Design: ${item.design_url}` : "",
-            item.design_text ? `Text: ${item.design_text}` : "",
-            item.addons.length
-              ? `Add-ons: ${item.addons.map((a) => a.label).join(", ")}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join(" | "),
-        })),
+        lineItems,
         shippingRate: shipping,
         sourceId: tokenResult.token,
         idempotencyKey: `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+        customer: {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: customer.phone,
+          address: {
+            addressLine1: customer.address,
+            locality: customer.city,
+            administrativeDistrictLevel1: customer.state,
+            postalCode: customer.zip,
+          },
+        },
       });
 
-      const data = orderResult.data as {
-        success: boolean;
-        orderId: string;
-        paymentId: string;
-        paymentStatus: string;
-      };
-
+      const data = orderResult.data as { success: boolean; orderId: string; paymentId: string; paymentStatus: string };
       if (data.success) {
-        setResult({
-          orderId: data.orderId,
-          paymentId: data.paymentId,
-          paymentStatus: data.paymentStatus,
-        });
+        setResult(data);
         clearCart();
       } else {
         throw new Error("Order creation failed");
@@ -160,12 +145,7 @@ export default function CheckoutPage() {
       <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
         <h1 className="text-4xl font-bold font-display mb-4">Your cart is empty</h1>
         <p className="text-teal/60 mb-6">Add some products to get started.</p>
-        <Link
-          href="/shop"
-          className="px-8 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
-        >
-          Browse Products
-        </Link>
+        <Link href="/shop" className="px-8 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile">Browse Products</Link>
       </div>
     );
   }
@@ -175,22 +155,15 @@ export default function CheckoutPage() {
       <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
         <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-8 max-w-md w-full">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+            <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
           <h2 className="text-2xl font-bold font-display mb-2">Order Confirmed!</h2>
-          <p className="text-teal/60 mb-4">Thank you for your order.</p>
+          <p className="text-teal/60 mb-4">Thank you for your order, {customer.firstName}.</p>
           <div className="text-sm text-teal/50 space-y-1 mb-6">
             <p>Order ID: {result.orderId}</p>
             <p>Payment: {result.paymentStatus}</p>
           </div>
-          <Link
-            href="/shop"
-            className="block w-full py-3 bg-teal text-white rounded-2xl font-semibold hover:bg-teal-light transition-colors text-center"
-          >
-            Continue Shopping
-          </Link>
+          <Link href="/shop" className="block w-full py-3 bg-teal text-white rounded-2xl font-semibold hover:bg-teal-light transition-colors text-center">Continue Shopping</Link>
         </div>
       </div>
     );
@@ -204,14 +177,27 @@ export default function CheckoutPage() {
             <Image src="/logo.png" alt={SITE.name} width={40} height={40} className="rounded-xl" priority />
             <span className="text-lg font-bold font-display hidden sm:inline">{SITE.name}</span>
           </Link>
-          <Link href="/shop" className="text-sm font-medium hover:text-gold transition-colors">
-            Back to Shop
-          </Link>
+          <Link href="/shop" className="text-sm font-medium hover:text-gold transition-colors">Back to Shop</Link>
         </nav>
       </header>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-10">
         <h1 className="text-3xl font-bold font-display mb-8">Checkout</h1>
+
+        {/* Customer Info */}
+        <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6 mb-6">
+          <h2 className="font-bold mb-4">Shipping Information</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <input type="text" placeholder="First Name *" value={customer.firstName} onChange={(e) => updateCustomer("firstName", e.target.value)} className="px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
+            <input type="text" placeholder="Last Name" value={customer.lastName} onChange={(e) => updateCustomer("lastName", e.target.value)} className="px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+            <input type="email" placeholder="Email *" value={customer.email} onChange={(e) => updateCustomer("email", e.target.value)} className="sm:col-span-2 px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
+            <input type="tel" placeholder="Phone" value={customer.phone} onChange={(e) => updateCustomer("phone", e.target.value)} className="sm:col-span-2 px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+            <input type="text" placeholder="Street Address *" value={customer.address} onChange={(e) => updateCustomer("address", e.target.value)} className="sm:col-span-2 px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
+            <input type="text" placeholder="City *" value={customer.city} onChange={(e) => updateCustomer("city", e.target.value)} className="px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
+            <input type="text" placeholder="State (e.g. CO)" value={customer.state} onChange={(e) => updateCustomer("state", e.target.value)} className="px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+            <input type="text" placeholder="ZIP Code *" value={customer.zip} onChange={(e) => updateCustomer("zip", e.target.value)} className="px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
+          </div>
+        </div>
 
         {/* Order Summary */}
         <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6 mb-6">
@@ -219,66 +205,37 @@ export default function CheckoutPage() {
           <div className="space-y-3">
             {cart.items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-teal">
-                  {item.name} x{item.quantity}
-                  {item.design_text ? ` — "${item.design_text}"` : ""}
-                </span>
+                <span className="text-teal">{item.name} x{item.quantity}{item.design_text ? ` — "${item.design_text}"` : ""}</span>
                 <span className="font-medium">${(item.base_price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>
           <div className="mt-4 pt-4 border-t border-warm-sand space-y-1 text-sm">
-            <div className="flex justify-between text-teal/60">
-              <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
-            </div>
-            {addonsTotal > 0 && (
-              <div className="flex justify-between text-teal/60">
-                <span>Add-ons</span>
-                <span>${addonsTotal.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-teal/60">
-              <span>Shipping</span>
-              <span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
-            </div>
-            <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand">
-              <span>Total</span>
-              <span className="text-gold">${total.toFixed(2)}</span>
-            </div>
+            <div className="flex justify-between text-teal/60"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+            {addonsTotal > 0 && <div className="flex justify-between text-teal/60"><span>Add-ons</span><span>${addonsTotal.toFixed(2)}</span></div>}
+            <div className="flex justify-between text-teal/60"><span>Shipping</span><span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span></div>
+            <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand"><span>Total</span><span className="text-gold">${total.toFixed(2)}</span></div>
           </div>
         </div>
 
-        {/* Card Payment */}
+        {/* Payment */}
         <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6 mb-6">
           <h2 className="font-bold mb-4">Payment</h2>
-          <div
-            id="card-container"
-            ref={cardRef}
-            className="min-h-[100px] rounded-xl border border-teal/20 p-4 bg-warm-sand/30"
-          />
-          {!cardReady && !error && (
-            <p className="text-sm text-teal/50 mt-2">Loading payment form...</p>
-          )}
+          <div id="card-container" ref={cardRef} className="min-h-[100px] rounded-xl border border-teal/20 p-4 bg-warm-sand/30" />
+          {!cardReady && !error && <p className="text-sm text-teal/50 mt-2">Loading payment form...</p>}
         </div>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 rounded-xl p-4 mb-6 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <div className="bg-red-50 text-red-600 rounded-xl p-4 mb-6 text-sm">{error}</div>}
 
         <button
           onClick={handlePayment}
-          disabled={processing || !cardReady || cart.items.length === 0}
-          className="w-full py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors shadow-card disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={processing || !cardReady || !customerValid}
+          className="w-full py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {processing ? "Processing..." : `Pay $${total.toFixed(2)}`}
         </button>
-
-        <p className="text-xs text-teal/40 text-center mt-4">
-          Secured by Square. We accept Visa, Mastercard, Amex, Discover, JCB, Apple Pay, Google Pay, and Cash App.
-        </p>
+        {!customerValid && <p className="text-xs text-teal/40 text-center mt-2">Fill in all required fields (*) to continue</p>}
+        <p className="text-xs text-teal/40 text-center mt-4">Secured by Square. We accept Visa, Mastercard, Amex, Discover, JCB, Apple Pay, Google Pay, and Cash App.</p>
       </main>
     </div>
   );
