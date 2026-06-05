@@ -31,7 +31,7 @@ export default function FundraisingPage() {
         {/* How It Works */}
         <section className="glass-card p-6 sm:p-10 mb-12">
           <h2 className="text-2xl font-bold font-display text-center mb-8">
-            How It Works
+            How Our Fundraising Program Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {FUNDRAISING.howItWorks.map((step) => (
@@ -43,17 +43,58 @@ export default function FundraisingPage() {
           </div>
         </section>
 
-        {/* What We Offer */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold font-display text-center mb-6">
-            What We Offer
+        {/* Who It's For + Products */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          <section className="glass-card p-6">
+            <h2 className="text-xl font-bold font-display text-center mb-4">
+              Who It&apos;s Perfect For
+            </h2>
+            <p className="text-sm text-primary/60 mb-4 text-center">
+              Whether you&apos;re raising money for uniforms, trips, equipment, programs, or events — we can help.
+            </p>
+            <div className="space-y-2">
+              {FUNDRAISING.whoFor.map((item) => (
+                <div key={item} className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-2.5">
+                  <svg className="w-4 h-4 text-gold shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                  </svg>
+                  <span className="text-sm text-primary/70">{item}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="glass-card p-6">
+            <h2 className="text-xl font-bold font-display text-center mb-4">
+              Products That Sell
+            </h2>
+            <p className="text-sm text-primary/60 mb-4 text-center">
+              Your catalog can include high-quality custom items such as:
+            </p>
+            <div className="space-y-2">
+              {FUNDRAISING.products.map((item) => (
+                <div key={item} className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-2.5">
+                  <svg className="w-4 h-4 text-gold shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
+                  </svg>
+                  <span className="text-sm text-primary/70">{item}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* Why Fundraise With Us */}
+        <section className="glass-card p-6 sm:p-10 mb-12">
+          <h2 className="text-xl font-bold font-display text-center mb-6">
+            Why Fundraise with Animas Reflections?
           </h2>
+          <p className="text-primary/60 text-center mb-6 text-sm">
+            This is fundraising made simple, transparent, and effective!
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {FUNDRAISING.whatWeOffer.map((item) => (
-              <div
-                key={item}
-                className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-3"
-              >
+            {FUNDRAISING.whyUs.map((item) => (
+              <div key={item} className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-3">
                 <svg className="w-5 h-5 text-gold shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
@@ -84,21 +125,20 @@ export default function FundraisingPage() {
               {FUNDRAISING.cta.text}
             </h2>
             <p className="text-primary/60 mb-8 max-w-md mx-auto">
-              We would love to help you turn custom merchandise into funding for your
-              cause. Reach out to get started — no commitment required.
+              Ready to start fundraising? Email us and we will get your fundraiser set up right away.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
                 href={`mailto:${FUNDRAISING.cta.email}?subject=Fundraising%20Inquiry`}
                 className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile text-lg"
               >
-                Email Us
+                Email Us to Get Started
               </a>
               <a
                 href={`tel:${FUNDRAISING.cta.phone}`}
                 className="inline-flex items-center justify-center h-14 px-10 rounded-2xl border-2 border-primary/20 text-primary font-semibold hover:border-primary/40 transition-colors text-lg"
               >
-                {FUNDRAISING.cta.phone}
+                Call {FUNDRAISING.cta.phone}
               </a>
             </div>
             <p className="text-xs text-primary/30 mt-6">

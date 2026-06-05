@@ -1,5 +1,5 @@
-const CACHE_NAME = "animas-reflections-v1";
-const PRECACHE_URLS = ["/", "/shop", "/customizer", "/about", "/contact"];
+const CACHE_NAME = "animas-reflections-v2";
+const PRECACHE_URLS = ["/", "/shop", "/search", "/fundraising", "/about", "/contact"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

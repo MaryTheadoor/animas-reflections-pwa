@@ -69,40 +69,59 @@ export const IM_OK_R_U = {
 } as const;
 
 export const FUNDRAISING = {
-  heading: "Fundraising",
-  subheading: "Turn Custom Merchandise Into Funding For Your Cause",
-  intro: `At Animas Reflections, we help teams, schools, nonprofits, and community organizations raise money through custom-designed merchandise. Whether you're funding a sports season, supporting a charitable cause, or rallying behind a community member, we make it easy to create products people love — and every sale puts money back into your mission.`,
+  heading: "Fundraising Made Easy with Custom Merchandise",
+  subheading: "50/50 Profit Split — No Upfront Costs — We Handle Everything",
+  intro: `Raise money without the stress. Animas Reflections offers a done-for-you online fundraising program using custom apparel and merchandise — with a clear 50/50 profit split, no inventory, and no minimum orders. We build your fundraising catalog, manage orders, print and ship products, and send you your share of the profits.`,
   howItWorks: [
     {
-      title: "1. Tell Us About Your Cause",
-      body: "Reach out and let us know what you're raising funds for — a team, a school club, a medical fund, a charity event, or anything else. We'll discuss your goals, timeline, and budget.",
+      title: "1. We Create Your Custom Fundraising Catalog",
+      body: "We design and host a custom fundraising catalog listing directly on our website, featuring products tailored to your organization.",
     },
     {
-      title: "2. Design Your Merchandise",
-      body: "Work with us to create custom designs that represent your cause. Choose from t-shirts, hoodies, hats, stickers, drinkware, and more. We can incorporate your logo, mascot, or custom artwork.",
+      title: "2. Supporters Shop Online",
+      body: "Your supporters place orders directly through Animas Reflections — simple, secure, and easy to share.",
     },
     {
-      title: "3. We Print & Fulfill",
-      body: "We handle production using professional sublimation and direct-to-film printing. Your supporters order online through your custom Square storefront or our website, and we ship directly to them.",
+      title: "3. We Handle Orders & Fulfillment",
+      body: "We take care of payment processing, printing and production, shipping, and customer service. No inventory. No logistics. No headaches.",
     },
     {
-      title: "4. Collect Your Funds",
-      body: "After the campaign ends, you receive the proceeds minus our production costs. It's that simple — no upfront inventory costs, no minimum orders, no risk.",
+      title: "4. You Earn 50% of the Profit",
+      body: "After production costs, profits are split evenly — 50/50 between your organization and Animas Reflections. Transparent and straightforward.",
     },
   ],
-  whatWeOffer: [
-    "Custom online storefront for your fundraiser",
-    "Professional design assistance",
-    "Wide product selection (apparel, accessories, drinkware, stickers)",
-    "No upfront costs — pay-as-you-sell model",
-    "Direct shipping to supporters",
-    "Transparent pricing and profit tracking",
-    "Support for teams, schools, charities, and individuals",
+  whoFor: [
+    "Schools & PTAs",
+    "Sports teams & clubs",
+    "Nonprofits & charities",
+    "Bands, music groups & arts programs",
+    "Community organizations & special causes",
+  ],
+  products: [
+    "T-shirts & hoodies",
+    "Stickers, slaps & decals",
+    "Tote bags & accessories",
+    "Pet scarves",
+    "Ornaments & specialty merchandise",
+  ],
+  whyUs: [
+    "50/50 profit split",
+    "No upfront costs",
+    "No minimum orders",
+    "No inventory or storage",
+    "Custom online fundraising catalog",
+    "Orders, printing & shipping handled",
+    "Family-owned business",
+    "Based in Durango, CO — serving nationwide",
   ],
   cta: {
     text: "Start Your Fundraiser Today",
     email: "AnimasReflections@gmail.com",
     phone: "970-769-2779",
+  },
+  socials: {
+    facebook: "https://facebook.com/animasreflections",
+    instagram: "https://instagram.com/animasreflections",
   },
   featuredCategories: ["LITTLE_STRANGER", "Fly_High_AA_Fundraiser"],
 } as const;
