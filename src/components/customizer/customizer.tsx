@@ -41,7 +41,7 @@ export default function Customizer({
     <div className="space-y-4">
       {/* View Tabs */}
       <div className="text-center">
-        <span className="inline-block px-4 py-1 bg-teal text-white text-sm font-medium rounded-full capitalize">
+        <span className="inline-block px-4 py-1 bg-primary text-white text-sm font-medium rounded-full capitalize">
           {viewName} View
         </span>
       </div>
@@ -75,7 +75,7 @@ export default function Customizer({
             />
           )}
           {designText && !designUrl && (
-            <div className="w-full h-full flex items-center justify-center text-xl font-bold text-teal/50">
+            <div className="w-full h-full flex items-center justify-center text-xl font-bold text-primary/50">
               {designText}
             </div>
           )}
@@ -84,7 +84,7 @@ export default function Customizer({
 
       {/* Text Input */}
       <div className="max-w-lg mx-auto">
-        <label className="block text-sm font-medium text-teal mb-1">
+        <label className="block text-sm font-medium text-primary mb-1">
           Name / Number
         </label>
         <input
@@ -92,7 +92,7 @@ export default function Customizer({
           value={designText ?? ""}
           onChange={(e) => onTextChange(e.target.value || undefined)}
           placeholder="e.g. SMITH 42"
-          className="w-full px-4 py-2 rounded-xl border border-teal/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-teal transition-colors"
+          className="w-full px-4 py-2 rounded-xl border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-primary transition-colors"
         />
       </div>
     </div>

@@ -120,14 +120,14 @@ export default function CustomizerPage() {
 
               {/* View Selector */}
               <div className="mt-4">
-                <span className="block text-sm font-medium text-teal mb-2">View</span>
+                <span className="block text-sm font-medium text-primary mb-2">View</span>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setActiveView("front")}
                     className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
                       activeView === "front"
-                        ? "bg-teal text-white"
-                        : "bg-warm-sand text-teal/60 hover:bg-warm-sand/80"
+                        ? "bg-primary text-white"
+                        : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                     }`}
                   >
                     Front
@@ -137,7 +137,7 @@ export default function CustomizerPage() {
 
               {/* Add-ons */}
               <div className="mt-4 space-y-2">
-                <span className="block text-sm font-medium text-teal mb-2">
+                <span className="block text-sm font-medium text-primary mb-2">
                   Add-ons (+${ADDON_PRICE} each)
                 </span>
                 {ADDONS.map((addon) => (
@@ -151,8 +151,8 @@ export default function CustomizerPage() {
                       onChange={() => handleToggleAddon(addon.type)}
                       className="accent-gold w-4 h-4"
                     />
-                    <span className="text-sm text-teal">{addon.label}</span>
-                    <span className="text-xs text-teal/40 ml-auto">+${ADDON_PRICE}</span>
+                    <span className="text-sm text-primary">{addon.label}</span>
+                    <span className="text-xs text-primary/40 ml-auto">+${ADDON_PRICE}</span>
                   </label>
                 ))}
               </div>
@@ -160,12 +160,12 @@ export default function CustomizerPage() {
               {/* Price Summary & Add to Cart */}
               <div className="mt-6 pt-4 border-t border-warm-sand space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-teal/60">Base price</span>
+                  <span className="text-primary/60">Base price</span>
                   <span>${PLACEHOLDER_TEMPLATE.base_price.toFixed(2)}</span>
                 </div>
                 {addonsCost > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-teal/60">Add-ons</span>
+                    <span className="text-primary/60">Add-ons</span>
                     <span>+${addonsCost.toFixed(2)}</span>
                   </div>
                 )}

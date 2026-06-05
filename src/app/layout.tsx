@@ -63,7 +63,7 @@ export default function RootLayout({
         <WebsiteJsonLd />
         <link rel="apple-touch-icon" href="/logo.png" />
       </head>
-      <body className="min-h-full flex flex-col bg-cream text-teal">
+      <body className="min-h-full flex flex-col bg-cream text-primary">
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

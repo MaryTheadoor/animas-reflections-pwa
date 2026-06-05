@@ -80,7 +80,7 @@ export default function DebugPanel() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-4 z-50 bg-teal text-white text-xs rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-teal-light transition-colors"
+        className="fixed bottom-20 left-4 z-50 bg-primary text-white text-xs rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-primary-light transition-colors"
         title="Debug Panel"
       >
         D
@@ -92,8 +92,8 @@ export default function DebugPanel() {
     <div className="fixed inset-0 z-50 flex items-start justify-end pointer-events-none">
       <div className="pointer-events-auto w-96 max-h-screen overflow-y-auto bg-white shadow-elevated border border-warm-sand rounded-2xl m-4 p-4 text-xs font-mono">
         <div className="flex items-center justify-between mb-3">
-          <span className="font-bold text-teal text-sm">Debug Panel</span>
-          <button onClick={() => setOpen(false)} className="text-teal/40 hover:text-teal">&times;</button>
+          <span className="font-bold text-primary text-sm">Debug Panel</span>
+          <button onClick={() => setOpen(false)} className="text-primary/40 hover:text-primary">&times;</button>
         </div>
         {[
           ["Build", info.buildTimestamp],
@@ -106,9 +106,9 @@ export default function DebugPanel() {
           ["Square Location", info.squareLocationId],
         ].map(([label, value]) => (
           <div key={label as string} className="flex justify-between py-1 border-b border-warm-sand/30">
-            <span className="text-teal/50">{label}</span>
+            <span className="text-primary/50">{label}</span>
             <span className={`text-right max-w-[60%] truncate ${
-              String(value).startsWith("error") ? "text-red-500" : "text-teal"
+              String(value).startsWith("error") ? "text-red-500" : "text-primary"
             }`}>{String(value)}</span>
           </div>
         ))}

@@ -50,7 +50,7 @@ const DEFAULT_CONFIG: SiteConfigData = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-teal mb-1">{label}</label>
+      <label className="block text-sm font-medium text-primary mb-1">{label}</label>
       {children}
     </div>
   );
@@ -112,7 +112,7 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <header className="bg-teal text-white px-6 py-4">
+      <header className="bg-primary text-white px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image src="/logo.png" alt={SITE.name} width={36} height={36} className="rounded-lg" />
@@ -135,8 +135,8 @@ function DashboardContent() {
           <Field label="Announcement Banner">
             <input type="text" value={config.announcement_text}
               onChange={(e) => setConfig({ ...config, announcement_text: e.target.value })}
-              className="w-full px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
-            <label className="flex items-center gap-2 mt-2 text-sm text-teal/60 cursor-pointer">
+              className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
+            <label className="flex items-center gap-2 mt-2 text-sm text-primary/60 cursor-pointer">
               <input type="checkbox" checked={config.announcement_active}
                 onChange={(e) => setConfig({ ...config, announcement_active: e.target.checked })} className="accent-gold" />
               Show announcement banner
@@ -154,10 +154,10 @@ function DashboardContent() {
                 <div className="flex gap-2 items-center">
                   <input type="color" value={config[key]}
                     onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
-                    className="w-12 h-10 rounded-lg border border-teal/20 cursor-pointer" />
+                    className="w-12 h-10 rounded-lg border border-primary/20 cursor-pointer" />
                   <input type="text" value={config[key]}
                     onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
-                    className="flex-1 px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none font-mono text-sm" />
+                    className="flex-1 px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none font-mono text-sm" />
                 </div>
               </Field>
             ))}
@@ -165,51 +165,51 @@ function DashboardContent() {
 
           {/* Website Copy */}
           <div className="mt-6">
-            <h3 className="font-bold font-display text-sm mb-3 text-teal">Website Copy</h3>
+            <h3 className="font-bold font-display text-sm mb-3 text-primary">Website Copy</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Hero Heading">
                 <input type="text" value={config.hero_heading}
                   onChange={(e) => setConfig({ ...config, hero_heading: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
               </Field>
               <Field label="Hero Subheading">
                 <input type="text" value={config.hero_subheading}
                   onChange={(e) => setConfig({ ...config, hero_subheading: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
               </Field>
             </div>
             <div className="mt-4">
               <Field label="About / Our Story Text">
                 <textarea rows={5} value={config.about_body}
                   onChange={(e) => setConfig({ ...config, about_body: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm resize-y" />
+                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm resize-y" />
               </Field>
             </div>
           </div>
 
           {/* Shipping & Pricing */}
           <div className="mt-6">
-            <h3 className="font-bold font-display text-sm mb-3 text-teal">Shipping &amp; Pricing</h3>
+            <h3 className="font-bold font-display text-sm mb-3 text-primary">Shipping &amp; Pricing</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Field label="Stickers Rate ($)">
                 <input type="number" step="0.01" value={config.shipping_tier_stickers}
                   onChange={(e) => setConfig({ ...config, shipping_tier_stickers: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
+                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
               </Field>
               <Field label="Apparel Rate ($)">
                 <input type="number" step="0.01" value={config.shipping_tier_apparel}
                   onChange={(e) => setConfig({ ...config, shipping_tier_apparel: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
+                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
               </Field>
               <Field label="Free Shipping Threshold ($)">
                 <input type="number" step="0.01" value={config.free_shipping_threshold}
                   onChange={(e) => setConfig({ ...config, free_shipping_threshold: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
+                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
               </Field>
               <Field label="Add-on Price ($)">
                 <input type="number" step="0.01" value={config.addon_price}
                   onChange={(e) => setConfig({ ...config, addon_price: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
+                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
               </Field>
             </div>
           </div>
@@ -223,13 +223,13 @@ function DashboardContent() {
         {/* ── Design Catalog ── */}
         <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
           <h2 className="text-xl font-bold font-display mb-4">Design Catalog</h2>
-          <p className="text-sm text-teal/60 mb-6">Upload brand logos, team designs, and artwork that customers can select in the customizer.</p>
+          <p className="text-sm text-primary/60 mb-6">Upload brand logos, team designs, and artwork that customers can select in the customizer.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <input type="text" value={designName} onChange={(e) => setDesignName(e.target.value)}
-              placeholder="Design name" className="px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+              placeholder="Design name" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
             <input type="text" value={designCategory} onChange={(e) => setDesignCategory(e.target.value)}
-              placeholder="Category (e.g. Durango High Football)" className="px-4 py-2 rounded-xl border border-teal/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-            <label className="flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed border-teal/20 cursor-pointer hover:border-teal/40 transition-colors text-sm text-teal/50">
+              placeholder="Category (e.g. Durango High Football)" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+            <label className="flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed border-primary/20 cursor-pointer hover:border-primary/40 transition-colors text-sm text-primary/50">
               {uploading ? "Uploading..." : "Choose File"}
               <input type="file" accept="image/*" onChange={handleDesignUpload}
                 disabled={uploading || !designName || !designCategory} className="hidden" />
@@ -241,14 +241,14 @@ function DashboardContent() {
                 <div key={d.id} className="bg-warm-sand/50 rounded-xl p-3 text-center relative group">
                   <Image src={d.image_url} alt={d.name} width={120} height={120} className="mx-auto rounded-lg mb-2 object-contain h-20" />
                   <p className="text-xs font-medium truncate">{d.name}</p>
-                  <p className="text-xs text-teal/40 truncate">{d.category}</p>
+                  <p className="text-xs text-primary/40 truncate">{d.category}</p>
                   <button onClick={() => removeDesign(d.id)}
                     className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-opacity">&times;</button>
                 </div>
               ))}
             </div>
           )}
-          {designs.length === 0 && <p className="text-sm text-teal/40 text-center py-8">No designs uploaded yet.</p>}
+          {designs.length === 0 && <p className="text-sm text-primary/40 text-center py-8">No designs uploaded yet.</p>}
         </section>
 
         {/* ── Recent Orders ── */}
@@ -279,23 +279,23 @@ function OrdersSection() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-sm text-teal/50">Loading orders...</p>;
+  if (loading) return <p className="text-sm text-primary/50">Loading orders...</p>;
   if (error) return <p className="text-sm text-red-500">{error}</p>;
-  if (!orders.length) return <p className="text-sm text-teal/40">No orders yet.</p>;
+  if (!orders.length) return <p className="text-sm text-primary/40">No orders yet.</p>;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead><tr className="text-left text-teal/50 border-b border-warm-sand">
+        <thead><tr className="text-left text-primary/50 border-b border-warm-sand">
           <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Date</th>
         </tr></thead>
         <tbody>
           {orders.slice(0, 20).map((o) => (
             <tr key={o.id} className="border-b border-warm-sand/30">
-              <td className="py-2 font-mono text-xs text-teal/60">{o.id?.slice(0, 12)}</td>
+              <td className="py-2 font-mono text-xs text-primary/60">{o.id?.slice(0, 12)}</td>
               <td className="py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${o.state === "COMPLETED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{o.state}</span></td>
               <td className="py-2 text-right font-mono">${o.total.toFixed(2)}</td>
-              <td className="py-2 text-teal/50">{new Date(o.createdAt as string).toLocaleDateString()}</td>
+              <td className="py-2 text-primary/50">{new Date(o.createdAt as string).toLocaleDateString()}</td>
             </tr>
           ))}
         </tbody>
@@ -318,12 +318,12 @@ function UsersSection() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-sm text-teal/50">Loading users...</p>;
+  if (loading) return <p className="text-sm text-primary/50">Loading users...</p>;
   if (error) {
     return (
       <div>
         <p className="text-sm text-red-500 mb-2">Could not load users: {error}</p>
-        <p className="text-xs text-teal/40">
+        <p className="text-xs text-primary/40">
           Manage authentication in{" "}
           <a
             href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users"
@@ -341,7 +341,7 @@ function UsersSection() {
   if (!users.length) {
     return (
       <div>
-        <p className="text-sm text-teal/40">
+        <p className="text-sm text-primary/40">
           No registered users found. Manage authentication in{" "}
           <a
             href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users"
@@ -359,12 +359,12 @@ function UsersSection() {
 
   return (
     <div>
-      <p className="text-xs text-teal/40 mb-3">{users.length} users registered.</p>
+      <p className="text-xs text-primary/40 mb-3">{users.length} users registered.</p>
       <div className="space-y-2">
         {users.map((u) => (
           <div key={u.uid} className="flex items-center justify-between text-sm p-2 bg-warm-sand/30 rounded-lg">
             <span className="font-medium">{u.email}</span>
-            <span className="text-xs text-teal/40">
+            <span className="text-xs text-primary/40">
               {u.updatedAt
                 ? `Last seen ${new Date(u.updatedAt).toLocaleDateString()}`
                 : u.created

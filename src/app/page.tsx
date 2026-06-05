@@ -43,7 +43,7 @@ export default function Home() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight font-display mb-6 animate-fade-in-up animate-delay-100">
               {HERO.heading}
             </h1>
-            <p className="text-lg text-teal/70 mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
+            <p className="text-lg text-primary/70 mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
               Design your own t-shirt, hoodie, bag, purse, ornament, coaster, dog
               scarf, long sleeve tee, print on wood, metal, jewelry and more!
             </p>
@@ -56,7 +56,7 @@ export default function Home() {
               </Link>
               <Link
                 href={HERO.cta_secondary.href}
-                className="inline-flex items-center justify-center h-14 px-10 rounded-2xl border-2 border-teal/20 text-teal font-semibold hover:border-teal/40 transition-colors text-lg"
+                className="inline-flex items-center justify-center h-14 px-10 rounded-2xl border-2 border-primary/20 text-primary font-semibold hover:border-primary/40 transition-colors text-lg"
               >
                 {HERO.cta_secondary.label}
               </Link>
@@ -84,8 +84,8 @@ export default function Home() {
             <div>
               <h2 className="text-3xl font-bold font-display mb-2">{OUR_STORY.heading}</h2>
               <p className="text-gold font-semibold mb-4">{OUR_STORY.subheading}</p>
-              <p className="text-teal/70 leading-relaxed">{OUR_STORY.body}</p>
-              <div className="mt-4 text-sm text-teal/50">
+              <p className="text-primary/70 leading-relaxed">{OUR_STORY.body}</p>
+              <div className="mt-4 text-sm text-primary/50">
                 <p>{SITE.phone}</p>
                 <p>{SITE.email}</p>
               </div>
@@ -100,7 +100,7 @@ export default function Home() {
           <h2 className="text-3xl font-bold font-display mb-4">
             Snapshot of Our Collections
           </h2>
-          <p className="text-teal/60 mb-8 max-w-md mx-auto">
+          <p className="text-primary/60 mb-8 max-w-md mx-auto">
             Discover something extraordinary and one-of-a-kind. Let&apos;s discuss
             preserving your cherished memories!
           </p>
@@ -118,13 +118,13 @@ export default function Home() {
         <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
           <div>
             <h4 className="font-bold font-display mb-3">{SITE.name}</h4>
-            <p className="text-sm text-teal/60 leading-relaxed">{SITE.description}</p>
+            <p className="text-sm text-primary/60 leading-relaxed">{SITE.description}</p>
           </div>
           <div>
             <h4 className="font-bold mb-3">Links</h4>
             <div className="flex flex-col gap-2 text-sm">
               {NAVIGATION.footer.map((link) => (
-                <Link key={link.href} href={link.href} className="text-teal/60 hover:text-gold transition-colors">
+                <Link key={link.href} href={link.href} className="text-primary/60 hover:text-gold transition-colors">
                   {link.label}
                 </Link>
               ))}
@@ -132,13 +132,13 @@ export default function Home() {
           </div>
           <div>
             <h4 className="font-bold mb-3">Policies</h4>
-            <p className="text-sm text-teal/60 leading-relaxed">{RETURN_POLICY}</p>
-            <p className="text-xs text-teal/40 mt-3">
+            <p className="text-sm text-primary/60 leading-relaxed">{RETURN_POLICY}</p>
+            <p className="text-xs text-primary/40 mt-3">
               We accept: {PAYMENT_METHODS.join(", ")}
             </p>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-warm-sand text-center text-sm text-teal/40">
+        <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-warm-sand text-center text-sm text-primary/40">
           <p>
             &copy; {new Date().getFullYear()} {SITE.name} &mdash; {SITE.location}. All rights reserved.
           </p>

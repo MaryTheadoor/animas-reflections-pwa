@@ -21,7 +21,7 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
       <div className="relative bg-white rounded-2xl shadow-float max-w-lg w-full max-h-[92vh] overflow-hidden flex flex-col">
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center text-teal/50 hover:text-teal transition-colors shadow-sm"
+          className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center text-primary/50 hover:text-primary transition-colors shadow-sm"
           aria-label="Close"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -38,14 +38,14 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
         <div className="overflow-y-auto p-4 sm:p-6 flex-1">
           <h2 className="text-lg sm:text-xl font-bold font-display mb-1">{item.name}</h2>
           {item.description && (
-            <p className="text-sm text-teal/60 mb-4 leading-relaxed line-clamp-4">
+            <p className="text-sm text-primary/60 mb-4 leading-relaxed line-clamp-4">
               {item.description.replace(/<[^>]*>/g, " ").substring(0, 300)}
             </p>
           )}
 
           {item.variations.length > 1 && (
             <div className="mb-4">
-              <span className="text-xs font-medium text-teal block mb-2">Options</span>
+              <span className="text-xs font-medium text-primary block mb-2">Options</span>
               <div className="flex flex-wrap gap-1.5">
                 {item.variations.map((v) => (
                   <button
@@ -53,8 +53,8 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
                     onClick={() => setSelectedVariation(v)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                       selectedVariation.id === v.id
-                        ? "bg-teal text-white btn-tactile btn-teal-tactile"
-                        : "bg-warm-sand text-teal/60 hover:bg-warm-sand/80"
+                        ? "bg-primary text-white btn-tactile btn-primary-tactile"
+                        : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                     }`}
                   >
                     {v.name || "Standard"}

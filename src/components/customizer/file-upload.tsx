@@ -63,8 +63,8 @@ export default function FileUpload({
 
   return (
     <div className="space-y-3">
-      <label className="block font-medium text-sm text-teal">{label}</label>
-      <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-teal/20 rounded-2xl cursor-pointer hover:border-teal/40 transition-colors bg-white/50">
+      <label className="block font-medium text-sm text-primary">{label}</label>
+      <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-primary/20 rounded-2xl cursor-pointer hover:border-primary/40 transition-colors bg-white/50">
         {uploading ? (
           <div className="text-center">
             <div className="w-full bg-warm-sand rounded-full h-2 mb-2 max-w-40 mx-auto">
@@ -73,10 +73,10 @@ export default function FileUpload({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-xs text-teal/50">{Math.round(progress)}%</span>
+            <span className="text-xs text-primary/50">{Math.round(progress)}%</span>
           </div>
         ) : (
-          <span className="text-sm text-teal/50">Click or drag to upload</span>
+          <span className="text-sm text-primary/50">Click or drag to upload</span>
         )}
         <input
           type="file"

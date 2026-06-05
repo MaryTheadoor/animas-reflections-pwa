@@ -5,22 +5,22 @@
 @theme {
   --color-cream: #FAF6F0;
   --color-warm-sand: #F5EBE6;
-  --color-teal: #1E4D4F;
-  --color-teal-light: #2A6B6E;
+  --color-primary: #1A365D;
+  --color-primary-light: #2B5A8C;
   --color-gold: #D97706;
   --color-gold-light: #E68A00;
   --color-plum: #935B8A;
   --color-plum-light: #A86B9F;
   --color-white: #FFFFFF;
-  --color-foreground: #1E4D4F;
+  --color-foreground: #1A365D;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: Georgia, "Times New Roman", serif;
   --radius-xl: 0.75rem;
   --radius-2xl: 1rem;
   --radius-3xl: 1.5rem;
-  --shadow-card: 0 4px 24px -2px rgba(30, 77, 79, 0.08);
-  --shadow-elevated: 0 12px 40px -6px rgba(30, 77, 79, 0.12);
-  --shadow-float: 0 20px 50px -10px rgba(30, 77, 79, 0.15);
+  --shadow-card: 0 4px 24px -2px rgba(26, 54, 93, 0.08);
+  --shadow-elevated: 0 12px 40px -6px rgba(26, 54, 93, 0.12);
+  --shadow-float: 0 20px 50px -10px rgba(26, 54, 93, 0.15);
 }
 
 body {
@@ -36,8 +36,8 @@ body {
 html.dark body {
   --color-cream: #0F172A;
   --color-warm-sand: #1E293B;
-  --color-teal: #94A3B8;
-  --color-teal-light: #CBD5E1;
+  --color-primary: #7B93B0;
+  --color-primary-light: #A0B4CC;
   --color-foreground: #F1F5F9;
   --color-white: #1E293B;
   background: #0F172A;
@@ -55,7 +55,7 @@ html.dark .nav-dock {
 }
 
 html.dark .nav-dock-link {
-  color: #94A3B8;
+  color: #7B93B0;
 }
 
 html.dark .nav-dock-link:hover,
@@ -69,7 +69,7 @@ html.dark .bg-ambient::before {
   opacity: 0.4;
 }
 
-html.dark .btn-teal-tactile {
+html.dark .btn-primary-tactile {
   background-color: #475569;
   border-color: #334155;
   border-bottom-color: #1E293B;
@@ -122,7 +122,7 @@ html.dark .btn-teal-tactile {
   flex-direction: column;
   align-items: center;
   text-decoration: none;
-  color: var(--color-teal);
+  color: var(--color-primary);
   opacity: 0.6;
   padding: 4px 6px;
   border-radius: 12px;
@@ -202,10 +202,10 @@ html.dark .nav-dock-theme {
   border-bottom-color: #8A4703;
   color: white;
 }
-.btn-teal-tactile {
-  background-color: #1E4D4F;
-  border-color: #163A3C;
-  border-bottom-color: #0E2628;
+.btn-primary-tactile {
+  background-color: #1A365D;
+  border-color: #132744;
+  border-bottom-color: #0D1C33;
   color: white;
 }
 

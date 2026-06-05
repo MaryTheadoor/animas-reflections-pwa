@@ -6,12 +6,12 @@ export default function ContactPage() {
     <PageLayout>
       <main className="flex-1 max-w-2xl mx-auto w-full px-6 pt-8 sm:pt-12 pb-16 sm:pb-20">
         <h1 className="text-4xl font-bold font-display mb-2">{CONTACT.heading}</h1>
-        <p className="text-teal/60 text-lg mb-10">{CONTACT.subheading}</p>
+        <p className="text-primary/60 text-lg mb-10">{CONTACT.subheading}</p>
         <div className="glass-card p-8 space-y-4">
-          <p className="text-teal/80"><strong>Phone:</strong> <a href={`tel:${CONTACT.phone}`} className="hover:text-gold">{CONTACT.phone}</a></p>
-          <p className="text-teal/80"><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`} className="hover:text-gold">{CONTACT.email}</a></p>
-          <p className="text-teal/80"><strong>Location:</strong> {CONTACT.location}</p>
-          <p className="text-xs text-teal/40 mt-4">{CONTACT.privacy_note}</p>
+          <p className="text-primary/80"><strong>Phone:</strong> <a href={`tel:${CONTACT.phone}`} className="hover:text-gold">{CONTACT.phone}</a></p>
+          <p className="text-primary/80"><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`} className="hover:text-gold">{CONTACT.email}</a></p>
+          <p className="text-primary/80"><strong>Location:</strong> {CONTACT.location}</p>
+          <p className="text-xs text-primary/40 mt-4">{CONTACT.privacy_note}</p>
         </div>
       </main>
     </PageLayout>

@@ -128,10 +128,10 @@ export default function ShopPage() {
       onClick={() => setActiveCategory(catId ?? name)}
       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
         activeCategory === (catId ?? name)
-          ? "bg-teal text-white"
+          ? "bg-primary text-white"
           : isParent
-            ? "bg-warm-sand text-teal font-bold"
-            : "bg-warm-sand/50 text-teal/60 hover:bg-warm-sand"
+            ? "bg-warm-sand text-primary font-bold"
+            : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
       }`}
     >
       {name}
@@ -169,7 +169,7 @@ export default function ShopPage() {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 pt-8 sm:pt-12 pb-16 sm:pb-20">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold font-display mb-3">Shop All Products</h1>
-          <p className="text-teal/60 max-w-xl mx-auto">
+          <p className="text-primary/60 max-w-xl mx-auto">
             Browse {items.length} customizable products. Click any item to view details, choose options, and design your own.
           </p>
         </div>
@@ -177,20 +177,20 @@ export default function ShopPage() {
         {/* Search + Sort */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6 items-start sm:items-center">
           <div className="relative flex-1 max-w-md">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products..."
               aria-label="Search products"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-teal/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
             />
           </div>
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="px-3 py-2.5 rounded-xl border border-teal/20 bg-white text-sm text-teal focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+            className="px-3 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.mode} value={opt.mode}>{opt.label}</option>
@@ -206,7 +206,7 @@ export default function ShopPage() {
             <select
               value={activeCategory}
               onChange={(e) => setActiveCategory(e.target.value)}
-              className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-teal/20 bg-white text-sm text-teal focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+              className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
             >
               <option value="All">All Products ({items.length})</option>
               <optgroup label="Categories">
@@ -220,13 +220,13 @@ export default function ShopPage() {
               <button
                 onClick={() => setActiveCategory("All")}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  activeCategory === "All" ? "bg-gold text-white" : "bg-warm-sand text-teal/60 hover:bg-warm-sand/80"
+                  activeCategory === "All" ? "bg-gold text-white" : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                 }`}
               >
                 All
               </button>
               {activeCategory !== "All" && (
-                <span className="text-xs text-teal/40 ml-2">
+                <span className="text-xs text-primary/40 ml-2">
                   {getActiveLabel()} ({filteredItems.length})
                 </span>
               )}
@@ -237,7 +237,7 @@ export default function ShopPage() {
           <div className="hidden sm:block space-y-3">
             <div>
               <button onClick={() => setShowBrands(!showBrands)}
-                className="flex items-center gap-1 text-xs font-bold font-display text-teal mb-2 hover:text-gold transition-colors">
+                className="flex items-center gap-1 text-xs font-bold font-display text-primary mb-2 hover:text-gold transition-colors">
                 {showBrands ? "−" : "+"} Categories
               </button>
               {showBrands && renderCategoryTree(CATEGORY_TREE)}
@@ -259,19 +259,19 @@ export default function ShopPage() {
         {error && (
           <div className="text-center py-20">
             <p className="text-red-500 mb-4">{error}</p>
-            <button onClick={refresh} className="px-6 py-2.5 rounded-xl btn-tactile btn-teal-tactile">Retry</button>
+            <button onClick={refresh} className="px-6 py-2.5 rounded-xl btn-tactile btn-primary-tactile">Retry</button>
           </div>
         )}
 
         {!loading && !error && filteredItems.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-teal/50">{search || activeCategory !== "All" ? "No products match your filters." : "No products available yet."}</p>
+            <p className="text-primary/50">{search || activeCategory !== "All" ? "No products match your filters." : "No products available yet."}</p>
           </div>
         )}
 
         {!loading && !error && filteredItems.length > 0 && (
           <>
-            <p className="text-xs text-teal/40 mb-4">
+            <p className="text-xs text-primary/40 mb-4">
               Showing {filteredItems.length} of {items.length} products
               {activeCategory !== "All" ? ` in "${getActiveLabel()}"` : ""}
             </p>

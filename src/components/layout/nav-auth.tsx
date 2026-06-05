@@ -8,7 +8,7 @@ export default function NavAuth() {
 
   if (isAdmin) {
     return (
-      <Link href="/admin" className="px-3 py-1.5 rounded-xl bg-teal text-white text-xs hover:bg-teal-light transition-colors">
+      <Link href="/admin" className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs hover:bg-primary-light transition-colors">
         Admin
       </Link>
     );
@@ -16,14 +16,14 @@ export default function NavAuth() {
 
   if (user) {
     return (
-      <Link href="/admin/login" className="px-3 py-1.5 rounded-xl border border-teal/20 text-teal text-xs hover:border-teal/40 transition-colors">
+      <Link href="/admin/login" className="px-3 py-1.5 rounded-xl border border-primary/20 text-primary text-xs hover:border-primary/40 transition-colors">
         {user.email?.split("@")[0]}
       </Link>
     );
   }
 
   return (
-    <Link href="/admin/login" className="px-3 py-1.5 rounded-xl border border-teal/20 text-teal text-xs hover:border-teal/40 transition-colors">
+    <Link href="/admin/login" className="px-3 py-1.5 rounded-xl border border-primary/20 text-primary text-xs hover:border-primary/40 transition-colors">
       Login
     </Link>
   );

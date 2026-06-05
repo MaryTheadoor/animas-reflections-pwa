@@ -66,7 +66,7 @@ export default function SearchBar({
       <div className="flex gap-3">
         <div className="relative flex-1">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-teal/30"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary/30"
             fill="none" viewBox="0 0 24 24" stroke="currentColor"
             aria-hidden="true"
           >
@@ -78,7 +78,7 @@ export default function SearchBar({
             onChange={(e) => setQuery(e.target.value)}
             placeholder='Search products... or try "red hoodies under $50"'
             aria-label="Search products"
-            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-teal/20 bg-white focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none text-sm transition-all"
+            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-primary/20 bg-white focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none text-sm transition-all"
           />
         </div>
         <button
@@ -94,7 +94,7 @@ export default function SearchBar({
           type="button"
           onClick={() => setShowFilters(!showFilters)}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            showFilters ? "bg-teal text-white" : "bg-warm-sand/50 text-teal/60 hover:bg-warm-sand"
+            showFilters ? "bg-primary text-white" : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
           }`}
         >
           {showFilters ? "Hide Filters" : "Filters"}
@@ -107,7 +107,7 @@ export default function SearchBar({
             setSort(newSort);
           }}
           aria-label="Sort results"
-          className="px-3 py-1.5 rounded-full border border-teal/20 bg-white text-xs text-teal focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+          className="px-3 py-1.5 rounded-full border border-primary/20 bg-white text-xs text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.mode} value={opt.mode}>{opt.label}</option>
@@ -136,13 +136,13 @@ export default function SearchBar({
       {showFilters && (
         <div className="space-y-4 p-4 bg-white/80 rounded-2xl border border-warm-sand">
           <div>
-            <span className="block text-xs font-medium text-teal mb-2">Category</span>
+            <span className="block text-xs font-medium text-primary mb-2">Category</span>
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
                 onClick={() => setCategoryId(null)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  !categoryId ? "bg-gold text-white" : "bg-warm-sand/50 text-teal/60 hover:bg-warm-sand"
+                  !categoryId ? "bg-gold text-white" : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
                 }`}
               >
                 All
@@ -154,8 +154,8 @@ export default function SearchBar({
                   onClick={() => setCategoryId(cat.id === categoryId ? null : cat.id)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                     categoryId === cat.id
-                      ? "bg-teal text-white"
-                      : "bg-warm-sand/50 text-teal/60 hover:bg-warm-sand"
+                      ? "bg-primary text-white"
+                      : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
                   }`}
                 >
                   {cat.name}
@@ -165,7 +165,7 @@ export default function SearchBar({
           </div>
 
           <div>
-            <span className="block text-xs font-medium text-teal mb-2">
+            <span className="block text-xs font-medium text-primary mb-2">
               Colors
               {selectedColors.length > 0 && ` (${selectedColors.length} selected)`}
             </span>
@@ -177,8 +177,8 @@ export default function SearchBar({
                   onClick={() => toggleColor(color)}
                   className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
                     selectedColors.includes(color)
-                      ? "bg-teal text-white"
-                      : "bg-warm-sand/50 text-teal/60 hover:bg-warm-sand"
+                      ? "bg-primary text-white"
+                      : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
                   }`}
                 >
                   {color}

@@ -3,7 +3,8 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import {
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
@@ -41,6 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) syncUserDoc(result.user);
+      })
+      .catch(() => {});
+
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -54,14 +61,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithGoogle = async () => {
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (err) {
+      throw new Error(
+        err instanceof Error ? err.message : "Google sign-in failed"
+      );
+    }
   };
 
   const logout = async () => {
     await signOut(auth);
   };
 
-  const isAdmin = !!user && (user.email === ADMIN_EMAIL || !!user.email?.endsWith("@animasreflections.com"));
+  const isAdmin = !!user && (
+    user.email === ADMIN_EMAIL ||
+    (!!ADMIN_EMAIL && !!user.email?.endsWith("@animasreflections.com"))
+  );
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, login, loginWithGoogle, logout }}>
@@ -96,7 +113,7 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
       <div className="flex items-center justify-center min-h-screen bg-cream">
         <div className="text-center p-8">
           <h1 className="text-2xl font-bold font-display mb-4">Access Denied</h1>
-          <p className="text-teal/60 mb-6">You must be logged in as an administrator.</p>
+          <p className="text-primary/60 mb-6">You must be logged in as an administrator.</p>
           <a
             href="/admin/login"
             className="px-6 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors"

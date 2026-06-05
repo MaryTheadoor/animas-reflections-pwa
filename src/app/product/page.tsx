@@ -64,10 +64,10 @@ function ProductContent() {
     <PageLayout>
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 pt-8 sm:pt-12 pb-16">
         {/* Breadcrumb */}
-        <div className="text-xs text-teal/40 mb-4">
+        <div className="text-xs text-primary/40 mb-4">
           <Link href="/shop" className="hover:text-gold">Shop</Link>
           <span className="mx-1">/</span>
-          <span className="text-teal/60">{product.name}</span>
+          <span className="text-primary/60">{product.name}</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
@@ -80,7 +80,7 @@ function ProductContent() {
             )}
             {/* Text overlay */}
             {customText && (
-              <div className="absolute top-[30%] left-1/2 -translate-x-1/2 text-xl font-bold text-teal/60 pointer-events-none">
+              <div className="absolute top-[30%] left-1/2 -translate-x-1/2 text-xl font-bold text-primary/60 pointer-events-none">
                 {customText}
               </div>
             )}
@@ -90,7 +90,7 @@ function ProductContent() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-display mb-2">{product.name}</h1>
             {product.description && (
-              <p className="text-sm text-teal/60 mb-4 leading-relaxed line-clamp-4">
+              <p className="text-sm text-primary/60 mb-4 leading-relaxed line-clamp-4">
                 {product.description.replace(/<[^>]*>/g, " ").substring(0, 400)}
               </p>
             )}
@@ -99,7 +99,7 @@ function ProductContent() {
             <p className="text-3xl font-bold text-gold mb-6">
               ${price.toFixed(2)}
               {product.variations.length > 1 && (
-                <span className="text-sm font-normal text-teal/50 ml-2">
+                <span className="text-sm font-normal text-primary/50 ml-2">
                   Starting at ${Math.min(...product.variations.map((v) => v.price)).toFixed(2)}
                 </span>
               )}
@@ -108,7 +108,7 @@ function ProductContent() {
             {/* Variation Picker */}
             {product.variations.length > 1 && (
               <div className="mb-6">
-                <span className="text-xs font-medium text-teal block mb-2">Style / Size</span>
+                <span className="text-xs font-medium text-primary block mb-2">Style / Size</span>
                 <div className="flex flex-wrap gap-2">
                   {product.variations.map((v, i) => (
                     <button
@@ -116,8 +116,8 @@ function ProductContent() {
                       onClick={() => setSelectedVariation(i)}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                         i === selectedVariation
-                          ? "bg-teal text-white btn-tactile btn-teal-tactile"
-                          : "bg-warm-sand text-teal/60 hover:bg-warm-sand/80"
+                          ? "bg-primary text-white btn-tactile btn-primary-tactile"
+                          : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                       }`}
                     >
                       {v.name || `Option ${i + 1}`}
@@ -130,7 +130,7 @@ function ProductContent() {
 
             {/* Custom Text */}
             <div className="mb-6">
-              <label className="text-xs font-medium text-teal block mb-1">
+              <label className="text-xs font-medium text-primary block mb-1">
                 Name / Number (optional)
               </label>
               <input
@@ -138,7 +138,7 @@ function ProductContent() {
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value)}
                 placeholder="e.g. SMITH 42"
-                className="w-full max-w-xs px-4 py-2 rounded-xl border border-teal/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                className="w-full max-w-xs px-4 py-2 rounded-xl border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
               />
             </div>
 
