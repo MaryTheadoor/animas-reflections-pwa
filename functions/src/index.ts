@@ -84,26 +84,37 @@ export const fetchSquareCatalog = onCall(
     try {
       const client = getSquareClient();
 
-      // Fetch items with related objects
-      const itemResponse = await client.catalog.search({
-        objectTypes: ["ITEM"],
-        includeRelatedObjects: true,
-      });
+      let allItems: CatalogObjectRaw[] = [];
+      let allRelated: CatalogObjectRaw[] = [];
+      let cursor: string | undefined;
 
-      const rawItems: CatalogObjectRaw[] =
-        (Array.isArray(itemResponse.objects) ? itemResponse.objects : []).filter(
-          (o) => {
-            const raw = o as CatalogObjectRaw;
-            return raw.itemData?.ecom_visibility === "VISIBLE";
-          }
-        ) as CatalogObjectRaw[];
+      do {
+        const itemResponse = await client.catalog.search({
+          objectTypes: ["ITEM"],
+          includeRelatedObjects: true,
+          limit: 1000,
+          cursor,
+        });
 
-      const related: CatalogObjectRaw[] =
-        (Array.isArray((itemResponse as Record<string, unknown>).relatedObjects)
+        const pageItems = (Array.isArray(itemResponse.objects) ? itemResponse.objects : []) as CatalogObjectRaw[];
+        allItems = allItems.concat(pageItems);
+
+        const pageRelated = (Array.isArray((itemResponse as Record<string, unknown>).relatedObjects)
           ? (itemResponse as Record<string, unknown>).relatedObjects
           : []) as CatalogObjectRaw[];
+        allRelated = allRelated.concat(pageRelated);
 
+        cursor = (itemResponse as Record<string, unknown>).cursor as string | undefined;
+      } while (cursor);
+
+      const rawItems = allItems.filter((o) => {
+        return o.itemData?.ecom_visibility === "VISIBLE";
+      });
+
+      const related = allRelated;
       const images = related.filter((o) => o.type === "IMAGE");
+
+      logger.info("Catalog items fetched", { total: allItems.length, visible: rawItems.length });
 
       // Fetch categories separately
       const catResponse = await client.catalog.search({

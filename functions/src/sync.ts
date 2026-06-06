@@ -324,22 +324,37 @@ export async function syncProductsFromSquare(
   const errors: string[] = [];
 
   logger.info("Fetching Square catalog...");
-  const itemResponse = await client.catalog.search({
-    objectTypes: ["ITEM"],
-    includeRelatedObjects: true,
-  });
 
-  const rawItems = ((itemResponse.objects ?? []) as SquareRawItem[]).filter(
-    (o) => o.itemData?.ecom_visibility === "VISIBLE"
-  );
+  let allRawItems: SquareRawItem[] = [];
+  let allImages: SquareRawImage[] = [];
+  let cursor: string | undefined;
 
-  const relatedObjects = (itemResponse as Record<string, unknown>).relatedObjects as
-    | SquareRawItem[]
-    | undefined;
-  const related = relatedObjects ?? [];
-  const images = related.filter(
-    (o) => o.type === "IMAGE"
-  ) as unknown as SquareRawImage[];
+  do {
+    const itemResponse = await client.catalog.search({
+      objectTypes: ["ITEM"],
+      includeRelatedObjects: true,
+      limit: 1000,
+      cursor,
+    });
+
+    const pageItems = ((itemResponse.objects ?? []) as SquareRawItem[]).filter(
+      (o) => o.itemData?.ecom_visibility === "VISIBLE"
+    );
+    allRawItems = allRawItems.concat(pageItems);
+
+    const relatedObjects = (itemResponse as Record<string, unknown>).relatedObjects as SquareRawItem[] | undefined;
+    const pageImages = (relatedObjects ?? []).filter(
+      (o) => o.type === "IMAGE"
+    ) as unknown as SquareRawImage[];
+    allImages = allImages.concat(pageImages);
+
+    cursor = (itemResponse as Record<string, unknown>).cursor as string | undefined;
+  } while (cursor);
+
+  const rawItems = allRawItems;
+  const images = allImages;
+
+  logger.info("Catalog items fetched", { total: rawItems.length });
 
   const imageMap = new Map<string, string>();
   for (const img of images) {
@@ -366,7 +381,7 @@ export async function syncProductsFromSquare(
           : (rawAmount ?? 0);
       const price = amount / 100;
 
-      if (price < 0.01) continue;
+      if (price < 2.00) continue;
 
       flatVariations.push({
         itemId: item.id,
@@ -400,22 +415,37 @@ export async function syncProductsFromSquare(
   }
 
   logger.info("Writing to Firestore...");
-  const batch = db.batch();
+
+  const MAX_BATCH_SYNC = 450;
+  let syncBatch = db.batch();
+  let syncBatchCount = 0;
   const productsRef = db.collection("products");
   const categoriesRef = db.collection("categories");
 
+  const flushSync = async () => {
+    if (syncBatchCount > 0) {
+      await syncBatch.commit();
+      syncBatch = db.batch();
+      syncBatchCount = 0;
+    }
+  };
+
   for (const cat of categories) {
-    batch.set(categoriesRef.doc(cat.id), {
+    syncBatch.set(categoriesRef.doc(cat.id), {
       name: cat.name,
       updatedAt: new Date().toISOString(),
     }, { merge: true });
+    syncBatchCount++;
+    if (syncBatchCount >= MAX_BATCH_SYNC) await flushSync();
   }
 
   for (const product of compositeProducts) {
-    batch.set(productsRef.doc(product.id), product);
+    syncBatch.set(productsRef.doc(product.id), product);
+    syncBatchCount++;
+    if (syncBatchCount >= MAX_BATCH_SYNC) await flushSync();
   }
 
-  await batch.commit();
+  await flushSync();
 
   await db.collection("config").doc("sync_status").set({
     lastSync: new Date().toISOString(),
@@ -479,22 +509,34 @@ export async function importFromSquare(
 ): Promise<{ imported: number; errors: string[] }> {
   const errors: string[] = [];
 
-  const itemResponse = await client.catalog.search({
-    objectTypes: ["ITEM"],
-    includeRelatedObjects: true,
-  });
+  let allItems: Array<Record<string, unknown>> = [];
+  let allImages: Array<Record<string, unknown>> = [];
+  let cursor: string | undefined;
 
-  const rawItems = ((itemResponse.objects || []) as unknown[]).filter((o) => {
-    const raw = o as Record<string, unknown>;
-    const data = raw.itemData as Record<string, unknown> | undefined;
-    return data?.ecom_visibility === "VISIBLE";
-  }) as Array<Record<string, unknown>>;
+  do {
+    const itemResponse = await client.catalog.search({
+      objectTypes: ["ITEM"],
+      includeRelatedObjects: true,
+      limit: 1000,
+      cursor,
+    });
 
-  const related = (itemResponse as Record<string, unknown>).relatedObjects as Array<Record<string, unknown>> | undefined;
-  const relatedImages = (related ?? []).filter((o) => o.type === "IMAGE") as Array<Record<string, unknown>>;
+    const pageItems = ((itemResponse.objects || []) as unknown[]).filter((o) => {
+      const raw = o as Record<string, unknown>;
+      const data = raw.itemData as Record<string, unknown> | undefined;
+      return data?.ecom_visibility === "VISIBLE";
+    }) as Array<Record<string, unknown>>;
+    allItems = allItems.concat(pageItems);
+
+    const related = (itemResponse as Record<string, unknown>).relatedObjects as Array<Record<string, unknown>> | undefined;
+    const pageImages = (related ?? []).filter((o) => o.type === "IMAGE") as Array<Record<string, unknown>>;
+    allImages = allImages.concat(pageImages);
+
+    cursor = (itemResponse as Record<string, unknown>).cursor as string | undefined;
+  } while (cursor);
 
   const imageMap = new Map<string, string>();
-  for (const img of relatedImages) {
+  for (const img of allImages) {
     const id = (img.imageData as Record<string, string> | undefined)?.id;
     const url = (img.imageData as Record<string, string> | undefined)?.url;
     if (id && url) imageMap.set(id, url);
@@ -509,7 +551,7 @@ export async function importFromSquare(
   }
 
   const brands = new Map<string, Array<Record<string, unknown>>>();
-  for (const item of rawItems) {
+  for (const item of allItems) {
     const data = (item.itemData || {}) as Record<string, unknown>;
     const cats = (data.categories || []) as Array<{ id: string }>;
     let brand = "Other";
