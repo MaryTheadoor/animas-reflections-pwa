@@ -43,10 +43,10 @@ export default function Home() {
               className="mx-auto mb-6 sm:mb-8 w-24 h-24 sm:w-[140px] sm:h-[140px] rounded-3xl shadow-float animate-fade-in-up"
               priority
             />
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight font-display mb-6 animate-fade-in-up animate-delay-100">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight font-display mb-6 animate-fade-in-up animate-delay-100 text-foreground">
               {HERO.heading}
             </h1>
-            <p className="text-lg text-primary/70 mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
+            <p className="text-lg text-foreground/70 mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
               Design your own t-shirt, hoodie, bag, purse, ornament, coaster, dog
               scarf, long sleeve tee, print on wood, metal, jewelry and more!
             </p>
@@ -59,7 +59,7 @@ export default function Home() {
               </Link>
               <Link
                 href={HERO.cta_secondary.href}
-                className="inline-flex items-center justify-center h-14 px-10 rounded-2xl border-2 border-primary/20 text-primary font-semibold hover:border-primary/40 transition-colors text-lg"
+                className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-primary text-white font-semibold hover:bg-primary-light transition-colors btn-tactile btn-primary-tactile text-lg"
               >
                 {HERO.cta_secondary.label}
               </Link>

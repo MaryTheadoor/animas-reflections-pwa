@@ -149,7 +149,7 @@ export default function AdminLoginPage() {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full py-3 rounded-2xl border-2 border-primary/20 text-primary font-semibold hover:border-primary/40 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-2xl bg-primary text-white font-semibold hover:bg-primary-light transition-colors btn-tactile btn-primary-tactile flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>

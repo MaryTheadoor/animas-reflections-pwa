@@ -136,7 +136,7 @@ export default function FundraisingPage() {
               </a>
               <a
                 href={`tel:${FUNDRAISING.cta.phone}`}
-                className="inline-flex items-center justify-center h-14 px-10 rounded-2xl border-2 border-primary/20 text-primary font-semibold hover:border-primary/40 transition-colors text-lg"
+                className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-primary text-white font-semibold hover:bg-primary-light transition-colors btn-tactile btn-primary-tactile text-lg"
               >
                 Call {FUNDRAISING.cta.phone}
               </a>
