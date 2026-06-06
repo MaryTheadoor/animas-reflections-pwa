@@ -226,7 +226,6 @@ export async function runProductPipeline(
   for (const item of allItems) {
     const data = (item.itemData || {}) as Record<string, unknown>;
     const name = (data.name as string) ?? "";
-    const description = (data.description as string) ?? "";
     const cats = (data.categories || []) as Array<{ id: string }>;
     const categoryName = cats.map((c) => categoryMap.get(c.id) ?? "").find(Boolean) ?? "Other";
     const variations = (data.variations || []) as Array<Record<string, unknown>>;
@@ -297,13 +296,13 @@ export async function runProductPipeline(
     if (count > 0) { await batch.commit(); batch = db.batch(); count = 0; }
   };
 
-  for (const [_, bp] of baseProductMap) {
-    batch.set(db.collection("baseProducts").doc(bp.id), bp, { merge: true });
+  for (const bp of baseProductMap) {
+    batch.set(db.collection("baseProducts").doc(bp[1].id), bp[1], { merge: true });
     if (++count >= MAX_BATCH) await flush();
   }
 
-  for (const [_, design] of designMap) {
-    batch.set(db.collection("designs").doc(design.id), design, { merge: true });
+  for (const design of designMap) {
+    batch.set(db.collection("designs").doc(design[1].id), design[1], { merge: true });
     if (++count >= MAX_BATCH) await flush();
   }
 
