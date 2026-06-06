@@ -77,8 +77,39 @@ export function useCatalog(): UseCatalogResult {
       });
       cats.sort((a, b) => a.name.localeCompare(b.name));
 
-      setItems(products);
-      setCategories(cats);
+      if (products.length > 0) {
+        setItems(products);
+        setCategories(cats);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn("Firestore read failed, falling back to Square API", err);
+    }
+
+    try {
+      const { httpsCallable } = await import("firebase/functions");
+      const { functions } = await import("@/lib/firebase");
+      const callable = httpsCallable<object, { items: SquareCatalogItem[]; categories?: CatalogCategory[] }>(
+        functions,
+        "fetchSquareCatalog"
+      );
+      const result = await callable({});
+      const catalogItems = result.data.items ?? [];
+      const catalogCategories = result.data.categories ?? [];
+
+      if (catalogCategories.length > 0) {
+        setCategories(catalogCategories);
+      } else {
+        const categoryMap = new Map<string, CatalogCategory>();
+        catalogItems.forEach((item) => {
+          item.categoryIds.forEach((cid) => {
+            if (!categoryMap.has(cid)) categoryMap.set(cid, { id: cid, name: cid });
+          });
+        });
+        setCategories(Array.from(categoryMap.values()));
+      }
+      setItems(catalogItems);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load catalog");
     } finally {

@@ -521,10 +521,21 @@ export async function importFromSquare(
     brands.get(brand)!.push(item);
   }
 
-  const batch = db.batch();
+  const MAX_BATCH = 450;
+
+  let batch = db.batch();
+  let batchCount = 0;
   const productsRef = db.collection("products");
   const categoriesRef = db.collection("categories");
   let imported = 0;
+
+  const flush = async () => {
+    if (batchCount > 0) {
+      await batch.commit();
+      batch = db.batch();
+      batchCount = 0;
+    }
+  };
 
   for (const [brand, items] of brands) {
     const brandId = `cat_${brand.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
@@ -536,6 +547,7 @@ export async function importFromSquare(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }, { merge: true });
+    batchCount++;
 
     for (const item of items) {
       const data = (item.itemData || {}) as Record<string, unknown>;
@@ -592,11 +604,16 @@ export async function importFromSquare(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+      batchCount++;
       imported++;
+
+      if (batchCount >= MAX_BATCH) {
+        await flush();
+      }
     }
   }
 
-  await batch.commit();
+  await flush();
 
   await db.collection("config").doc("import_status").set({
     lastImport: new Date().toISOString(),
