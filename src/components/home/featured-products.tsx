@@ -7,7 +7,7 @@ import ProductCard from "@/components/product/product-card";
 export default function FeaturedProducts() {
   const { items, loading } = useCatalog();
 
-  const featured = items.slice(0, 4);
+  const featured = items.slice(0, 6);
 
   if (loading || featured.length === 0) {
     return (
@@ -40,7 +40,11 @@ export default function FeaturedProducts() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {featured.map((item, i) => (
-            <div key={item.id} style={{ animationDelay: `${i * 0.1}s` }} className="animate-fade-in-up">
+            <div
+              key={item.id}
+              style={{ animationDelay: `${i * 0.1}s` }}
+              className={`animate-fade-in-up ${i >= 4 ? "hidden lg:block" : ""}`}
+            >
               <ProductCard item={item} />
             </div>
           ))}
