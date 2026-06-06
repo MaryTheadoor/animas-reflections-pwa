@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, writeBatch } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
@@ -189,6 +189,26 @@ function DashboardContent() {
     }
   };
 
+  const handleClear = async () => {
+    if (!confirm("Delete ALL products and categories from Firestore? This cannot be undone.")) return;
+    setSyncing(true);
+    try {
+      const [prodSnap, catSnap] = await Promise.all([
+        getDocs(collection(db, "products")),
+        getDocs(collection(db, "categories")),
+      ]);
+      const batch = writeBatch(db);
+      prodSnap.forEach((d) => batch.delete(d.ref));
+      catSnap.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      setSyncResult({ products: 0, categories: 0, items: 0 });
+      setSyncing(false);
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Clear failed");
+      setSyncing(false);
+    }
+  };
+
   const addAdmin = async () => {
     const email = newAdminEmail.trim().toLowerCase();
     if (!email || adminEmails.includes(email)) return;
@@ -286,6 +306,12 @@ function DashboardContent() {
                 className="px-4 py-2.5 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
               >
                 {syncing ? "Importing..." : "Import from Square"}
+              </button>
+              <button
+                onClick={handleClear}
+                className="px-4 py-2.5 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors"
+              >
+                Clear All
               </button>
             </div>
           </div>

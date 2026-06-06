@@ -6,7 +6,7 @@ service cloud.firestore {
     // Admin-only write access (enforced via Firebase Auth in Functions)
     match /config/{document=**} {
       allow read: if true;
-      allow write: if false; // Write handled via Cloud Functions with admin SDK
+      allow write: if false;
     }
 
     // Design catalog - public read, admin write via Functions
@@ -15,8 +15,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Product template metadata - public read, admin write via Functions
+    // Products - public read, admin write via Functions
     match /products/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Categories - public read, admin write via Functions
+    match /categories/{document=**} {
       allow read: if true;
       allow write: if false;
     }

@@ -69,17 +69,22 @@ export function useCatalog(): UseCatalogResult {
         }
       });
 
-      const catsSnap = await getDocs(collection(db, "categories"));
-      const cats: CatalogCategory[] = [];
-      catsSnap.forEach((doc) => {
-        const data = doc.data() as ManagedCategory;
-        cats.push({ id: data.id, name: data.name });
-      });
-      cats.sort((a, b) => a.name.localeCompare(b.name));
-
       if (products.length > 0) {
         setItems(products);
-        setCategories(cats);
+
+        try {
+          const catsSnap = await getDocs(collection(db, "categories"));
+          const cats: CatalogCategory[] = [];
+          catsSnap.forEach((doc) => {
+            const data = doc.data() as ManagedCategory;
+            cats.push({ id: data.id, name: data.name });
+          });
+          cats.sort((a, b) => a.name.localeCompare(b.name));
+          setCategories(cats);
+        } catch {
+          // Categories read failed — continue with products only
+        }
+
         setLoading(false);
         return;
       }
