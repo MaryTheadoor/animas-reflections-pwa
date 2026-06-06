@@ -103,25 +103,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Collections CTA */}
-      <section className="py-20 px-6 text-center">
-        <div className="glass-card max-w-2xl mx-auto p-10">
-          <h2 className="text-3xl font-bold font-display mb-4">
-            Snapshot of Our Collections
-          </h2>
-          <p className="text-primary/60 mb-8 max-w-md mx-auto">
-            Discover something extraordinary and one-of-a-kind. Let&apos;s discuss
-            preserving your cherished memories!
-          </p>
-          <Link
-            href="/custom"
-            className="inline-flex items-center justify-center h-12 px-8 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
-          >
-            Design Your Own
-          </Link>
-        </div>
-      </section>
-
       {/* FAQ Teaser */}
       <FaqTeaser />
 

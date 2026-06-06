@@ -7,7 +7,7 @@ import ProductCard from "@/components/product/product-card";
 export default function FeaturedProducts() {
   const { items, loading } = useCatalog();
 
-  const featured = items.slice(0, 6);
+  const featured = items.slice(0, 4);
 
   if (loading || featured.length === 0) {
     return (

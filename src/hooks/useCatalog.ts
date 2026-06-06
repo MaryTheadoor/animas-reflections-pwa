@@ -5,7 +5,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { SquareCatalogItem, ManagedProduct, ManagedCategory } from "@/types";
 
-export const USE_SYNTHETIC = true;
+export const USE_SYNTHETIC = false;
 
 const DATA_SOURCE: "synthetic" | "firestore" = USE_SYNTHETIC ? "synthetic" : "firestore";
 

@@ -27,19 +27,27 @@ export default function BandMerchTeaser() {
             </span>
           ))}
         </div>
-        <Link
-          href={BAND_MERCH.cta.href}
-          className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-plum text-white font-semibold hover:bg-plum-light transition-colors btn-tactile"
-          style={{
-            backgroundColor: "#935B8A",
-            borderColor: "#7A4A72",
-            borderBottomColor: "#5C3856",
-            borderBottomWidth: "4px",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.25)",
-          }}
-        >
-          {BAND_MERCH.cta.label}
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link
+            href={BAND_MERCH.ctaBrowse.href}
+            className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-plum text-white font-semibold hover:bg-plum-light transition-colors btn-tactile text-lg"
+            style={{
+              backgroundColor: "#935B8A",
+              borderColor: "#7A4A72",
+              borderBottomColor: "#5C3856",
+              borderBottomWidth: "4px",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,0.25)",
+            }}
+          >
+            {BAND_MERCH.ctaBrowse.label}
+          </Link>
+          <Link
+            href={BAND_MERCH.cta.href}
+            className="inline-flex items-center justify-center h-14 px-10 rounded-2xl border-2 border-plum/30 text-plum font-semibold hover:border-plum/60 transition-colors text-lg"
+          >
+            {BAND_MERCH.cta.label}
+          </Link>
+        </div>
       </div>
     </section>
   );

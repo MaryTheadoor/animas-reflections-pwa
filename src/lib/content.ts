@@ -185,6 +185,7 @@ export const BAND_MERCH = {
     "Fan fundraising programs available",
   ],
   cta: { label: "Start Your Band's Merch", href: "/contact" },
+  ctaBrowse: { label: "Browse Band Merch", href: "/shop" },
 } as const;
 
 export const FEATURED_PRODUCTS = {
