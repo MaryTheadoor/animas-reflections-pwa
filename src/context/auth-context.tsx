@@ -10,7 +10,7 @@ import {
   onAuthStateChanged,
   type User,
 } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
@@ -24,6 +24,28 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+async function getAdminEmails(): Promise<string[]> {
+  try {
+    const snap = await getDoc(doc(db, "config", "admin"));
+    if (snap.exists()) {
+      const data = snap.data() as { emails?: string[] };
+      return (data.emails ?? []).map((e) => e.toLowerCase().trim());
+    }
+  } catch {
+    // Silently fail
+  }
+  return [];
+}
+
+async function isUserAdmin(email: string | null): Promise<boolean> {
+  if (!email) return false;
+  const lowered = email.toLowerCase().trim();
+  if (ADMIN_EMAIL && lowered === ADMIN_EMAIL.toLowerCase().trim()) return true;
+  if (ADMIN_EMAIL && lowered.endsWith("@animasreflections.com")) return true;
+  const adminEmails = await getAdminEmails();
+  return adminEmails.includes(lowered);
+}
 
 async function syncUserDoc(u: User) {
   try {
@@ -40,6 +62,7 @@ async function syncUserDoc(u: User) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     getRedirectResult(auth)
@@ -48,10 +71,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {});
 
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      if (u) {
+        syncUserDoc(u);
+        const admin = await isUserAdmin(u.email);
+        setIsAdmin(admin);
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
-      if (u) syncUserDoc(u);
     });
     return unsub;
   }, []);
@@ -74,11 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await signOut(auth);
   };
-
-  const isAdmin = !!user && (
-    user.email === ADMIN_EMAIL ||
-    (!!ADMIN_EMAIL && !!user.email?.endsWith("@animasreflections.com"))
-  );
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, login, loginWithGoogle, logout }}>
