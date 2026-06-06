@@ -23,20 +23,22 @@ interface UseCatalogResult {
 }
 
 function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
+  const images = Array.isArray(p.images) ? p.images : [];
+  const variants = Array.isArray(p.variants) ? p.variants : [];
   return {
-    id: p.id,
-    name: p.name,
-    description: p.description,
-    categoryIds: [p.categoryId],
-    image_url: p.images[0] ?? "",
-    variations: p.variants.map((v) => ({
-      id: v.id,
-      name: v.name,
-      price: v.price,
-      sku: v.sku,
+    id: p.id ?? "",
+    name: p.name ?? "",
+    description: p.description ?? "",
+    categoryIds: p.categoryId ? [p.categoryId] : [],
+    image_url: images[0] ?? "",
+    variations: variants.map((v) => ({
+      id: v.id ?? "",
+      name: v.name ?? "",
+      price: typeof v.price === "number" ? v.price : 0,
+      sku: v.sku ?? "",
     })),
-    colors: p.colors,
-    tags: p.tags,
+    colors: Array.isArray(p.colors) ? p.colors : [],
+    tags: Array.isArray(p.tags) ? p.tags : [],
   };
 }
 

@@ -88,11 +88,19 @@ export function searchProducts(
   }
 
   if (sort === "price-asc") {
-    scored.sort((a, b) => Math.min(...a.item.variations.map((v) => v.price)) - Math.min(...b.item.variations.map((v) => v.price)));
+    scored.sort((a, b) => {
+      const pa = Math.min(...(a.item.variations ?? []).map((v) => v.price ?? 0).concat(0));
+      const pb = Math.min(...(b.item.variations ?? []).map((v) => v.price ?? 0).concat(0));
+      return pa - pb;
+    });
   } else if (sort === "price-desc") {
-    scored.sort((a, b) => Math.min(...b.item.variations.map((v) => v.price)) - Math.min(...a.item.variations.map((v) => v.price)));
+    scored.sort((a, b) => {
+      const pa = Math.min(...(a.item.variations ?? []).map((v) => v.price ?? 0).concat(0));
+      const pb = Math.min(...(b.item.variations ?? []).map((v) => v.price ?? 0).concat(0));
+      return pb - pa;
+    });
   } else if (sort === "name-asc") {
-    scored.sort((a, b) => a.item.name.localeCompare(b.item.name));
+    scored.sort((a, b) => (a.item.name ?? "").localeCompare(b.item.name ?? ""));
   } else {
     scored.sort((a, b) => b.score - a.score);
   }

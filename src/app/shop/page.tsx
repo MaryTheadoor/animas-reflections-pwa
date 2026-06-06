@@ -46,11 +46,19 @@ export default function ShopPage() {
       );
     }
     if (sortMode === "price-asc") {
-      result = [...result].sort((a, b) => Math.min(...a.variations.map((v) => v.price)) - Math.min(...b.variations.map((v) => v.price)));
+      result = [...result].sort((a, b) => {
+        const pa = Math.min(...(a.variations ?? []).map((v) => v.price ?? 0).concat(0));
+        const pb = Math.min(...(b.variations ?? []).map((v) => v.price ?? 0).concat(0));
+        return pa - pb;
+      });
     } else if (sortMode === "price-desc") {
-      result = [...result].sort((a, b) => Math.min(...b.variations.map((v) => v.price)) - Math.min(...a.variations.map((v) => v.price)));
+      result = [...result].sort((a, b) => {
+        const pa = Math.min(...(a.variations ?? []).map((v) => v.price ?? 0).concat(0));
+        const pb = Math.min(...(b.variations ?? []).map((v) => v.price ?? 0).concat(0));
+        return pb - pa;
+      });
     } else if (sortMode === "name-asc") {
-      result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+      result = [...result].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     }
     return result;
   }, [items, activeCategory, search, sortMode, categories]);

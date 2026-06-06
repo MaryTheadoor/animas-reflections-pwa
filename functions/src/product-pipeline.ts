@@ -224,65 +224,74 @@ export async function runProductPipeline(
   const instances: ProductInstance[] = [];
 
   for (const item of allItems) {
-    const data = (item.itemData || {}) as Record<string, unknown>;
-    const name = (data.name as string) ?? "";
-    const cats = (data.categories || []) as Array<{ id: string }>;
-    const categoryName = cats.map((c) => categoryMap.get(c.id) ?? "").find(Boolean) ?? "Other";
-    const variations = (data.variations || []) as Array<Record<string, unknown>>;
+    try {
+      const data = (item.itemData || {}) as Record<string, unknown>;
+      const name = String(data.name ?? "").trim();
+      if (!name) continue;
 
-    const baseType = detectBaseType(name);
-    const designName = normalizeDesignName(detectDesign(name, categoryName));
+      const cats = (Array.isArray(data.categories) ? data.categories : []) as Array<{ id: string }>;
+      const categoryName = cats.map((c) => categoryMap.get(c.id) ?? "").find(Boolean) ?? "Other";
+      const variations = (Array.isArray(data.variations) ? data.variations : []) as Array<Record<string, unknown>>;
 
-    if (!baseType) {
-      errors.push(`Unknown type: ${name}`);
-      continue;
-    }
+      const baseType = detectBaseType(name);
+      const rawDesign = detectDesign(name, categoryName);
+      const designName = normalizeDesignName(rawDesign);
 
-    const baseKey = baseType.typeName.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    if (!baseProductMap.has(baseKey)) {
-      baseProductMap.set(baseKey, {
-        id: `base_${baseKey}`,
-        name: baseType.typeName,
-        type: baseType.category,
-        category: baseType.category,
-        defaultImage: "",
-        description: "",
-        tags: [baseType.category.toLowerCase(), baseType.typeName.toLowerCase()],
-      });
-    }
+      if (!baseType) {
+        if (errors.length < 20) errors.push(`Unknown type: ${name.substring(0, 80)}`);
+        continue;
+      }
 
-    const designKey = designName.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    if (!designMap.has(designKey)) {
-      designMap.set(designKey, {
-        id: `design_${designKey}`,
-        name: designName,
-        brand: designName,
-        category: categoryName,
-        logoUrl: "",
-      });
-    }
+      const baseKey = baseType.typeName.toLowerCase().replace(/[^a-z0-9]+/g, "_") || "other";
+      if (!baseProductMap.has(baseKey)) {
+        baseProductMap.set(baseKey, {
+          id: `base_${baseKey}`,
+          name: baseType.typeName,
+          type: baseType.category,
+          category: baseType.category,
+          defaultImage: "",
+          description: "",
+          tags: [baseType.category.toLowerCase(), baseType.typeName.toLowerCase()],
+        });
+      }
 
-    for (const v of variations) {
-      const vd = (v.itemVariationData || {}) as Record<string, unknown>;
-      const pm = vd.priceMoney as { amount?: bigint } | undefined;
-      const price = pm?.amount ? Number(pm.amount) / 100 : 0;
-      if (price < 2) continue;
+      const designKey = designName.toLowerCase().replace(/[^a-z0-9]+/g, "_") || "general";
+      if (!designMap.has(designKey)) {
+        designMap.set(designKey, {
+          id: `design_${designKey}`,
+          name: designName,
+          brand: designName,
+          category: categoryName,
+          logoUrl: "",
+        });
+      }
 
-      const instanceId = `prod_${baseKey}_${designKey}_${(v.id as string)?.slice(0, 8) ?? Date.now()}`;
+      for (const v of variations) {
+        const vd = (v.itemVariationData || {}) as Record<string, unknown>;
+        const pm = vd.priceMoney as { amount?: bigint } | undefined;
+        const price = pm?.amount ? Number(pm.amount) / 100 : 0;
+        if (price < 2) continue;
 
-      instances.push({
-        id: instanceId,
-        baseProductId: `base_${baseKey}`,
-        designId: `design_${designKey}`,
-        name: `${designName} ${baseType.typeName}`,
-        price,
-        image: "",
-        sku: (vd.sku as string) ?? "",
-        squareItemId: (item.id as string) ?? "",
-        squareVariationId: (v.id as string) ?? "",
-        active: true,
-        updatedAt: new Date().toISOString(),
-      });
+        const instanceId = `prod_${baseKey}_${designKey}_${String(v.id ?? Date.now()).slice(0, 8)}`;
+
+        instances.push({
+          id: instanceId,
+          baseProductId: `base_${baseKey}`,
+          designId: `design_${designKey}`,
+          name: `${designName} ${baseType.typeName}`,
+          price,
+          image: "",
+          sku: String(vd.sku ?? ""),
+          squareItemId: String(item.id ?? ""),
+          squareVariationId: String(v.id ?? ""),
+          active: true,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    } catch (itemErr) {
+      const name = String(((item.itemData || {}) as Record<string, unknown>).name ?? "unknown").substring(0, 80);
+      logger.error("Pipeline: item parse error", { name, error: String(itemErr) });
+      if (errors.length < 20) errors.push(`Parse error: ${name}`);
     }
   }
 

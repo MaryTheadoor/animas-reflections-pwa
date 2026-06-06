@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import NavAuth from "@/components/layout/nav-auth";
 import { ThemeToggle } from "@/context/theme-context";
 import CartNavButton from "@/components/cart/cart-nav-button";
-import { ANNOUNCEMENT } from "@/lib/content";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", d: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" },
@@ -19,6 +19,7 @@ const NAV_LINKS = [
 export default function HeaderBar() {
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
+  const config = useSiteConfig();
 
   useEffect(() => {
     const el = ref.current;
@@ -36,14 +37,14 @@ export default function HeaderBar() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("has-announcement", ANNOUNCEMENT.active);
-  }, []);
+    document.documentElement.classList.toggle("has-announcement", config.announcement_active);
+  }, [config.announcement_active]);
 
   return (
     <div ref={ref} className="fixed top-0 left-0 right-0 z-50">
-      {ANNOUNCEMENT.active && (
+      {config.announcement_active && (
         <div className="bg-gold text-white text-center text-sm py-2 px-4 font-medium">
-          {ANNOUNCEMENT.text}
+          {config.announcement_text}
         </div>
       )}
       <nav className="nav-dock">
