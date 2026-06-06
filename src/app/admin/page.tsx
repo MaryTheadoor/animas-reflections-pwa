@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, getDoc, setDoc, collection, getDocs, writeBatch } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
@@ -193,14 +193,11 @@ function DashboardContent() {
     if (!confirm("Delete ALL products and categories from Firestore? This cannot be undone.")) return;
     setSyncing(true);
     try {
-      const [prodSnap, catSnap] = await Promise.all([
-        getDocs(collection(db, "products")),
-        getDocs(collection(db, "categories")),
-      ]);
-      const batch = writeBatch(db);
-      prodSnap.forEach((d) => batch.delete(d.ref));
-      catSnap.forEach((d) => batch.delete(d.ref));
-      await batch.commit();
+      const callable = httpsCallable<object, { success: boolean; message: string }>(
+        functions,
+        "clearProducts"
+      );
+      await callable({});
       setSyncResult({ products: 0, categories: 0, items: 0 });
       setSyncing(false);
     } catch (err) {

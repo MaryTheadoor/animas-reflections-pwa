@@ -470,6 +470,34 @@ export const importProducts = onCall(
   }
 );
 
+export const clearProducts = onCall(
+  { cors: true, region: "us-central1" },
+  async () => {
+    logger.info("clearProducts invoked");
+    const db = getFirestore();
+    const batchSize = 400;
+    const collections = ["products", "categories"];
+
+    for (const colName of collections) {
+      let deleted = 0;
+      do {
+        const snap = await db.collection(colName).limit(batchSize).get();
+        if (snap.empty) break;
+        const batch = db.batch();
+        snap.forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+        deleted += snap.size;
+        logger.info(`Deleted ${deleted} from ${colName}`);
+      } while (true);
+    }
+
+    await db.collection("config").doc("sync_status").delete();
+    await db.collection("config").doc("import_status").delete();
+
+    return { success: true, message: "All products and categories cleared" };
+  }
+);
+
 export const scheduledSync = onSchedule(
   "0 4 * * *",
   async () => {
