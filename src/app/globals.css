@@ -103,7 +103,7 @@ html.dark .nav-dock-theme {
   border-bottom: 1px solid rgba(245, 235, 230, 0.8);
   padding: 6px 8px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   justify-items: center;
   align-items: center;
   row-gap: 2px;

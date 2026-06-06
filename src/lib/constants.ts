@@ -8,7 +8,7 @@ export const SHIPPING = {
 
 export const ADDON_PRICE = 5.0;
 
-export const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "";
+export const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "mary.theadoor.doctor@gmail.com";
 
 export const SQUARE_ENV: "sandbox" | "production" =
   (process.env.NEXT_PUBLIC_SQUARE_ENVIRONMENT as "sandbox" | "production") || "sandbox";

@@ -68,6 +68,8 @@ function DashboardContent() {
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -89,9 +91,16 @@ function DashboardContent() {
         });
       }
     };
+    const loadAdmins = async () => {
+      const snap = await getDoc(doc(db, "config", "admin"));
+      if (snap.exists()) {
+        setAdminEmails((snap.data() as { emails?: string[] }).emails ?? []);
+      }
+    };
     loadConfig();
     loadDesigns();
     loadSyncStatus();
+    loadAdmins();
   }, []);
 
   const saveConfig = async () => {
@@ -144,6 +153,21 @@ function DashboardContent() {
     } finally {
       setSyncing(false);
     }
+  };
+
+  const addAdmin = async () => {
+    const email = newAdminEmail.trim().toLowerCase();
+    if (!email || adminEmails.includes(email)) return;
+    const updated = [...adminEmails, email];
+    setAdminEmails(updated);
+    await setDoc(doc(db, "config", "admin"), { emails: updated }, { merge: true });
+    setNewAdminEmail("");
+  };
+
+  const removeAdmin = async (email: string) => {
+    const updated = adminEmails.filter((e) => e !== email);
+    setAdminEmails(updated);
+    await setDoc(doc(db, "config", "admin"), { emails: updated }, { merge: true });
   };
 
   return (
@@ -295,6 +319,50 @@ function DashboardContent() {
             className="mt-6 px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile">
             {saved ? "Saved!" : saving ? "Saving..." : "Save Settings"}
           </button>
+        </section>
+
+        {/* ── Admin Management ── */}
+        <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+          <h2 className="text-xl font-bold font-display mb-4">Admin Users</h2>
+          <p className="text-sm text-primary/60 mb-4">
+            Users listed here have full access to the admin dashboard. They must sign in first via the login page.
+          </p>
+          <div className="flex gap-2 mb-4">
+            <input
+              type="email"
+              value={newAdminEmail}
+              onChange={(e) => setNewAdminEmail(e.target.value)}
+              placeholder="Add admin email..."
+              className="flex-1 px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+            />
+            <button
+              onClick={addAdmin}
+              disabled={!newAdminEmail.trim()}
+              className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-light transition-colors disabled:opacity-50"
+            >
+              Add
+            </button>
+          </div>
+          {adminEmails.length > 0 ? (
+            <div className="space-y-1">
+              {adminEmails.map((email) => (
+                <div key={email} className="flex items-center justify-between bg-warm-sand/30 rounded-lg px-4 py-2 text-sm">
+                  <span className="text-primary">{email}</span>
+                  <button
+                    onClick={() => removeAdmin(email)}
+                    className="text-red-400 hover:text-red-600 text-xs font-medium"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-primary/40">No admin emails configured. Add at least one to enable admin access.</p>
+          )}
+          <p className="text-xs text-primary/30 mt-3">
+            The hardcoded fallback admin is <code className="bg-warm-sand px-1 rounded">mary.theadoor.doctor@gmail.com</code>.
+          </p>
         </section>
 
         {/* ── Design Catalog ── */}
