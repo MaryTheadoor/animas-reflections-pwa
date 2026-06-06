@@ -9,6 +9,9 @@ import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
 import { useAuth, RequireAdmin } from "@/context/auth-context";
 import { SITE } from "@/lib/content";
+import ProductManager from "@/components/admin/product-manager";
+import CategoryManager from "@/components/admin/category-manager";
+import type { ManagedCategory } from "@/types";
 
 interface SiteConfigData {
   announcement_text: string;
@@ -58,6 +61,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function DashboardContent() {
   const { user, logout } = useAuth();
+  const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "orders" | "users" | "admins">("products");
   const [config, setConfig] = useState<SiteConfigData>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -70,6 +74,7 @@ function DashboardContent() {
   const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [managedCategories, setManagedCategories] = useState<ManagedCategory[]>([]);
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -97,10 +102,18 @@ function DashboardContent() {
         setAdminEmails((snap.data() as { emails?: string[] }).emails ?? []);
       }
     };
+    const loadCats = async () => {
+      const snap = await getDocs(collection(db, "categories"));
+      const cats: ManagedCategory[] = [];
+      snap.forEach((d) => cats.push(d.data() as ManagedCategory));
+      cats.sort((a, b) => a.order - b.order);
+      setManagedCategories(cats);
+    };
     loadConfig();
     loadDesigns();
     loadSyncStatus();
     loadAdmins();
+    loadCats();
   }, []);
 
   const saveConfig = async () => {
@@ -185,9 +198,51 @@ function DashboardContent() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-5xl mx-auto px-6 py-4 space-y-6">
 
-        {/* ── Square Sync ── */}
+        {/* ── Tab Navigation ── */}
+        <div className="flex flex-wrap gap-1 bg-white rounded-2xl p-1.5 border border-warm-sand">
+          {[
+            { key: "products" as const, label: "Products" },
+            { key: "categories" as const, label: "Categories" },
+            { key: "settings" as const, label: "Settings" },
+            { key: "designs" as const, label: "Designs" },
+            { key: "orders" as const, label: "Orders" },
+            { key: "users" as const, label: "Users" },
+            { key: "admins" as const, label: "Admins" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                tab === t.key
+                  ? "bg-primary text-white"
+                  : "text-primary/50 hover:text-primary hover:bg-warm-sand/50"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Products ── */}
+        {tab === "products" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <ProductManager categories={managedCategories} />
+          </section>
+        )}
+
+        {/* ── Categories ── */}
+        {tab === "categories" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <CategoryManager />
+          </section>
+        )}
+
+        {/* ── Settings ── */}
+        {tab === "settings" && (
+          <>
+            {/* ── Square Sync ── */}
         <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -320,13 +375,16 @@ function DashboardContent() {
             {saved ? "Saved!" : saving ? "Saving..." : "Save Settings"}
           </button>
         </section>
+        </>
+        )}
 
         {/* ── Admin Management ── */}
-        <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-          <h2 className="text-xl font-bold font-display mb-4">Admin Users</h2>
-          <p className="text-sm text-primary/60 mb-4">
-            Users listed here have full access to the admin dashboard. They must sign in first via the login page.
-          </p>
+        {tab === "admins" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <h2 className="text-xl font-bold font-display mb-4">Admin Users</h2>
+            <p className="text-sm text-primary/60 mb-4">
+              Users listed here have full access to the admin dashboard. They must sign in first via the login page.
+            </p>
           <div className="flex gap-2 mb-4">
             <input
               type="email"
@@ -364,12 +422,14 @@ function DashboardContent() {
             The hardcoded fallback admin is <code className="bg-warm-sand px-1 rounded">mary.theadoor.doctor@gmail.com</code>.
           </p>
         </section>
+        )}
 
         {/* ── Design Catalog ── */}
-        <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-          <h2 className="text-xl font-bold font-display mb-4">Design Catalog</h2>
-          <p className="text-sm text-primary/60 mb-6">Upload brand logos, team designs, and artwork that customers can select in the customizer.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {tab === "designs" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <h2 className="text-xl font-bold font-display mb-4">Design Catalog</h2>
+            <p className="text-sm text-primary/60 mb-6">Upload brand logos, team designs, and artwork that customers can select in the customizer.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <input type="text" value={designName} onChange={(e) => setDesignName(e.target.value)}
               placeholder="Design name" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
             <input type="text" value={designCategory} onChange={(e) => setDesignCategory(e.target.value)}
@@ -395,18 +455,23 @@ function DashboardContent() {
           )}
           {designs.length === 0 && <p className="text-sm text-primary/40 text-center py-8">No designs uploaded yet.</p>}
         </section>
+        )}
 
         {/* ── Recent Orders ── */}
-        <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-          <h2 className="text-xl font-bold font-display mb-4">Recent Orders</h2>
-          <OrdersSection />
-        </section>
+        {tab === "orders" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <h2 className="text-xl font-bold font-display mb-4">Recent Orders</h2>
+            <OrdersSection />
+          </section>
+        )}
 
         {/* ── User Management ── */}
-        <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-          <h2 className="text-xl font-bold font-display mb-4">User Management</h2>
-          <UsersSection />
-        </section>
+        {tab === "users" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <h2 className="text-xl font-bold font-display mb-4">User Management</h2>
+            <UsersSection />
+          </section>
+        )}
       </main>
     </div>
   );

@@ -29,36 +29,37 @@ export interface DesignAsset {
   created_at: string;
 }
 
-/* ─── Composite Product (Firestore) ─────────────────────────────── */
+/* ─── CMS Managed Product ────────────────────────────────────────── */
 
-export interface VariantGroup {
+export interface ManagedVariant {
+  id: string;
   name: string;
-  options: VariantOption[];
-}
-
-export interface VariantOption {
-  label: string;
-  sku: string;
   price: number;
-  squareItemId: string;
-  squareVariationId: string;
+  sku: string;
 }
 
-export interface CompositeProduct {
+export interface ManagedProduct {
   id: string;
   name: string;
   description: string;
-  categoryIds: string[];
-  brand: string;
+  categoryId: string;
   colors: string[];
   tags: string[];
   images: string[];
-  minPrice: number;
-  maxPrice: number;
-  variantGroups: VariantGroup[];
+  variants: ManagedVariant[];
+  active: boolean;
+  featured: boolean;
+  createdAt: string;
   updatedAt: string;
-  syncedAt: string;
-  itemCount: number;
+}
+
+export interface ManagedCategory {
+  id: string;
+  name: string;
+  slug: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SyncStatus {
