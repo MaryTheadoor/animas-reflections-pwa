@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import PlaceholderImage from "@/components/ui/placeholder-image";
 import type { SquareCatalogItem } from "@/types";
 import { getProductImageUrl } from "@/hooks/useCatalog";
 
@@ -29,7 +28,11 @@ export default function ProductCard({ item }: ProductCardProps) {
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
-          <PlaceholderImage />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-warm-sand to-primary/5">
+            <span className="text-4xl font-bold text-primary/15 font-display select-none">
+              {item.name.charAt(0).toUpperCase()}
+            </span>
+          </div>
         )}
         {item.variations.length > 1 && (
           <span className="absolute top-3 left-3 bg-primary text-white text-xs px-2 py-1 rounded-full shadow-sm">

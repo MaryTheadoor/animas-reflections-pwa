@@ -27,6 +27,23 @@ function getSquareClient(): SquareClient {
   });
 }
 
+function cleanProductName(raw: string): string {
+  return raw
+    .replace(/\b(\d+(\.\d+)?\s*oz\.?)\b/gi, "")
+    .replace(/\bSORRY SOLD OUT\b/gi, "")
+    .replace(/\bOut of stock\b/gi, "")
+    .replace(/\bOnly \d+ Available\b/gi, "")
+    .replace(/\bLimited Edition\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function generateDescription(name: string, categories: { id: string }[]): string {
+  const catNames = categories.map((c) => c.id).filter(Boolean);
+  const typeHint = catNames.length > 0 ? ` | Category: ${catNames.join(", ")}` : "";
+  return `Custom ${name}. Professionally printed in Durango, CO.${typeHint}`;
+}
+
 // ─── Fetch Square Catalog ─────────────────────────────────────────
 
 interface CatalogObjectRaw {
@@ -114,8 +131,20 @@ export const fetchSquareCatalog = onCall(
 
       const related = allRelated;
       const images = related.filter((o) => o.type === "IMAGE");
+      logger.info("Catalog items fetched", {
+        total: allItems.length,
+        visible: rawItems.length,
+        imagesInRelated: images.length,
+        itemsWithImageIds: rawItems.filter((o) => (o.itemData?.imageIds?.length ?? 0) > 0).length,
+      });
 
-      logger.info("Catalog items fetched", { total: allItems.length, visible: rawItems.length });
+      const imageMap = new Map<string, string>();
+      for (const img of images) {
+        const id = img.imageData?.id;
+        const url = img.imageData?.url;
+        if (id && url) imageMap.set(String(id), url);
+      }
+      logger.info("Image map built", { mappedImages: imageMap.size });
 
       // Fetch categories separately
       const catResponse = await client.catalog.search({
@@ -153,8 +182,8 @@ export const fetchSquareCatalog = onCall(
 
           return {
             id: item.id,
-            name: itemData?.name ?? "",
-            description: itemData?.description ?? "",
+            name: cleanProductName(itemData?.name ?? ""),
+            description: itemData?.description || generateDescription(itemData?.name ?? "", itemData?.categories ?? []),
             categoryIds: (itemData?.categories ?? []).map((c) => c.id),
             image_url: itemImage?.imageData?.url ?? null,
             variations: validVariations,
