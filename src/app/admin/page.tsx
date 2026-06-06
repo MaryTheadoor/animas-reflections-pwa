@@ -168,6 +168,27 @@ function DashboardContent() {
     }
   };
 
+  const handleImport = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const callable = httpsCallable<object, { imported: number; errors: string[] }>(
+        functions,
+        "importProducts"
+      );
+      const result = await callable({});
+      const data = result.data;
+      setSyncResult({ products: data.imported, categories: 0, items: data.imported });
+      if (data.errors.length > 0) {
+        setSyncError(data.errors.join(", "));
+      }
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const addAdmin = async () => {
     const email = newAdminEmail.trim().toLowerCase();
     if (!email || adminEmails.includes(email)) return;
@@ -251,13 +272,22 @@ function DashboardContent() {
                 Pull products from Square and build composite product catalog
               </p>
             </div>
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
-            >
-              {syncing ? "Syncing..." : "Sync Now"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-light transition-colors disabled:opacity-50 btn-tactile btn-primary-tactile"
+              >
+                {syncing ? "Syncing..." : "Sync Now"}
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={syncing}
+                className="px-4 py-2.5 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
+              >
+                {syncing ? "Importing..." : "Import from Square"}
+              </button>
+            </div>
           </div>
           {syncResult && (
             <div className="grid grid-cols-3 gap-4 text-center mb-4">

@@ -11,8 +11,9 @@
   --color-gold-light: #E68A00;
   --color-plum: #935B8A;
   --color-plum-light: #A86B9F;
+  --color-text: #111827;
   --color-white: #FFFFFF;
-  --color-foreground: #8400FF;
+  --color-foreground: #111827;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: Georgia, "Times New Roman", serif;
   --radius-xl: 0.75rem;

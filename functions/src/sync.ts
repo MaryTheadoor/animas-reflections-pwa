@@ -2,6 +2,9 @@ import * as logger from "firebase-functions/logger";
 import { getFirestore } from "firebase-admin/firestore";
 import { SquareClient } from "square";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type StorageBucket = any;
+
 export interface CompositeProduct {
   id: string;
   name: string;
@@ -450,4 +453,156 @@ export async function getSyncStatus(
     itemCount: (data.itemCount as number) ?? 0,
     errors: (data.errors as string[]) ?? [],
   };
+}
+
+// ─── Import from Square with Images ───────────────────────────────
+
+async function downloadImage(url: string, bucket: StorageBucket): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const buffer = await response.arrayBuffer();
+    const filename = `products/square-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const file = bucket.file(filename);
+    await file.save(Buffer.from(buffer), { contentType: "image/jpeg" });
+    await file.makePublic();
+    return `https://storage.googleapis.com/${bucket.name}/${filename}`;
+  } catch {
+    return null;
+  }
+}
+
+export async function importFromSquare(
+  client: SquareClient,
+  db: ReturnType<typeof getFirestore>,
+  storageBucket: StorageBucket
+): Promise<{ imported: number; errors: string[] }> {
+  const errors: string[] = [];
+
+  const itemResponse = await client.catalog.search({
+    objectTypes: ["ITEM"],
+    includeRelatedObjects: true,
+  });
+
+  const rawItems = ((itemResponse.objects || []) as unknown[]).filter((o) => {
+    const raw = o as Record<string, unknown>;
+    const data = raw.itemData as Record<string, unknown> | undefined;
+    return data?.ecom_visibility === "VISIBLE";
+  }) as Array<Record<string, unknown>>;
+
+  const related = (itemResponse as Record<string, unknown>).relatedObjects as Array<Record<string, unknown>> | undefined;
+  const relatedImages = (related ?? []).filter((o) => o.type === "IMAGE") as Array<Record<string, unknown>>;
+
+  const imageMap = new Map<string, string>();
+  for (const img of relatedImages) {
+    const id = (img.imageData as Record<string, string> | undefined)?.id;
+    const url = (img.imageData as Record<string, string> | undefined)?.url;
+    if (id && url) imageMap.set(id, url);
+  }
+
+  const categoriesResponse = await client.catalog.search({ objectTypes: ["CATEGORY"] });
+  const rawCategories = (categoriesResponse.objects ?? []) as unknown as Array<Record<string, unknown>>;
+  const catMap = new Map<string, string>();
+  for (const c of rawCategories) {
+    const cd = c.categoryData as Record<string, string> | undefined;
+    if (cd?.name) catMap.set(c.id as string, cd.name);
+  }
+
+  const brands = new Map<string, Array<Record<string, unknown>>>();
+  for (const item of rawItems) {
+    const data = (item.itemData || {}) as Record<string, unknown>;
+    const cats = (data.categories || []) as Array<{ id: string }>;
+    let brand = "Other";
+    for (const cat of cats) {
+      const name = catMap.get(cat.id) ?? "";
+      if (name) { brand = name; break; }
+    }
+    if (!brands.has(brand)) brands.set(brand, []);
+    brands.get(brand)!.push(item);
+  }
+
+  const batch = db.batch();
+  const productsRef = db.collection("products");
+  const categoriesRef = db.collection("categories");
+  let imported = 0;
+
+  for (const [brand, items] of brands) {
+    const brandId = `cat_${brand.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+    batch.set(categoriesRef.doc(brandId), {
+      id: brandId,
+      name: brand,
+      slug: brand.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      order: imported,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+
+    for (const item of items) {
+      const data = (item.itemData || {}) as Record<string, unknown>;
+      const variations = (data.variations || []) as Array<Record<string, unknown>>;
+      const name = (data.name as string) ?? "";
+      const description = (data.description as string) ?? "";
+
+      const itemImageIds = ((data.imageIds || []) as string[]).map(String);
+      const primaryImageUrl = itemImageIds
+        .map((id) => imageMap.get(id))
+        .find(Boolean) ?? null;
+
+      let storageUrl = "";
+      if (primaryImageUrl) {
+        const downloaded = await downloadImage(primaryImageUrl, storageBucket);
+        if (downloaded) storageUrl = downloaded;
+      }
+
+      const productId = `prod_${imported}_${Date.now()}`;
+      const variants = variations
+        .filter((v) => {
+          const vd = (v.itemVariationData || {}) as Record<string, unknown>;
+          const pm = vd.priceMoney as { amount?: bigint } | undefined;
+          return pm?.amount ? Number(pm.amount) >= 200 : false;
+        })
+        .map((v) => {
+          const vd = (v.itemVariationData || {}) as Record<string, unknown>;
+          const pm = vd.priceMoney as { amount?: bigint } | undefined;
+          return {
+            id: (v.id as string) ?? "",
+            name: (vd.name as string) ?? "",
+            price: pm?.amount ? Number(pm.amount) / 100 : 0,
+            sku: (vd.sku as string) ?? "",
+          };
+        });
+
+      if (variants.length === 0) continue;
+
+      const tags = name.toLowerCase().match(/\b[a-z]{3,}\b/g)?.filter(
+        (w) => !["the", "and", "for", "with"].includes(w)
+      ) ?? [];
+
+      batch.set(productsRef.doc(productId), {
+        id: productId,
+        name,
+        description: description.substring(0, 600),
+        categoryId: brandId,
+        colors: [],
+        tags: [...new Set([brand.toLowerCase(), ...tags])],
+        images: storageUrl ? [storageUrl] : [],
+        variants,
+        active: true,
+        featured: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      imported++;
+    }
+  }
+
+  await batch.commit();
+
+  await db.collection("config").doc("import_status").set({
+    lastImport: new Date().toISOString(),
+    imported,
+    errors,
+  }, { merge: true });
+
+  return { imported, errors };
 }

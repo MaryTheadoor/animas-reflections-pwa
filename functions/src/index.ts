@@ -3,11 +3,12 @@ import { onCall, onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { SquareClient, SquareEnvironment, SquareError } from "square";
 import { defineString } from "firebase-functions/params";
 import { genkit, z } from "genkit";
 import { googleAI } from "@genkit-ai/googleai";
-import { syncProductsFromSquare, getSyncStatus } from "./sync.js";
+import { syncProductsFromSquare, getSyncStatus, importFromSquare } from "./sync.js";
 
 initializeApp();
 
@@ -439,6 +440,22 @@ export const fetchSyncStatus = onCall(
   async () => {
     const db = getFirestore();
     return await getSyncStatus(db);
+  }
+);
+
+export const importProducts = onCall(
+  { cors: true, region: "us-central1", timeoutSeconds: 600 },
+  async () => {
+    logger.info("importProducts invoked");
+    try {
+      const client = getSquareClient();
+      const db = getFirestore();
+      const bucket = getStorage().bucket();
+      return await importFromSquare(client, db, bucket);
+    } catch (err) {
+      logger.error("Import failed", err);
+      throw new Error(err instanceof Error ? err.message : "Import failed");
+    }
   }
 );
 
