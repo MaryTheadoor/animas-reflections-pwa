@@ -27,6 +27,7 @@ export const NAVIGATION = {
     { label: "Cart", href: "/checkout" },
     { label: "Search", href: "/search" },
     { label: "Fundraising", href: "/fundraising" },
+    { label: "FAQ", href: "/faq" },
     { label: "About Us", href: "/about" },
     { label: "Contact", href: "/contact" },
     { label: "Terms of Sale", href: "/terms" },
@@ -124,6 +125,66 @@ export const FUNDRAISING = {
     instagram: "https://instagram.com/animasreflections",
   },
   featuredCategories: ["LITTLE_STRANGER", "Fly_High_AA_Fundraiser"],
+} as const;
+
+export const FAQ = {
+  heading: "Frequently Asked Questions",
+  subheading: "Answers to common questions about our products, process, and services.",
+  items: [
+    {
+      q: "Can I use my own design or artwork?",
+      a: "Absolutely! You can upload your own image, logo, or design. We accept PNG, JPEG, and WebP files. If you need help creating or refining your design, we can assist with that too — just reach out.",
+    },
+    {
+      q: "How long does it take to receive my order?",
+      a: "Production typically takes 5-10 business days depending on order volume and complexity. Shipping time varies by location. We'll provide an estimated delivery date when you place your order.",
+    },
+    {
+      q: "What payment methods do you accept?",
+      a: "We accept Visa, Mastercard, American Express, Discover, JCB, Apple Pay, Google Pay, and Cash App. All payments are processed securely through Square.",
+    },
+    {
+      q: "Do you ship internationally?",
+      a: "Currently we ship within the United States. If you have an international inquiry, please contact us and we'll do our best to accommodate.",
+    },
+    {
+      q: "What is your return policy?",
+      a: "All sales are final. If you have any trouble with your order — wrong size, defect, or damage — please contact us within 5 days of receipt and we will make it right.",
+    },
+    {
+      q: "How do I start a fundraiser?",
+      a: "Email us at AnimasReflections@gmail.com with details about your organization and fundraising goals. We'll help determine the best setup and timeline. There are no setup fees, no minimum orders, and no upfront costs.",
+    },
+    {
+      q: "How do we get paid from a fundraiser?",
+      a: "After the fundraiser ends or at agreed intervals, your organization receives 50% of the net profit. We handle all payment processing and send you your share directly.",
+    },
+    {
+      q: "Who handles customer questions and shipping?",
+      a: "Animas Reflections handles all customer service, printing, and shipping. Your organization never has to manage logistics or inventory.",
+    },
+    {
+      q: "What products can I customize?",
+      a: "We can print on t-shirts, hoodies, tank tops, hats, jackets, stickers, ornaments, glass cutting boards, wood panels, metal jewelry, pet scarves, drink huggers, and more. If you don't see what you want, ask us!",
+    },
+    {
+      q: "How do I care for my printed apparel?",
+      a: "Wash inside out in cold water and tumble dry low or hang dry. Our sublimation and DTF prints are durable and designed to last, but proper care will extend the life of your garment.",
+    },
+  ],
+} as const;
+
+export const BAND_MERCH = {
+  heading: "Band & Music Merchandise",
+  subheading: "Custom designs for musicians, concert tees, and fan gear",
+  intro: `From monthly concert tees to limited-run tour merchandise, we partner with bands and musicians to create high-quality custom apparel and accessories. Our sublimation printing delivers vibrant, long-lasting designs on premium garments. Whether you're a local Durango band or a national act, we can produce merch your fans will love.`,
+  highlights: [
+    "Custom concert tees & hoodies",
+    "Full-color sublimation printing",
+    "No minimum orders",
+    "Fan fundraising programs available",
+  ],
+  cta: { label: "Start Your Band's Merch", href: "/contact" },
 } as const;
 
 export const FEATURED_PRODUCTS = {

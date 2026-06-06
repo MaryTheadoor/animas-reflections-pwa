@@ -3,6 +3,8 @@ import Link from "next/link";
 import HeaderBar from "@/components/layout/header-bar";
 import FeaturedProducts from "@/components/home/featured-products";
 import FundraisingTeaser from "@/components/home/fundraising-teaser";
+import BandMerchTeaser from "@/components/home/band-merch-teaser";
+import FaqTeaser from "@/components/home/faq-teaser";
 import {
   SITE,
   HERO,
@@ -72,6 +74,9 @@ export default function Home() {
       {/* Fundraising Teaser */}
       <FundraisingTeaser />
 
+      {/* Band Merch Teaser */}
+      <BandMerchTeaser />
+
       {/* Our Story — Glass Card */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto w-full">
         <div className="glass-card p-6 sm:p-12">
@@ -116,6 +121,9 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      {/* FAQ Teaser */}
+      <FaqTeaser />
 
       {/* Footer */}
       <footer className="bg-white border-t border-warm-sand py-12 px-6 mt-auto">
