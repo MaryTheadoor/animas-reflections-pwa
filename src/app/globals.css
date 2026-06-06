@@ -110,6 +110,11 @@ html.dark .btn-primary-tactile {
   border-color: #6A00CC;
   border-bottom-color: #4D0099;
 }
+html.dark .btn-plum-tactile {
+  background-color: #935B8A;
+  border-color: #7A4A72;
+  border-bottom-color: #5C3856;
+}
 
 html.dark .nav-dock-theme {
   border-left-color: rgba(132, 0, 255, 0.25);
@@ -246,6 +251,12 @@ html.dark .nav-dock-theme {
   background-color: #8400FF;
   border-color: #6A00CC;
   border-bottom-color: #4D0099;
+  color: white;
+}
+.btn-plum-tactile {
+  background-color: #935B8A;
+  border-color: #7A4A72;
+  border-bottom-color: #5C3856;
   color: white;
 }
 
