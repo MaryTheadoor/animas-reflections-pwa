@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useCatalog } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
 
 type SortMode = "default" | "price-asc" | "price-desc" | "name-asc";
+type BrowseMode = "design" | "type";
 
 const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "default", label: "Default" },
@@ -19,36 +20,21 @@ export default function ShopPage() {
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("default");
-
-  const catNameToId = useMemo(() => {
-    const map = new Map<string, string>();
-    categories.forEach((c) => map.set(c.name.trim().toLowerCase(), c.id));
-    return map;
-  }, [categories]);
-
-  const getCategoryId = useCallback(
-    (name: string) => catNameToId.get(name.toLowerCase().trim()) ?? null,
-    [catNameToId]
-  );
+  const [browseMode, setBrowseMode] = useState<BrowseMode>("design");
 
   const filteredItems = useMemo(() => {
     let result = items;
     if (activeCategory !== "All") {
-      const catId = getCategoryId(activeCategory);
+      const catId = categories.find((c) => c.id === activeCategory)?.id;
       if (catId) {
         result = result.filter((i) => i.categoryIds.includes(catId));
       } else {
-        const isSyntheticId = categories.some((c) => c.id === activeCategory);
-        if (isSyntheticId) {
-          result = result.filter((i) => i.categoryIds.includes(activeCategory));
-        } else {
-          const q = activeCategory.toLowerCase();
-          result = result.filter(
-            (i) =>
-              i.name.toLowerCase().includes(q) ||
-              (i.description?.toLowerCase() ?? "").includes(q)
-          );
-        }
+        const q = activeCategory.toLowerCase();
+        result = result.filter(
+          (i) =>
+            i.name.toLowerCase().includes(q) ||
+            (i.description?.toLowerCase() ?? "").includes(q)
+        );
       }
     }
     if (search.trim()) {
@@ -67,14 +53,12 @@ export default function ShopPage() {
       result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     }
     return result;
-  }, [items, activeCategory, search, sortMode, getCategoryId, categories]);
+  }, [items, activeCategory, search, sortMode, categories]);
 
   const activeLabel =
     activeCategory === "All"
       ? "All Products"
-      : categories.find((c) => c.id === activeCategory)?.name ??
-        categories.find((c) => c.name === activeCategory)?.name ??
-        activeCategory;
+      : categories.find((c) => c.id === activeCategory)?.name ?? activeCategory;
 
   return (
     <PageLayout>
@@ -86,7 +70,6 @@ export default function ShopPage() {
           </p>
         </div>
 
-        {/* Search + Sort */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6 items-start sm:items-center">
           <div className="relative flex-1 max-w-md">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -110,7 +93,27 @@ export default function ShopPage() {
           </select>
         </div>
 
-        {/* Categories — dynamic from Firestore/Square */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex bg-warm-sand/50 rounded-full p-1 gap-1">
+            <button
+              onClick={() => { setBrowseMode("design"); setActiveCategory("All"); }}
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
+                browseMode === "design" ? "bg-primary text-white" : "text-primary/60 hover:text-primary"
+              }`}
+            >
+              By Design / Brand
+            </button>
+            <button
+              onClick={() => { setBrowseMode("type"); setActiveCategory("All"); }}
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
+                browseMode === "type" ? "bg-primary text-white" : "text-primary/60 hover:text-primary"
+              }`}
+            >
+              By Product Type
+            </button>
+          </div>
+        </div>
+
         <div className="space-y-3 mb-8">
           <div className="flex flex-wrap gap-1.5 items-center">
             <select
@@ -156,7 +159,6 @@ export default function ShopPage() {
           </div>
         </div>
 
-        {/* Content */}
         {loading && (
           <div className="flex items-center justify-center py-20">
             <div className="flex gap-3">

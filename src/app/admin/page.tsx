@@ -196,7 +196,7 @@ function DashboardContent() {
   };
 
   const handleClear = async () => {
-    if (!confirm("Delete ALL products and categories from Firestore? This cannot be undone.")) return;
+    if (!confirm("Delete ALL products, categories, designs, and instances?")) return;
     setSyncing(true);
     try {
       const callable = httpsCallable<object, { success: boolean; message: string }>(
@@ -208,6 +208,27 @@ function DashboardContent() {
       setSyncing(false);
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Clear failed");
+      setSyncing(false);
+    }
+  };
+
+  const handlePipeline = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const callable = httpsCallable<object, { baseProducts: number; designs: number; instances: number; items: number; errors: string[] }>(
+        functions,
+        "runPipeline"
+      );
+      const result = await callable({});
+      const data = result.data;
+      setSyncResult({ products: data.instances, categories: data.baseProducts + data.designs, items: data.items });
+      if (data.errors.length > 0) {
+        setSyncError(data.errors.slice(0, 3).join("; "));
+      }
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Pipeline failed");
+    } finally {
       setSyncing(false);
     }
   };
@@ -315,6 +336,13 @@ function DashboardContent() {
                 className="px-4 py-2.5 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
               >
                 {syncing ? "Importing..." : "Import from Square"}
+              </button>
+              <button
+                onClick={handlePipeline}
+                disabled={syncing}
+                className="px-4 py-2.5 bg-plum text-white rounded-xl text-sm font-semibold hover:bg-plum-light transition-colors disabled:opacity-50 btn-tactile btn-plum-tactile"
+              >
+                {syncing ? "Running..." : "Run Pipeline"}
               </button>
               <button
                 onClick={handleClear}

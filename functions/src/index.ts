@@ -9,6 +9,7 @@ import { defineString } from "firebase-functions/params";
 import { genkit, z } from "genkit";
 import { googleAI } from "@genkit-ai/googleai";
 import { syncProductsFromSquare, getSyncStatus, importFromSquare } from "./sync.js";
+import { runProductPipeline, getPipelineStatus } from "./product-pipeline.js";
 
 initializeApp();
 
@@ -507,9 +508,8 @@ export const clearProducts = onCall(
     logger.info("clearProducts invoked");
     const db = getFirestore();
     const batchSize = 400;
-    const collections = ["products", "categories"];
 
-    for (const colName of collections) {
+    for (const colName of ["products", "categories", "baseProducts", "designs", "productInstances"]) {
       let deleted = 0;
       do {
         const snap = await db.collection(colName).limit(batchSize).get();
@@ -524,8 +524,32 @@ export const clearProducts = onCall(
 
     await db.collection("config").doc("sync_status").delete();
     await db.collection("config").doc("import_status").delete();
+    await db.collection("config").doc("pipeline_status").delete();
 
-    return { success: true, message: "All products and categories cleared" };
+    return { success: true, message: "All products, categories, designs, and instances cleared" };
+  }
+);
+
+export const runPipeline = onCall(
+  { cors: true, region: "us-central1", timeoutSeconds: 600 },
+  async () => {
+    logger.info("runPipeline invoked");
+    try {
+      const client = getSquareClient();
+      const db = getFirestore();
+      return await runProductPipeline(client, db);
+    } catch (err) {
+      logger.error("Pipeline failed", err);
+      throw new Error(err instanceof Error ? err.message : "Pipeline failed");
+    }
+  }
+);
+
+export const fetchPipelineStatus = onCall(
+  { cors: true, region: "us-central1" },
+  async () => {
+    const db = getFirestore();
+    return await getPipelineStatus(db);
   }
 );
 
@@ -536,7 +560,7 @@ export const scheduledSync = onSchedule(
     try {
       const client = getSquareClient();
       const db = getFirestore();
-      await syncProductsFromSquare(client, db);
+      await runProductPipeline(client, db);
     } catch (err) {
       logger.error("Scheduled sync failed", err);
     }
