@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
@@ -118,10 +118,16 @@ function DashboardContent() {
 
   const saveConfig = async () => {
     setSaving(true);
-    await setDoc(doc(db, "config", "site"), config, { merge: true });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      const callable = httpsCallable(functions, "saveSiteConfig");
+      await callable(config as unknown as Record<string, unknown>);
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setSaving(false);
+      alert("Failed to save: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
   };
 
   const handleDesignUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,14 +217,20 @@ function DashboardContent() {
     if (!email || adminEmails.includes(email)) return;
     const updated = [...adminEmails, email];
     setAdminEmails(updated);
-    await setDoc(doc(db, "config", "admin"), { emails: updated }, { merge: true });
+    try {
+      const callable = httpsCallable(functions, "saveAdminEmails");
+      await callable({ emails: updated });
+    } catch {}
     setNewAdminEmail("");
   };
 
   const removeAdmin = async (email: string) => {
     const updated = adminEmails.filter((e) => e !== email);
     setAdminEmails(updated);
-    await setDoc(doc(db, "config", "admin"), { emails: updated }, { merge: true });
+    try {
+      const callable = httpsCallable(functions, "saveAdminEmails");
+      await callable({ emails: updated });
+    } catch {}
   };
 
   return (

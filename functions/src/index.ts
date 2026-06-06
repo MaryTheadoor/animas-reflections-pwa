@@ -355,7 +355,6 @@ export const fetchSiteConfig = onCall(
   { cors: true, region: "us-central1" },
   async () => {
     try {
-      const { getFirestore } = await import("firebase-admin/firestore");
       const db = getFirestore();
       const snap = await db.collection("config").doc("site").get();
       const data = snap.data() ?? {};
@@ -373,6 +372,38 @@ export const fetchSiteConfig = onCall(
     } catch (err) {
       logger.error("Failed to fetch site config", err);
       throw new Error("Failed to fetch site config");
+    }
+  }
+);
+
+export const saveSiteConfig = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const data = request.data as Record<string, unknown>;
+    logger.info("saveSiteConfig invoked");
+    try {
+      const db = getFirestore();
+      await db.collection("config").doc("site").set(data, { merge: true });
+      return { success: true };
+    } catch (err) {
+      logger.error("Failed to save site config", err);
+      throw new Error("Failed to save site config");
+    }
+  }
+);
+
+export const saveAdminEmails = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const data = request.data as { emails: string[] };
+    logger.info("saveAdminEmails invoked");
+    try {
+      const db = getFirestore();
+      await db.collection("config").doc("admin").set({ emails: data.emails }, { merge: true });
+      return { success: true };
+    } catch (err) {
+      logger.error("Failed to save admin emails", err);
+      throw new Error("Failed to save admin emails");
     }
   }
 );
