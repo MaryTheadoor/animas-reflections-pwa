@@ -20,15 +20,28 @@ export default function CategoryManager() {
   const [editName, setEditName] = useState("");
 
   const loadCategories = useCallback(async () => {
-    const snap = await getDocs(collection(db, "categories"));
-    const items: ManagedCategory[] = [];
-    snap.forEach((d) => {
-      const data = d.data() as ManagedCategory;
-      if (data.name) items.push(data);
-    });
-    items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    setCategories(items);
-    setLoading(false);
+    try {
+      const snap = await getDocs(collection(db, "categories"));
+      const items: ManagedCategory[] = [];
+      snap.forEach((d) => {
+        const data = d.data() as ManagedCategory;
+        if (!data.id || !data.name) return;
+        items.push({
+          id: data.id,
+          name: data.name,
+          slug: data.slug ?? "",
+          order: data.order ?? 0,
+          createdAt: data.createdAt ?? "",
+          updatedAt: data.updatedAt ?? "",
+        });
+      });
+      items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      setCategories(items);
+    } catch (err) {
+      console.error("Category load failed", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

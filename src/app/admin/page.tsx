@@ -105,36 +105,35 @@ function DashboardContent() {
 
   useEffect(() => {
     const loadConfig = async () => {
-      const snap = await getDoc(doc(db, "config", "site"));
+      try { const snap = await getDoc(doc(db, "config", "site"));
       if (snap.exists()) setConfig({ ...DEFAULT_CONFIG, ...snap.data() } as SiteConfigData);
+      } catch {}
     };
     const loadDesigns = async () => {
-      const snap = await getDoc(doc(db, "designs", "catalog"));
+      try { const snap = await getDoc(doc(db, "designs", "catalog"));
       if (snap.exists()) setDesigns((snap.data() as { items?: DesignAsset[] }).items ?? []);
+      } catch {}
     };
     const loadSyncStatus = async () => {
-      const snap = await getDoc(doc(db, "config", "sync_status"));
+      try { const snap = await getDoc(doc(db, "config", "sync_status"));
       if (snap.exists()) {
         const data = snap.data() as { productCount?: number; categoryCount?: number; itemCount?: number };
-        setSyncResult({
-          products: data.productCount ?? 0,
-          categories: data.categoryCount ?? 0,
-          items: data.itemCount ?? 0,
-        });
+        setSyncResult({ products: data.productCount ?? 0, categories: data.categoryCount ?? 0, items: data.itemCount ?? 0 });
       }
+      } catch {}
     };
     const loadAdmins = async () => {
-      const snap = await getDoc(doc(db, "config", "admin"));
-      if (snap.exists()) {
-        setAdminEmails((snap.data() as { emails?: string[] }).emails ?? []);
-      }
+      try { const snap = await getDoc(doc(db, "config", "admin"));
+      if (snap.exists()) setAdminEmails((snap.data() as { emails?: string[] }).emails ?? []);
+      } catch {}
     };
     const loadCats = async () => {
-      const snap = await getDocs(collection(db, "categories"));
+      try { const snap = await getDocs(collection(db, "categories"));
       const cats: ManagedCategory[] = [];
-      snap.forEach((d) => cats.push(d.data() as ManagedCategory));
-      cats.sort((a, b) => a.order - b.order);
+      snap.forEach((d) => { const data = d.data() as ManagedCategory; if (data.id && data.name) cats.push(data); });
+      cats.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       setManagedCategories(cats);
+      } catch {}
     };
     loadConfig();
     loadDesigns();
@@ -190,8 +189,8 @@ function DashboardContent() {
       );
       const result = await callable({});
       const data = result.data;
-      setSyncResult({ products: data.products, categories: data.categories, items: data.items });
-      if (data.errors.length > 0) {
+      setSyncResult({ products: data.products ?? 0, categories: data.categories ?? 0, items: data.items ?? 0 });
+      if (data.errors?.length) {
         setSyncError(data.errors.join(", "));
       }
     } catch (err) {
@@ -211,8 +210,8 @@ function DashboardContent() {
       );
       const result = await callable({});
       const data = result.data;
-      setSyncResult({ products: data.imported, categories: 0, items: data.imported });
-      if (data.errors.length > 0) {
+      setSyncResult({ products: data.imported ?? 0, categories: 0, items: data.imported ?? 0 });
+      if (data.errors?.length) {
         setSyncError(data.errors.join(", "));
       }
     } catch (err) {
@@ -249,8 +248,8 @@ function DashboardContent() {
       );
       const result = await callable({});
       const data = result.data;
-      setSyncResult({ products: data.instances, categories: data.baseProducts + data.designs, items: data.items });
-      if (data.errors.length > 0) {
+      setSyncResult({ products: data.instances ?? 0, categories: (data.baseProducts ?? 0) + (data.designs ?? 0), items: data.items ?? 0 });
+      if (data.errors?.length) {
         setSyncError(data.errors.slice(0, 3).join("; "));
       }
     } catch (err) {
@@ -611,7 +610,7 @@ function OrdersSection() {
 
   if (loading) return <p className="text-sm text-primary/50">Loading orders...</p>;
   if (error) return <p className="text-sm text-red-500">{error}</p>;
-  if (!orders.length) return <p className="text-sm text-primary/40">No orders yet.</p>;
+  if (!orders?.length) return <p className="text-sm text-primary/40">No orders yet.</p>;
 
   return (
     <div className="overflow-x-auto">
@@ -668,7 +667,7 @@ function UsersSection() {
       </div>
     );
   }
-  if (!users.length) {
+  if (!users?.length) {
     return (
       <div>
         <p className="text-sm text-primary/40">

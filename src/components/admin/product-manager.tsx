@@ -49,15 +49,34 @@ export default function ProductManager({ categories }: Props) {
   const [newVariant, setNewVariant] = useState({ name: "", price: "", sku: "" });
 
   const loadProducts = useCallback(async () => {
-    const snap = await getDocs(collection(db, "products"));
-    const items: ManagedProduct[] = [];
-    snap.forEach((d) => {
-      const data = d.data() as ManagedProduct;
-      if (data.name) items.push(data);
-    });
-    items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    setProducts(items);
-    setLoading(false);
+    try {
+      const snap = await getDocs(collection(db, "products"));
+      const items: ManagedProduct[] = [];
+      snap.forEach((d) => {
+        const data = d.data() as ManagedProduct;
+        if (!data.name || !data.id) return;
+        const safe: ManagedProduct = {
+          ...data,
+          variants: Array.isArray(data.variants) ? data.variants : [],
+          colors: Array.isArray(data.colors) ? data.colors : [],
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          images: Array.isArray(data.images) ? data.images : [],
+          categoryId: data.categoryId ?? "",
+          description: data.description ?? "",
+          active: data.active ?? true,
+          featured: data.featured ?? false,
+          createdAt: data.createdAt ?? "",
+          updatedAt: data.updatedAt ?? "",
+        };
+        items.push(safe);
+      });
+      items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      setProducts(items);
+    } catch (err) {
+      console.error("Product load failed", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -228,7 +247,7 @@ export default function ProductManager({ categories }: Props) {
                   {!p.active && <span className="text-red-400 ml-1 text-xs">(hidden)</span>}
                 </p>
                 <p className="text-xs text-primary/40">
-                  {p.variants.length} variants · {categories.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
+                  {p.variants?.length ?? 0} variants · {categories.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
