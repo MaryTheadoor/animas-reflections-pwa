@@ -3,8 +3,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import {
   signInWithEmailAndPassword,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
@@ -65,12 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) syncUserDoc(result.user);
-      })
-      .catch(() => {});
-
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
@@ -92,10 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithRedirect(auth, provider);
-    } catch (err) {
+      await signInWithPopup(auth, provider);
+    } catch (popupErr) {
       throw new Error(
-        err instanceof Error ? err.message : "Google sign-in failed"
+        popupErr instanceof Error ? popupErr.message : "Google sign-in was cancelled"
       );
     }
   };
@@ -137,13 +130,21 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
       <div className="flex items-center justify-center min-h-screen bg-cream">
         <div className="text-center p-8">
           <h1 className="text-2xl font-bold font-display mb-4">Access Denied</h1>
-          <p className="text-primary/60 mb-6">You must be logged in as an administrator.</p>
-          <a
-            href="/admin/login"
-            className="px-6 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors"
-          >
-            Admin Login
-          </a>
+          <p className="text-primary/60 mb-2">You must be logged in as an administrator.</p>
+          {user && (
+            <p className="text-xs text-primary/30 mb-4">
+              Signed in as: {user.email}. 
+              If this should be an admin account, add it in the Admin Users tab.
+            </p>
+          )}
+          {!user && (
+            <a
+              href="/admin/login"
+              className="inline-block px-6 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors"
+            >
+              Admin Login
+            </a>
+          )}
         </div>
       </div>
     );
