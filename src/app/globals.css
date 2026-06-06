@@ -3,8 +3,8 @@
 /* ─── Animas Reflections Brand Theme ────────────────────────────── */
 
 @theme {
-  --color-cream: #FAF6F0;
-  --color-warm-sand: #F5EBE6;
+  --color-cream: #F7F4EE;
+  --color-warm-sand: #F0EBE3;
   --color-primary: #8400FF;
   --color-primary-light: #9D33FF;
   --color-gold: #D97706;
@@ -19,17 +19,45 @@
   --radius-xl: 0.75rem;
   --radius-2xl: 1rem;
   --radius-3xl: 1.5rem;
-  --shadow-card: 0 4px 24px -2px rgba(132, 0, 255, 0.08);
-  --shadow-elevated: 0 12px 40px -6px rgba(132, 0, 255, 0.12);
-  --shadow-float: 0 20px 50px -10px rgba(132, 0, 255, 0.15);
+  --shadow-card: 0 2px 16px -4px rgba(132, 0, 255, 0.06);
+  --shadow-elevated: 0 8px 32px -6px rgba(132, 0, 255, 0.1);
+  --shadow-float: 0 16px 40px -10px rgba(132, 0, 255, 0.12);
 }
+
+/* ─── Base Styles ───────────────────────────────────────────────── */
 
 body {
   background: var(--color-cream);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+p {
+  line-height: 1.7;
+}
+
+/* ─── Paper Texture Background ──────────────────────────────────── */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #F7F4EE;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(210, 200, 180, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(200, 190, 170, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(220, 210, 195, 0.05) 0%, transparent 50%);
 }
 
 /* ─── Dark Mode ──────────────────────────────────────────────────── */
@@ -42,6 +70,11 @@ html.dark body {
   --color-foreground: #F1F5F9;
   --color-white: #1E293B;
   background: #0F172A;
+}
+
+html.dark body::before {
+  background-color: #0F172A;
+  background-image: none;
 }
 
 html.dark .glass-card {
@@ -82,16 +115,16 @@ html.dark .nav-dock-theme {
   border-left-color: rgba(132, 0, 255, 0.25);
 }
 
-/* ─── Ambient Background Texture ───────────────────────────────── */
+/* ─── Ambient Background Texture (page-layout) ──────────────────── */
 
 .bg-ambient { position: relative; }
 .bg-ambient::before {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle at center, #E8DFD6 1px, transparent 1px);
-  background-size: 32px 32px;
-  opacity: 0.3;
+  background-image: radial-gradient(circle at center, #E8E2D6 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.18;
   pointer-events: none;
 }
 
@@ -101,7 +134,7 @@ html.dark .nav-dock-theme {
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(245, 235, 230, 0.8);
+  border-bottom: 1px solid rgba(240, 235, 227, 0.8);
   padding: 6px 8px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -112,15 +145,15 @@ html.dark .nav-dock-theme {
 
 @media (min-width: 768px) {
   .nav-dock {
-    border: 1px solid rgba(245, 235, 230, 0.8);
+    border: 1px solid rgba(240, 235, 227, 0.8);
     border-radius: 999px;
-    border-bottom: 1px solid rgba(245, 235, 230, 0.8);
+    border-bottom: 1px solid rgba(240, 235, 227, 0.8);
     display: flex;
     gap: 4px;
     padding: 6px 16px;
     max-width: fit-content;
     margin: 4px auto;
-    box-shadow: 0 8px 32px rgba(132, 0, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(132, 0, 255, 0.08);
   }
 }
 
@@ -177,10 +210,10 @@ html.dark .nav-dock-theme {
 /* ─── Glassmorphism Cards ───────────────────────────────────────── */
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(245, 235, 230, 0.6);
+  border: 1px solid rgba(240, 235, 227, 0.7);
   border-radius: 1.5rem;
   box-shadow: var(--shadow-card);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -195,13 +228,13 @@ html.dark .nav-dock-theme {
   align-items: center;
   justify-content: center;
   border-bottom-width: 4px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.25);
   transition: transform 0.1s ease, border-bottom-width 0.1s ease, box-shadow 0.1s ease;
 }
 .btn-tactile:active {
   transform: translateY(3px);
   border-bottom-width: 1px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 .btn-gold-tactile {
   background-color: #D97706;
@@ -214,6 +247,22 @@ html.dark .nav-dock-theme {
   border-color: #6A00CC;
   border-bottom-color: #4D0099;
   color: white;
+}
+
+/* ─── Unified Tile Section ───────────────────────────────────────── */
+
+.section-tile {
+  padding: 4rem 1rem;
+  max-width: 64rem;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .section-tile {
+    padding: 6rem 1.5rem;
+  }
 }
 
 /* ─── Tile Grid ──────────────────────────────────────────────────── */

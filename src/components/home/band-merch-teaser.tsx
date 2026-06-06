@@ -3,7 +3,7 @@ import { BAND_MERCH } from "@/lib/content";
 
 export default function BandMerchTeaser() {
   return (
-    <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-4xl mx-auto w-full">
+    <section className="section-tile">
       <div className="glass-card p-6 sm:p-10 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-plum/10 rounded-full text-plum text-xs font-semibold mb-4">
           <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">

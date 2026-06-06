@@ -9,7 +9,7 @@ const QUESTIONS = [
 
 export default function FaqTeaser() {
   return (
-    <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-3xl mx-auto w-full">
+    <section className="section-tile">
       <div className="glass-card p-6 sm:p-10">
         <h2 className="text-3xl font-bold font-display text-center mb-2">
           Frequently Asked Questions

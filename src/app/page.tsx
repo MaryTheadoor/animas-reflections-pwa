@@ -78,7 +78,7 @@ export default function Home() {
       <BandMerchTeaser />
 
       {/* Our Story — Glass Card */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto w-full">
+      <section className="section-tile">
         <div className="glass-card p-6 sm:p-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div className="flex justify-center">

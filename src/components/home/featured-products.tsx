@@ -11,7 +11,7 @@ export default function FeaturedProducts() {
 
   if (loading || featured.length === 0) {
     return (
-      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto w-full">
+      <section className="section-tile">
         <h2 className="text-3xl font-bold font-display text-center mb-2">Featured Products</h2>
         <p className="text-primary/60 text-center mb-12 max-w-md mx-auto">
           Discover our diverse collection now and find your perfect style
@@ -33,7 +33,7 @@ export default function FeaturedProducts() {
 
   return (
     <>
-      <section className="py-16 sm:py-24 px-4 sm:px-6 max-w-6xl mx-auto w-full">
+      <section className="section-tile">
         <h2 className="text-3xl font-bold font-display text-center mb-2">Featured Products</h2>
         <p className="text-primary/60 text-center mb-12 max-w-md mx-auto">
           Discover our diverse collection now and find your perfect style
