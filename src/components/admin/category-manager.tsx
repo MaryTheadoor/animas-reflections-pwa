@@ -22,8 +22,11 @@ export default function CategoryManager() {
   const loadCategories = useCallback(async () => {
     const snap = await getDocs(collection(db, "categories"));
     const items: ManagedCategory[] = [];
-    snap.forEach((d) => items.push(d.data() as ManagedCategory));
-    items.sort((a, b) => a.order - b.order);
+    snap.forEach((d) => {
+      const data = d.data() as ManagedCategory;
+      if (data.name) items.push(data);
+    });
+    items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     setCategories(items);
     setLoading(false);
   }, []);

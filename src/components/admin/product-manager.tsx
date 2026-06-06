@@ -51,8 +51,11 @@ export default function ProductManager({ categories }: Props) {
   const loadProducts = useCallback(async () => {
     const snap = await getDocs(collection(db, "products"));
     const items: ManagedProduct[] = [];
-    snap.forEach((d) => items.push(d.data() as ManagedProduct));
-    items.sort((a, b) => a.name.localeCompare(b.name));
+    snap.forEach((d) => {
+      const data = d.data() as ManagedProduct;
+      if (data.name) items.push(data);
+    });
+    items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     setProducts(items);
     setLoading(false);
   }, []);
@@ -208,7 +211,7 @@ export default function ProductManager({ categories }: Props) {
               key={p.id}
               className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-3"
             >
-              {p.images[0] ? (
+              {p.images?.[0] ? (
                 <Image
                   src={p.images[0]}
                   alt={p.name}

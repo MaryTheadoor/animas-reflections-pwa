@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
@@ -12,6 +12,33 @@ import { SITE } from "@/lib/content";
 import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
 import type { ManagedCategory } from "@/types";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error: error.message };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-cream">
+          <div className="text-center p-8">
+            <h1 className="text-xl font-bold font-display mb-4">Dashboard Error</h1>
+            <p className="text-red-500 text-sm mb-4 font-mono">{this.state.error}</p>
+            <button onClick={() => { this.setState({ error: null }); window.location.reload(); }}
+              className="px-6 py-3 bg-gold text-white rounded-2xl font-semibold">
+              Reload Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface SiteConfigData {
   announcement_text: string;
@@ -682,5 +709,5 @@ function UsersSection() {
 }
 
 export default function AdminDashboard() {
-  return <RequireAdmin><DashboardContent /></RequireAdmin>;
+  return <RequireAdmin><ErrorBoundary><DashboardContent /></ErrorBoundary></RequireAdmin>;
 }
