@@ -9,8 +9,9 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { httpsCallable } from "firebase/functions";
 import Image from "next/image";
-import { db, storage } from "@/lib/firebase";
+import { db, storage, functions } from "@/lib/firebase";
 import type { ManagedProduct, ManagedCategory } from "@/types";
 
 const EMPTY_PRODUCT: ManagedProduct = {
@@ -47,6 +48,11 @@ export default function ProductManager({ categories }: Props) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [newTag, setNewTag] = useState("");
   const [newVariant, setNewVariant] = useState({ name: "", price: "", sku: "" });
+
+  // Sync state
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -195,6 +201,28 @@ export default function ProductManager({ categories }: Props) {
     loadProducts();
   };
 
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const callable = httpsCallable<object, { success: boolean; products: number; categories: number; items: number; errors: string[] }>(
+        functions,
+        "syncProducts"
+      );
+      const result = await callable({});
+      const data = result.data;
+      setSyncResult({ products: data.products ?? 0, categories: data.categories ?? 0, items: data.items ?? 0 });
+      if (data.errors?.length) {
+        setSyncError(data.errors.slice(0, 3).join("; "));
+      }
+      await loadProducts();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -210,18 +238,51 @@ export default function ProductManager({ categories }: Props) {
   return (
     <div className="space-y-6">
       {/* ── Product List ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-bold font-display text-lg">{products.length} Products</h3>
-          <p className="text-xs text-primary/40">Managed in Firestore</p>
+          <p className="text-xs text-primary/40">
+            {products.filter((p) => p.squareItemIds?.length).length} synced from Square
+          </p>
         </div>
-        <button
-          onClick={() => startEdit(EMPTY_PRODUCT)}
-          className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors"
-        >
-          + New Product
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-light transition-colors disabled:opacity-50 btn-tactile btn-primary-tactile"
+            title="Pull latest products from Square and sync to Firestore"
+          >
+            {syncing ? "Syncing..." : "Sync from Square"}
+          </button>
+          <button
+            onClick={() => startEdit(EMPTY_PRODUCT)}
+            className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors"
+          >
+            + New
+          </button>
+        </div>
       </div>
+
+      {/* Sync Status */}
+      {syncResult && (
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="bg-green-50 rounded-xl p-3">
+            <p className="text-xl font-bold text-green-700">{syncResult.products}</p>
+            <p className="text-xs text-green-600">Products</p>
+          </div>
+          <div className="bg-green-50 rounded-xl p-3">
+            <p className="text-xl font-bold text-green-700">{syncResult.categories}</p>
+            <p className="text-xs text-green-600">Categories</p>
+          </div>
+          <div className="bg-green-50 rounded-xl p-3">
+            <p className="text-xl font-bold text-green-700">{syncResult.items}</p>
+            <p className="text-xs text-green-600">Square Items</p>
+          </div>
+        </div>
+      )}
+      {syncError && (
+        <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{syncError}</div>
+      )}
 
       {products.length > 0 && !editing && (
         <div className="space-y-1">
@@ -251,6 +312,11 @@ export default function ProductManager({ categories }: Props) {
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {p.squareItemIds?.length ? (
+                  <span className="px-2 py-0.5 text-[10px] bg-blue-50 text-blue-600 rounded-full font-medium">Square</span>
+                ) : (
+                  <span className="px-2 py-0.5 text-[10px] bg-warm-sand text-primary/40 rounded-full">Manual</span>
+                )}
                 <button
                   onClick={() => startEdit(p)}
                   className="px-3 py-1 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"

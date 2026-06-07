@@ -36,6 +36,8 @@ export interface ManagedVariant {
   name: string;
   price: number;
   sku: string;
+  squareItemId?: string;
+  squareVariationId?: string;
 }
 
 export interface ManagedProduct {
@@ -51,6 +53,7 @@ export interface ManagedProduct {
   featured: boolean;
   createdAt: string;
   updatedAt: string;
+  squareItemIds?: string[];
 }
 
 export interface ManagedCategory {
