@@ -122,7 +122,7 @@ export const FUNDRAISING = {
   },
   socials: {
     facebook: "https://facebook.com/animasreflections",
-    instagram: "https://instagram.com/animasreflections",
+    instagram: "https://instagram.com/cjfuss.animasreflections",
   },
   featuredCategories: ["LITTLE_STRANGER", "Fly_High_AA_Fundraiser"],
 } as const;
@@ -171,6 +171,30 @@ export const FAQ = {
       q: "How do I care for my printed apparel?",
       a: "Wash inside out in cold water and tumble dry low or hang dry. Our sublimation and DTF prints are durable and designed to last, but proper care will extend the life of your garment.",
     },
+    {
+      q: "Do you offer custom printing with no minimum order?",
+      a: "Yes! Animas Reflections proudly offers no minimum orders on custom apparel, stickers, promotional products, and fundraising items. Whether you need one item or hundreds, we make it easy to get exactly what you want — no set up fees, no hidden costs.",
+    },
+    {
+      q: "What is 'no-feel' printing?",
+      a: "No-feel printing is a high-quality, full-color print method that results in soft, breathable designs that won't crack, peel, or feel heavy on the fabric. It allows for high detail and vibrant colors while maintaining comfort. This method is available on polyester and poly-blend fabrics. For cotton and dark colors, we use silkscreen or DTF methods.",
+    },
+    {
+      q: "Do you charge setup or design fees?",
+      a: "No. We believe custom printing should be accessible, so we offer no setup fees. If you need help turning your idea into a printable design — adjusting your artwork, cleaning up a logo, or creating something from scratch — we're happy to assist at no extra charge.",
+    },
+    {
+      q: "How do I get started with a custom order?",
+      a: "Getting started is easy! 1) Browse our catalog or tell us what you have in mind. 2) Upload your design or share your idea with us. 3) We'll help fine-tune the details — sizing, placement, and material. 4) We print and ship your custom items. Just email AnimasReflections@gmail.com or give us a call at 970-769-2779.",
+    },
+    {
+      q: "Who do you typically work with?",
+      a: "We work with small businesses and startups, artists, bands and musicians, schools, teams and nonprofits, event organizers and fundraisers, and individuals looking for custom gifts. Every order — big or small — receives the same care and attention.",
+    },
+    {
+      q: "Why should I choose Animas Reflections over other print shops?",
+      a: "Unlike many print shops, we are a family-owned and operated business based in Durango, Colorado since 1999. We offer no minimum orders, no setup fees, and personalized customer service. We focus on quality, creativity, and making the process stress-free. When you work with us, you're supporting a local small business that genuinely cares about every order.",
+    },
   ],
 } as const;
 
@@ -204,15 +228,20 @@ export const FEATURED_PRODUCTS = {
 
 export const CATEGORIES = {
   heading: "Featured Categories",
-  subheading: "Our latest collections are full of items you will love",
+  subheading: "Browse by brand, team, or collection",
   items: [
-    "Animas Reflections",
-    "I'M OK R U",
-    "Biscuit Hockey",
-    "Durango Lacrosse",
+    "Bands & Music",
     "Custom Designs",
+    "Teams & Sports",
+    "BISCUIT HOCKEY",
+    "I'M OK R U",
+    "Dunphy Stock FAM",
+    "GREEN BUDDHA",
     "Jewelry",
     "Custom Slaps",
+    "Wood Signs",
+    "Women In Aviation",
+    "ET Art",
   ],
 } as const;
 
