@@ -1,38 +1,43 @@
 import * as logger from "firebase-functions/logger";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { SquareClient } from "square";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type StorageBucket = any;
+// ─── ManagedProduct is the canonical product format ──────────────
+// Both the admin UI and the frontend catalog read this format from Firestore.
 
-export interface CompositeProduct {
+export interface ManagedProduct {
   id: string;
   name: string;
   description: string;
-  categoryIds: string[];
-  brand: string;
+  categoryId: string;
   colors: string[];
   tags: string[];
   images: string[];
-  minPrice: number;
-  maxPrice: number;
-  variantGroups: VariantGroup[];
+  variants: ManagedVariant[];
+  active: boolean;
+  featured: boolean;
+  createdAt: string;
   updatedAt: string;
-  syncedAt: string;
-  itemCount: number;
+  squareItemIds?: string[];
 }
 
-export interface VariantGroup {
+export interface ManagedVariant {
+  id: string;
   name: string;
-  options: VariantOption[];
+  price: number;
+  sku: string;
+  squareItemId?: string;
+  squareVariationId?: string;
 }
 
-export interface VariantOption {
-  label: string;
-  sku: string;
-  price: number;
-  squareItemId: string;
-  squareVariationId: string;
+export interface ManagedCategory {
+  id: string;
+  name: string;
+  slug: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SyncResult {
@@ -79,12 +84,6 @@ interface SquareRawImage {
   id: string;
   type: string;
   imageData?: { id?: string; url?: string; name?: string };
-}
-
-interface SquareRawCategory {
-  id: string;
-  type: string;
-  categoryData?: { name?: string };
 }
 
 interface FlattenedVariation {
@@ -195,138 +194,162 @@ function extractTags(name: string, description: string, categories: string[]): s
   return [...tags];
 }
 
-function normalizeName(name: string): string {
-  return name
-    .replace(/\s+/g, " ")
-    .replace(/["\u201C\u201D]/g, '"')
-    .replace(/['\u2018\u2019]/g, "'")
-    .trim();
-}
+// ─── Brand Detection ─────────────────────────────────────────────
 
-function groupByBrand(items: FlattenedVariation[]): Map<string, FlattenedVariation[]> {
-  const brands = new Map<string, FlattenedVariation[]>();
+const BRAND_PATTERNS: [RegExp, string][] = [
+  [/\bbiscuit hockey\b/i, "Biscuit Hockey"],
+  [/\bi.?m ok r u\b/i, "I'M OK R U"],
+  [/\bdurango lacrosse\b/i, "Durango Lacrosse"],
+  [/\bdurango hockey\b/i, "Durango Hockey"],
+  [/\bdurango high school alpine ski\b/i, "Durango Alpine Ski"],
+  [/\bdurango roller girls\b/i, "Durango Roller Girls"],
+  [/\bdunphy\b/i, "Dunphy Stock FAM"],
+  [/\bgreen buddh?a\b/i, "GREEN BUDDHA"],
+  [/\blittle stranger\b/i, "LITTLE STRANGER"],
+  [/\bjordan branch\b/i, "Jordan Branch Music"],
+  [/\bet art\b/i, "ET Art"],
+  [/\bwomen in aviation\b/i, "Women In Aviation"],
+  [/\bfly high\b/i, "Fly High AA"],
+  [/\bcustom slap\b/i, "Custom Slaps"],
+  [/\bjewelry\b/i, "Jewelry"],
+  [/\bwood sign|chromaluxe wood\b/i, "Wood Signs"],
+  [/\bpet scarf\b/i, "Pet Scarves"],
+  [/\bornament\b/i, "Ornaments"],
+  [/\bglass cutting board\b/i, "Glass Cutting Boards"],
+  [/\bdrink hugger|neoprene\b/i, "Drink Huggers"],
+  [/\bhat\b/i, "Hats"],
+  [/\banimas reflections\b/i, "Animas Reflections"],
+];
 
-  for (const item of items) {
-    const name = item.itemName.toLowerCase();
-    let brandKey = "Other";
-
-    const brandPatterns: [RegExp, string][] = [
-      [/\bbiscuit hockey\b/i, "Biscuit Hockey"],
-      [/\bi.?m ok r u\b/i, "I'M OK R U"],
-      [/\bdurango lacrosse\b/i, "Durango Lacrosse"],
-      [/\bdurango hockey\b/i, "Durango Hockey"],
-      [/\bdurango high school alpine ski\b/i, "Durango Alpine Ski"],
-      [/\bdurango roller girls\b/i, "Durango Roller Girls"],
-      [/\bdunphy\b/i, "Dunphy Stock FAM"],
-      [/\bgreen buddh?a\b/i, "GREEN BUDDHA"],
-      [/\blittle stranger\b/i, "LITTLE STRANGER"],
-      [/\bjordan branch\b/i, "Jordan Branch Music"],
-      [/\bet art\b/i, "ET Art"],
-      [/\bwomen in aviation\b/i, "Women In Aviation"],
-      [/\bfly high\b/i, "Fly High AA"],
-      [/\bcustom slap\b/i, "Custom Slaps"],
-      [/\bjewelry\b/i, "Jewelry"],
-      [/\bwood sign|chromaluxe wood\b/i, "Wood Signs"],
-      [/\bpet scarf\b/i, "Pet Scarves"],
-      [/\bornament\b/i, "Ornaments"],
-      [/\bglass cutting board\b/i, "Glass Cutting Boards"],
-      [/\bdrink hugger|neoprene\b/i, "Drink Huggers"],
-      [/\bhat\b/i, "Hats"],
-    ];
-
-    for (const [pattern, label] of brandPatterns) {
-      if (pattern.test(name)) {
-        brandKey = label;
-        break;
-      }
-    }
-
-    if (!brands.has(brandKey)) {
-      brands.set(brandKey, []);
-    }
-    brands.get(brandKey)!.push(item);
+function detectBrand(name: string): string {
+  for (const [pattern, label] of BRAND_PATTERNS) {
+    if (pattern.test(name)) return label;
   }
-
-  return brands;
+  return "Animas Reflections";
 }
 
-function buildCompositeProduct(
+function getBrandCategoryName(brand: string): string {
+  // Map brands to standard categories
+  const categoryMap: Record<string, string> = {
+    "Biscuit Hockey": "Biscuit Hockey",
+    "I'M OK R U": "I'M OK R U",
+    "Durango Lacrosse": "Durango Lacrosse",
+    "Durango Hockey": "Durango Hockey",
+    "Durango Alpine Ski": "Durango Alpine Ski",
+    "Durango Roller Girls": "Durango Roller Girls",
+    "Dunphy Stock FAM": "Dunphy Stock FAM",
+    "GREEN BUDDHA": "GREEN BUDDHA",
+    "LITTLE STRANGER": "LITTLE STRANGER",
+    "Jordan Branch Music": "Jordan Branch Music",
+    "ET Art": "ET Art",
+    "Women In Aviation": "Women In Aviation",
+    "Fly High AA": "Fly High AA",
+    "Custom Slaps": "Custom Slaps",
+    "Jewelry": "Jewelry",
+    "Wood Signs": "Wood Signs",
+    "Pet Scarves": "Pet Scarves",
+    "Ornaments": "Ornaments",
+    "Glass Cutting Boards": "Glass Cutting Boards",
+    "Drink Huggers": "Drink Huggers",
+    "Hats": "Hats",
+    "Animas Reflections": "Animas Reflections",
+  };
+  return categoryMap[brand] ?? brand;
+}
+
+// ─── Build ManagedProduct from grouped variations ────────────────
+
+function buildManagedProduct(
   brand: string,
   members: FlattenedVariation[]
-): CompositeProduct {
+): ManagedProduct {
+  const now = new Date().toISOString();
   const first = members[0];
-  const itemIds = [...new Set(members.map((m) => m.itemId))];
 
-  const groups = new Map<string, VariantGroup>();
-  const sizes = new Map<string, VariantOption[]>();
-  const colors = new Set<string>();
+  // Collect all unique data
+  const allColors = new Set<string>();
+  const allTags = new Set<string>();
+  const allImages = new Set<string>();
+  const squareItemIds: string[] = [];
+  const variantMap = new Map<string, ManagedVariant>();
 
   for (const m of members) {
-    const c = extractColors(m.variationName);
-    c.forEach((col) => colors.add(col));
+    extractColors(m.variationName).forEach((c) => allColors.add(c));
+    extractTags(m.itemName, m.itemDescription ?? "", m.categoryIds).forEach((t) => allTags.add(t));
+    if (m.imageUrl) allImages.add(m.imageUrl);
+    if (!squareItemIds.includes(m.itemId)) squareItemIds.push(m.itemId);
 
+    // Build variant — prefer size+color formatted name, fall back to variation name
     const size = extractSizes(m.variationName);
-    const key = size ?? "Standard";
+    const colors = extractColors(m.variationName);
+    const variantName = [size, ...colors].filter(Boolean).join(" ") || m.variationName || "Standard";
 
-    if (!sizes.has(key)) sizes.set(key, []);
-    sizes.get(key)!.push({
-      label: m.variationName || key,
-      sku: m.sku ?? "",
-      price: m.price,
-      squareItemId: m.itemId,
-      squareVariationId: m.variationId,
-    });
+    // Use variation ID as variant key (dedupe by variation)
+    const key = m.variationId;
+    if (!variantMap.has(key)) {
+      variantMap.set(key, {
+        id: m.variationId,
+        name: variantName,
+        price: m.price,
+        sku: m.sku ?? "",
+        squareItemId: m.itemId,
+        squareVariationId: m.variationId,
+      });
+    }
   }
 
-  if (sizes.size > 1) {
-    const options = [...sizes.entries()].map(([sizeLabel, opts]) => {
-      const cheapest = opts.reduce((a, b) => (a.price < b.price ? a : b));
-      return { label: sizeLabel, sku: cheapest.sku, price: cheapest.price, squareItemId: cheapest.squareItemId, squareVariationId: cheapest.squareVariationId };
-    });
-    groups.set("Size", { name: "Size", options });
-  } else if (members.length > 1) {
-    const options = members.map((m) => ({
-      label: m.variationName,
-      sku: m.sku ?? "",
-      price: m.price,
-      squareItemId: m.itemId,
-      squareVariationId: m.variationId,
-    }));
-    groups.set("Option", { name: "Option", options });
-  }
-
-  const prices = members.map((m) => m.price).filter((p) => p > 0);
-  const allColors = [...colors];
-  const allImages = [...new Set(members.map((m) => m.imageUrl).filter(Boolean))] as string[];
+  const brandSlug = brand.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  const categoryId = `cat_${brandSlug}`;
 
   return {
-    id: `comp_${brand.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${Date.now()}`,
-    name: normalizeName(first.itemName),
-    description: (first.itemDescription ?? "").substring(0, 600),
-    categoryIds: [...new Set(members.flatMap((m) => m.categoryIds))],
-    brand,
-    colors: allColors,
-    tags: extractTags(first.itemName, first.itemDescription ?? "", []),
-    images: allImages,
-    minPrice: prices.length > 0 ? Math.min(...prices) : 0,
-    maxPrice: prices.length > 0 ? Math.max(...prices) : 0,
-    variantGroups: [...groups.values()],
-    updatedAt: new Date().toISOString(),
-    syncedAt: new Date().toISOString(),
-    itemCount: itemIds.length,
+    id: `prod_${brandSlug}_${Date.now()}`,
+    name: brand,
+    description: (first.itemDescription ?? `Custom ${brand} merchandise. Professionally printed in Durango, CO.`).substring(0, 600),
+    categoryId,
+    colors: [...allColors],
+    tags: [brand.toLowerCase(), ...allTags],
+    images: [...allImages],
+    variants: [...variantMap.values()],
+    active: true,
+    featured: false,
+    createdAt: now,
+    updatedAt: now,
+    squareItemIds,
   };
 }
+
+// ─── Image Download Helper ───────────────────────────────────────
+
+async function downloadSquareImage(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const buffer = await response.arrayBuffer();
+    const bucket = getStorage().bucket();
+    const filename = `products/square-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const file = bucket.file(filename);
+    await file.save(Buffer.from(buffer), { contentType: "image/jpeg" });
+    await file.makePublic();
+    return `https://storage.googleapis.com/${bucket.name}/${filename}`;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Main Sync: Square → Firestore (ManagedProduct format) ───────
 
 export async function syncProductsFromSquare(
   client: SquareClient,
   db: ReturnType<typeof getFirestore>
 ): Promise<SyncResult> {
   const errors: string[] = [];
+  const now = new Date().toISOString();
 
   logger.info("Fetching Square catalog...");
 
+  // Fetch all ITEMs with related IMAGE objects
   let allRawItems: SquareRawItem[] = [];
-  let allImages: SquareRawImage[] = [];
+  let allRelatedImages: SquareRawImage[] = [];
   let cursor: string | undefined;
 
   do {
@@ -346,126 +369,166 @@ export async function syncProductsFromSquare(
     const pageImages = (relatedObjects ?? []).filter(
       (o) => o.type === "IMAGE"
     ) as unknown as SquareRawImage[];
-    allImages = allImages.concat(pageImages);
+    allRelatedImages = allRelatedImages.concat(pageImages);
 
     cursor = (itemResponse as Record<string, unknown>).cursor as string | undefined;
   } while (cursor);
 
-  const rawItems = allRawItems;
-  const images = allImages;
+  logger.info("Square catalog fetched", {
+    totalItems: allRawItems.length,
+    relatedImages: allRelatedImages.length,
+  });
 
-  logger.info("Catalog items fetched", { total: rawItems.length });
-
+  // Build image lookup map
   const imageMap = new Map<string, string>();
-  for (const img of images) {
+  for (const img of allRelatedImages) {
     const id = img.imageData?.id;
     const url = img.imageData?.url;
-    if (id && url) imageMap.set(id, url);
+    if (id && url) imageMap.set(String(id), url);
   }
+  logger.info("Image map ready", { size: imageMap.size });
 
+  // Flatten items → variations, grouped by detected brand
   const flatVariations: FlattenedVariation[] = [];
-  for (const item of rawItems) {
-    const data = item.itemData;
-    if (!data?.variations?.length) continue;
 
-    const itemImages = (data.imageIds ?? [])
-      .map((id) => imageMap.get(String(id)))
-      .filter(Boolean) as string[];
+  for (const item of allRawItems) {
+    const data = item.itemData;
+    if (!data?.name || !data?.variations?.length) continue;
+
+    const itemImageIds = (data.imageIds ?? []).map(String);
+    const primaryImageUrl = itemImageIds
+      .map((id) => imageMap.get(id))
+      .find(Boolean) ?? null;
 
     for (const v of data.variations) {
       const vd = v.itemVariationData;
-      const rawAmount = vd?.priceMoney?.amount;
-      const amount =
-        typeof rawAmount === "bigint"
-          ? Number(rawAmount)
-          : (rawAmount ?? 0);
+      if (!vd) continue;
+      const rawAmount = vd.priceMoney?.amount;
+      const amount = typeof rawAmount === "bigint" ? Number(rawAmount) : (rawAmount ?? 0);
       const price = amount / 100;
-
       if (price < 2.00) continue;
 
       flatVariations.push({
         itemId: item.id,
-        itemName: data.name ?? "",
+        itemName: data.name,
         itemDescription: data.description ?? "",
         variationId: v.id,
-        variationName: vd?.name ?? "",
+        variationName: vd.name ?? "",
         price,
-        sku: vd?.sku ?? "",
+        sku: vd.sku ?? "",
         categoryIds: (data.categories ?? []).map((c) => c.id),
-        imageUrl: itemImages[0] ?? null,
+        imageUrl: primaryImageUrl,
       });
     }
   }
 
-  const categoriesResponse = await client.catalog.search({
-    objectTypes: ["CATEGORY"],
-  });
-  const rawCategories = (categoriesResponse.objects ?? []) as SquareRawCategory[];
-  const categories = rawCategories.map((c) => ({
-    id: c.id,
-    name: c.categoryData?.name ?? c.id,
-  }));
+  logger.info("Variations flattened", { count: flatVariations.length });
 
-  const brands = groupByBrand(flatVariations);
-
-  const compositeProducts: CompositeProduct[] = [];
-  for (const [brand, members] of brands) {
-    if (members.length === 0) continue;
-    compositeProducts.push(buildCompositeProduct(brand, members));
+  // Group variations by brand
+  const brandGroups = new Map<string, FlattenedVariation[]>();
+  for (const v of flatVariations) {
+    const brand = detectBrand(v.itemName);
+    if (!brandGroups.has(brand)) brandGroups.set(brand, []);
+    brandGroups.get(brand)!.push(v);
   }
 
+  logger.info("Brands detected", { count: brandGroups.size });
+
+  // Build ManagedProducts
+  const products: ManagedProduct[] = [];
+  const brandCategories: Map<string, ManagedCategory> = new Map();
+  let catOrder = 0;
+
+  for (const [brand, members] of brandGroups) {
+    if (members.length === 0) continue;
+    const product = buildManagedProduct(brand, members);
+    products.push(product);
+
+    const catName = getBrandCategoryName(brand);
+    const catSlug = catName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const catId = `cat_${catSlug}`;
+
+    if (!brandCategories.has(catId)) {
+      brandCategories.set(catId, {
+        id: catId,
+        name: catName,
+        slug: catSlug,
+        order: catOrder++,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+
+  // Download images to Firebase Storage (do this before writing to Firestore)
+  logger.info("Downloading images...");
+  let imagesDownloaded = 0;
+  for (const product of products) {
+    if (product.images.length > 0) {
+      const storageUrls: string[] = [];
+      for (const url of product.images.slice(0, 3)) {
+        // Only download Square CDN URLs, skip already-local URLs
+        if (url.includes("squarecdn.com") || url.includes("squareup.com")) {
+          const local = await downloadSquareImage(url);
+          if (local) {
+            storageUrls.push(local);
+            imagesDownloaded++;
+          }
+        } else {
+          storageUrls.push(url); // Keep existing non-Square URLs
+        }
+      }
+      if (storageUrls.length > 0) {
+        product.images = storageUrls;
+      }
+    }
+  }
+  logger.info("Images processed", { downloaded: imagesDownloaded });
+
+  // Write to Firestore
   logger.info("Writing to Firestore...");
+  const MAX_BATCH = 450;
+  let batch = db.batch();
+  let batchCount = 0;
 
-  const MAX_BATCH_SYNC = 450;
-  let syncBatch = db.batch();
-  let syncBatchCount = 0;
-  const productsRef = db.collection("products");
-  const categoriesRef = db.collection("categories");
-
-  const flushSync = async () => {
-    if (syncBatchCount > 0) {
-      await syncBatch.commit();
-      syncBatch = db.batch();
-      syncBatchCount = 0;
+  const flush = async () => {
+    if (batchCount > 0) {
+      await batch.commit();
+      batch = db.batch();
+      batchCount = 0;
     }
   };
 
-  for (const cat of categories) {
-    syncBatch.set(categoriesRef.doc(cat.id), {
-      name: cat.name,
-      updatedAt: new Date().toISOString(),
-    }, { merge: true });
-    syncBatchCount++;
-    if (syncBatchCount >= MAX_BATCH_SYNC) await flushSync();
+  for (const [id, category] of brandCategories) {
+    batch.set(db.collection("categories").doc(id), category);
+    batchCount++;
+    if (batchCount >= MAX_BATCH) await flush();
   }
 
-  for (const product of compositeProducts) {
-    syncBatch.set(productsRef.doc(product.id), product);
-    syncBatchCount++;
-    if (syncBatchCount >= MAX_BATCH_SYNC) await flushSync();
+  for (const product of products) {
+    batch.set(db.collection("products").doc(product.id), product);
+    batchCount++;
+    if (batchCount >= MAX_BATCH) await flush();
   }
 
-  await flushSync();
+  await flush();
 
-  await db.collection("config").doc("sync_status").set({
-    lastSync: new Date().toISOString(),
-    productCount: compositeProducts.length,
-    categoryCount: categories.length,
+  // Write sync status
+  const syncStatus: SyncStatus = {
+    lastSync: now,
+    productCount: products.length,
+    categoryCount: brandCategories.size,
     itemCount: flatVariations.length,
     errors,
-  }, { merge: true });
+  };
+  await db.collection("config").doc("sync_status").set(syncStatus, { merge: true });
 
-  logger.info("Sync complete", {
-    products: compositeProducts.length,
-    categories: categories.length,
-    items: flatVariations.length,
-    errors: errors.length,
-  });
+  logger.info("Sync complete", syncStatus);
 
   return {
     success: true,
-    products: compositeProducts.length,
-    categories: categories.length,
+    products: products.length,
+    categories: brandCategories.size,
     items: flatVariations.length,
     errors,
   };
@@ -485,28 +548,15 @@ export async function getSyncStatus(
   };
 }
 
-// ─── Import from Square with Images ───────────────────────────────
-
-async function downloadImage(url: string, bucket: StorageBucket): Promise<string | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    const buffer = await response.arrayBuffer();
-    const filename = `products/square-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-    const file = bucket.file(filename);
-    await file.save(Buffer.from(buffer), { contentType: "image/jpeg" });
-    await file.makePublic();
-    return `https://storage.googleapis.com/${bucket.name}/${filename}`;
-  } catch {
-    return null;
-  }
-}
+// ─── Import from Square (by Square Category) ─────────────────────
+// Alternative grouping strategy: organizes by Square category names
+// rather than detected brands. Both output ManagedProduct format.
 
 export async function importFromSquare(
   client: SquareClient,
-  db: ReturnType<typeof getFirestore>,
-  storageBucket: StorageBucket
+  db: ReturnType<typeof getFirestore>
 ): Promise<{ imported: number; errors: string[] }> {
+  const now = new Date().toISOString();
   const errors: string[] = [];
 
   let allItems: Array<Record<string, unknown>> = [];
@@ -567,8 +617,6 @@ export async function importFromSquare(
 
   let batch = db.batch();
   let batchCount = 0;
-  const productsRef = db.collection("products");
-  const categoriesRef = db.collection("categories");
   let imported = 0;
 
   const flush = async () => {
@@ -579,15 +627,19 @@ export async function importFromSquare(
     }
   };
 
+  let catOrder = 0;
+
   for (const [brand, items] of brands) {
-    const brandId = `cat_${brand.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
-    batch.set(categoriesRef.doc(brandId), {
-      id: brandId,
+    const brandSlug = brand.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const categoryId = `cat_${brandSlug}`;
+
+    batch.set(db.collection("categories").doc(categoryId), {
+      id: categoryId,
       name: brand,
-      slug: brand.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      order: imported,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      slug: brandSlug,
+      order: catOrder++,
+      createdAt: now,
+      updatedAt: now,
     }, { merge: true });
     batchCount++;
 
@@ -604,12 +656,12 @@ export async function importFromSquare(
 
       let storageUrl = "";
       if (primaryImageUrl) {
-        const downloaded = await downloadImage(primaryImageUrl, storageBucket);
+        const downloaded = await downloadSquareImage(primaryImageUrl);
         if (downloaded) storageUrl = downloaded;
       }
 
-      const productId = `prod_${imported}_${Date.now()}`;
-      const variants = variations
+      const productId = `prod_${brandSlug}_${imported}_${Date.now()}`;
+      const productVariants = variations
         .filter((v) => {
           const vd = (v.itemVariationData || {}) as Record<string, unknown>;
           const pm = vd.priceMoney as { amount?: bigint } | undefined;
@@ -623,28 +675,31 @@ export async function importFromSquare(
             name: (vd.name as string) ?? "",
             price: pm?.amount ? Number(pm.amount) / 100 : 0,
             sku: (vd.sku as string) ?? "",
+            squareItemId: item.id as string,
+            squareVariationId: v.id as string,
           };
         });
 
-      if (variants.length === 0) continue;
+      if (productVariants.length === 0) continue;
 
       const tags = name.toLowerCase().match(/\b[a-z]{3,}\b/g)?.filter(
         (w) => !["the", "and", "for", "with"].includes(w)
       ) ?? [];
 
-      batch.set(productsRef.doc(productId), {
+      batch.set(db.collection("products").doc(productId), {
         id: productId,
         name,
         description: description.substring(0, 600),
-        categoryId: brandId,
+        categoryId,
         colors: [],
         tags: [...new Set([brand.toLowerCase(), ...tags])],
         images: storageUrl ? [storageUrl] : [],
-        variants,
+        variants: productVariants,
         active: true,
         featured: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
+        squareItemIds: [item.id as string],
       });
       batchCount++;
       imported++;
@@ -658,7 +713,7 @@ export async function importFromSquare(
   await flush();
 
   await db.collection("config").doc("import_status").set({
-    lastImport: new Date().toISOString(),
+    lastImport: now,
     imported,
     errors,
   }, { merge: true });
