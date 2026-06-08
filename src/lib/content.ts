@@ -12,6 +12,9 @@ export const SITE = {
   founded: 1999,
   description:
     "Family owned and operated design & print operation based in Durango, CO, creating unique custom designs inspired by the beauty of Southwest Colorado since 1999.",
+  socials: {
+    instagram: "https://instagram.com/cjfuss.animasreflections",
+  },
 } as const;
 
 export const NAVIGATION = {

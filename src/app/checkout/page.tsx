@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { httpsCallable } from "firebase/functions";
@@ -28,6 +29,7 @@ const emptyCustomer: CustomerInfo = {
 };
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { cart, subtotal, addonsTotal, shipping, total, clearCart } = useCart();
   const [customer, setCustomer] = useState<CustomerInfo>(emptyCustomer);
   const [processing, setProcessing] = useState(false);
@@ -167,20 +169,19 @@ export default function CheckoutPage() {
   }
 
   if (result) {
+    // Redirect to dedicated confirmation page with order details
+    useEffect(() => {
+      clearCart();
+      router.replace(`/order-confirmation?orderId=${encodeURIComponent(result.orderId)}&status=${encodeURIComponent(result.paymentStatus)}`);
+    }, []);
     return (
       <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
-        <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-8 max-w-md w-full">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-          </div>
-          <h2 className="text-2xl font-bold font-display mb-2">Order Confirmed!</h2>
-          <p className="text-primary/60 mb-4">Thank you for your order, {customer.firstName}.</p>
-          <div className="text-sm text-primary/50 space-y-1 mb-6">
-            <p>Order ID: {result.orderId}</p>
-            <p>Payment: {result.paymentStatus}</p>
-          </div>
-          <Link href="/shop" className="block w-full py-3 bg-primary text-white rounded-2xl font-semibold hover:bg-primary-light transition-colors text-center">Continue Shopping</Link>
+        <div className="flex gap-3">
+          <div className="w-3 h-3 bg-gold rounded-full animate-bounce" />
+          <div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:130ms]" />
+          <div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:260ms]" />
         </div>
+        <p className="mt-4 text-primary/60">Redirecting to your order confirmation...</p>
       </div>
     );
   }

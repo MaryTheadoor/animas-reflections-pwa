@@ -10,6 +10,48 @@ import { useCart } from "@/context/cart-context";
 import PageLayout from "@/components/layout/page-layout";
 import { USE_SYNTHETIC } from "@/hooks/useCatalog";
 
+function ProductJsonLd({
+  name,
+  description,
+  imageUrl,
+  price,
+  productId,
+  sku,
+}: {
+  name: string;
+  description: string;
+  imageUrl: string;
+  price: number;
+  productId: string;
+  sku: string;
+}) {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name,
+    description: description.replace(/<[^>]*>/g, " ").substring(0, 300),
+    image: imageUrl || "https://www.animasreflections.com/logo.png",
+    sku,
+    offers: {
+      "@type": "Offer",
+      price: price.toFixed(2),
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: `https://www.animasreflections.com/product?id=${productId}`,
+    },
+    brand: {
+      "@type": "Brand",
+      name: "Animas Reflections",
+    },
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
 export default function ProductPage() {
   return (
     <Suspense fallback={<PageLayout><div className="flex items-center justify-center min-h-[50vh]"><div className="flex gap-3"><div className="w-3 h-3 bg-gold rounded-full animate-bounce" /><div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:130ms]" /><div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:260ms]" /></div></div></PageLayout>}>
@@ -63,6 +105,16 @@ function ProductContent() {
   return (
     <PageLayout>
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 pt-8 sm:pt-12 pb-16">
+        {/* JSON-LD Structured Data */}
+        <ProductJsonLd
+          name={product.name}
+          description={product.description}
+          imageUrl={imageUrl}
+          price={price}
+          productId={product.id}
+          sku={variation?.sku || product.id}
+        />
+
         {/* Breadcrumb */}
         <div className="text-xs text-primary/40 mb-4">
           <Link href="/shop" className="hover:text-gold">Shop</Link>

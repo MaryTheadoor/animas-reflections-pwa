@@ -39,7 +39,9 @@ export function OrganizationJsonLd() {
           addressRegion: "CO",
           addressCountry: "US",
         },
-        sameAs: [],
+        sameAs: [
+          "https://www.instagram.com/cjfuss.animasreflections/",
+        ],
       }}
     />
   );
