@@ -8,8 +8,9 @@ import { db } from "@/lib/firebase";
 import { useCart } from "@/context/cart-context";
 import Customizer, { type DesignState } from "@/components/customizer/customizer";
 import FileUpload from "@/components/customizer/file-upload";
-import { ADDON_PRICE, SITE_NAME } from "@/lib/constants";
+import { SITE_NAME } from "@/lib/constants";
 import { USE_SYNTHETIC } from "@/hooks/useCatalog";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 import type { AddonType, DesignAsset } from "@/types";
 
 const PRODUCT_VIEWS = [
@@ -42,6 +43,8 @@ const DEFAULT_DESIGN_STATE: DesignState = {
 
 export default function CustomizerPage() {
   const { addItem } = useCart();
+  const siteConfig = useSiteConfig();
+  const addonPrice = siteConfig.addon_price;
   const [activeView, setActiveView] = useState("front");
   const [designUrl, setDesignUrl] = useState<string>();
   const [designText, setDesignText] = useState<string>();
@@ -97,13 +100,13 @@ export default function CustomizerPage() {
       addons: Array.from(selectedAddons).map((type) => ({
         type,
         label: ADDONS.find((a) => a.type === type)?.label ?? type,
-        price: ADDON_PRICE,
+        price: addonPrice,
       })),
       isSynthetic: USE_SYNTHETIC,
     });
   };
 
-  const addonsCost = selectedAddons.size * ADDON_PRICE;
+  const addonsCost = selectedAddons.size * addonPrice;
   const totalPrice = 20.0 + addonsCost;
 
   return (

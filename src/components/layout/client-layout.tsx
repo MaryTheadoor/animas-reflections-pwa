@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { CartProvider, useCart } from "@/context/cart-context";
 import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/context/theme-context";
+import { SiteConfigProvider } from "@/context/site-config-context";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import type { ReactNode } from "react";
 
@@ -15,18 +16,27 @@ function CartDrawerWrapper() {
 export default function ClientLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      if (process.env.NODE_ENV === "production") {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      } else {
+        // Dev mode: unregister any lingering service worker to prevent HMR refresh loops
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((r) => r.unregister());
+        });
+      }
     }
   }, []);
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <CartProvider>
-          {children}
-          <CartDrawerWrapper />
-        </CartProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <SiteConfigProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <CartProvider>
+            {children}
+            <CartDrawerWrapper />
+          </CartProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </SiteConfigProvider>
   );
 }

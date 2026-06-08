@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import HeaderBar from "@/components/layout/header-bar";
@@ -13,8 +15,10 @@ import {
   PAYMENT_METHODS,
   RETURN_POLICY,
 } from "@/lib/content";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 export default function Home() {
+  const siteConfig = useSiteConfig();
   return (
     <div
       className="flex flex-col flex-1 bg-ambient"
@@ -44,11 +48,10 @@ export default function Home() {
               priority
             />
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight font-display mb-6 animate-fade-in-up animate-delay-100 text-foreground">
-              {HERO.heading}
+              {siteConfig.hero_heading || HERO.heading}
             </h1>
             <p className="text-lg text-foreground/70 mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
-              Design your own t-shirt, hoodie, bag, purse, ornament, coaster, dog
-              scarf, long sleeve tee, print on wood, metal, jewelry and more!
+              {siteConfig.hero_subheading || "Design your own t-shirt, hoodie, bag, purse, ornament, coaster, dog scarf, long sleeve tee, print on wood, metal, jewelry and more!"}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animate-delay-300">
               <Link
@@ -93,7 +96,7 @@ export default function Home() {
             <div>
               <h2 className="text-3xl font-bold font-display mb-2">{OUR_STORY.heading}</h2>
               <p className="text-gold font-semibold mb-4">{OUR_STORY.subheading}</p>
-              <p className="text-primary/70 leading-relaxed">{OUR_STORY.body}</p>
+              <p className="text-primary/70 leading-relaxed">{siteConfig.about_body || OUR_STORY.body}</p>
               <div className="mt-4 text-sm text-primary/50">
                 <p>{SITE.phone}</p>
                 <p>{SITE.email}</p>

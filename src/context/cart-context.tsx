@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { CartItem, CartAddon, AddonType } from "@/types";
-import { ADDON_PRICE, SHIPPING } from "@/lib/constants";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 interface CartState {
   items: CartItem[];
@@ -20,7 +20,7 @@ type CartAction =
   | { type: "ADD_ITEM"; item: CartItem }
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
-  | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; modifierId?: string }
+  | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; modifierId?: string; addonPrice: number }
   | { type: "SET_SHIPPING_TIER"; tier: "stickers" | "apparel" | "free" }
   | { type: "CLEAR_CART" };
 
@@ -60,7 +60,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
                 : action.addonType === "sleeve_print"
                   ? "Sleeve Print"
                   : "Name/Number Personalization",
-            price: ADDON_PRICE,
+            price: action.addonPrice,
             modifier_id: action.modifierId,
           };
           return { ...i, addons: [...i.addons, addon] };
@@ -103,6 +103,10 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, dispatch] = useReducer(cartReducer, initialCart);
   const [cartOpen, setCartOpen] = useState(false);
+  const siteConfig = useSiteConfig();
+  const freeThreshold = siteConfig.free_shipping_threshold;
+  const shippingTierStickers = siteConfig.shipping_tier_stickers;
+  const shippingTierApparel = siteConfig.shipping_tier_apparel;
 
   const addItem = useCallback((item: CartItem) => {
     dispatch({ type: "ADD_ITEM", item });
@@ -118,9 +122,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const toggleAddon = useCallback(
     (id: string, addonType: AddonType, modifierId?: string) => {
-      dispatch({ type: "TOGGLE_ADDON", id, addonType, modifierId });
+      dispatch({ type: "TOGGLE_ADDON", id, addonType, modifierId, addonPrice: siteConfig.addon_price });
     },
-    []
+    [siteConfig.addon_price]
   );
 
   const clearCart = useCallback(() => {
@@ -145,11 +149,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const shipping =
-    subtotal >= SHIPPING.FREE_THRESHOLD
+    subtotal >= freeThreshold
       ? 0
       : cart.shippingTier === "stickers"
-        ? SHIPPING.TIER_STICKERS
-        : SHIPPING.TIER_APPAREL;
+        ? shippingTierStickers
+        : shippingTierApparel;
 
   const total = subtotal + addonsTotal + shipping;
   const itemCount = cart.items.reduce((sum, i) => sum + i.quantity, 0);
