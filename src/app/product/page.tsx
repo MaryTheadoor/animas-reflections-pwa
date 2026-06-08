@@ -194,27 +194,35 @@ function ProductContent() {
               />
             </div>
 
-            {/* Add to Cart */}
-            <button
-              onClick={() => {
-                if (!variation) return;
-                addItem({
-                  id: crypto.randomUUID(),
-                  product_id: product.id,
-                  variation_id: variation.id,
-                  name: `${product.name} — ${variation.name}`,
-                  base_price: price,
-                  quantity: 1,
-                  selected_view: "front",
-                  design_text: customText || undefined,
-                  addons: [],
-                  isSynthetic: USE_SYNTHETIC,
-                });
-              }}
-              className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
-            >
-              Add to Cart — ${price.toFixed(2)}
-            </button>
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  if (!variation) return;
+                  addItem({
+                    id: crypto.randomUUID(),
+                    product_id: product.id,
+                    variation_id: variation.id,
+                    name: `${product.name} — ${variation.name}`,
+                    base_price: price,
+                    quantity: 1,
+                    selected_view: "front",
+                    design_text: customText || undefined,
+                    addons: [],
+                    isSynthetic: USE_SYNTHETIC,
+                  });
+                }}
+                className="flex-1 px-6 py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
+              >
+                Add to Cart — ${price.toFixed(2)}
+              </button>
+              <Link
+                href={`/customizer?product=${encodeURIComponent(product.id)}`}
+                className="flex-1 px-6 py-3 rounded-2xl bg-primary/10 text-primary font-semibold hover:bg-primary/20 transition-colors text-center btn-tactile"
+              >
+                Customize This
+              </Link>
+            </div>
           </div>
         </div>
       </main>
