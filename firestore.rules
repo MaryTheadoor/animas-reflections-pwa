@@ -3,28 +3,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admin-only write access (enforced via Firebase Auth in Functions)
+    // Site config - public read, authenticated write
     match /config/{document=**} {
       allow read: if true;
-      allow write: if false;
+      allow write: if request.auth != null;
     }
 
-    // Design catalog - public read, admin write via Functions
+    // Design catalog - public read, authenticated write
     match /designs/{document=**} {
       allow read: if true;
-      allow write: if false;
+      allow write: if request.auth != null;
     }
 
-    // Products - public read, admin write via Functions
+    // Products - public read, authenticated write
     match /products/{document=**} {
       allow read: if true;
-      allow write: if false;
+      allow write: if request.auth != null;
     }
 
-    // Categories - public read, admin write via Functions
+    // Categories - public read, authenticated write
     match /categories/{document=**} {
       allow read: if true;
-      allow write: if false;
+      allow write: if request.auth != null;
     }
 
     // User profiles - authenticated users can read/write their own doc

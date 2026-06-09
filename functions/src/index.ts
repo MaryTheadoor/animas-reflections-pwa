@@ -453,7 +453,7 @@ export const fetchRecentOrders = onCall(
         returnEntries: true,
         query: {
           filter: {
-            stateFilter: { states: ["COMPLETED", "OPEN"] },
+            stateFilter: { states: ["COMPLETED", "CANCELED"] },
           },
           sort: {
             sortField: "CLOSED_AT",
@@ -753,7 +753,7 @@ export const createSquareProduct = onCall(
           sku: String(v.sku ?? ""),
           pricingType: "FIXED_PRICING",
           priceMoney: {
-            amount: priceCents,
+            amount: BigInt(Math.round(priceCents)),
             currency: "USD",
           },
         },
