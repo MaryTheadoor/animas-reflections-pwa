@@ -83,14 +83,18 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  // Apply CSS variables to :root for brand colors
+  // Apply CSS variables to :root for brand colors — only when values differ to avoid HMR loops
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty("--color-primary", config.primary_color);
-    root.style.setProperty("--color-accent", config.accent_color);
-    root.style.setProperty("--color-background", config.background_color);
-    // Also set the nav-dock/theme accent
-    root.style.setProperty("--nav-dock-active-color", config.accent_color);
+    const setIfChanged = (prop: string, value: string) => {
+      if (root.style.getPropertyValue(prop) !== value) {
+        root.style.setProperty(prop, value);
+      }
+    };
+    setIfChanged("--color-primary", config.primary_color);
+    setIfChanged("--color-accent", config.accent_color);
+    setIfChanged("--color-background", config.background_color);
+    setIfChanged("--nav-dock-active-color", config.accent_color);
   }, [config.primary_color, config.accent_color, config.background_color]);
 
   return (

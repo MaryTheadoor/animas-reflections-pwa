@@ -11,6 +11,7 @@ export interface ManagedProduct {
   name: string;
   description: string;
   categoryId: string;
+  productType: string;
   colors: string[];
   tags: string[];
   images: string[];
@@ -20,6 +21,15 @@ export interface ManagedProduct {
   createdAt: string;
   updatedAt: string;
   squareItemIds?: string[];
+  seoTitle?: string;
+  seoDescription?: string;
+  printZones?: {
+    front: { x_percent: number; y_percent: number; width_percent: number; height_percent: number };
+    back?: { x_percent: number; y_percent: number; width_percent: number; height_percent: number };
+    sleeve?: { x_percent: number; y_percent: number; width_percent: number; height_percent: number };
+  };
+  weightOz?: number;
+  baseProductId?: string;
 }
 
 export interface ManagedVariant {
@@ -29,6 +39,7 @@ export interface ManagedVariant {
   sku: string;
   squareItemId?: string;
   squareVariationId?: string;
+  inventory?: number;
 }
 
 export interface ManagedCategory {
@@ -259,6 +270,16 @@ function getBrandCategoryName(brand: string): string {
 
 // ─── Build ManagedProduct from grouped variations ────────────────
 
+function detectProductType(brand: string, tags: string[]): string {
+  const lower = `${brand} ${tags.join(" ")}`.toLowerCase();
+  if (/sticker|slap|decal/i.test(lower)) return "sticker";
+  if (/sign|wood/i.test(lower)) return "sign";
+  if (/jewelry|necklace|bracelet|earring/i.test(lower)) return "jewelry";
+  if (/hat|bag|scarf|drink|hugger|ornament|cutting|board|pet/i.test(lower)) return "accessory";
+  if (/shirt|hoodie|sweat|tank|tee|apparel|long.?sleeve|crewneck/i.test(lower)) return "apparel";
+  return "other";
+}
+
 function buildManagedProduct(
   brand: string,
   members: FlattenedVariation[]
@@ -306,6 +327,7 @@ function buildManagedProduct(
     name: brand,
     description: (first.itemDescription ?? `Custom ${brand} merchandise. Professionally printed in Durango, CO.`).substring(0, 600),
     categoryId,
+    productType: detectProductType(brand, [...allTags]),
     colors: [...allColors],
     tags: [brand.toLowerCase(), ...allTags],
     images: [...allImages],
@@ -691,6 +713,7 @@ export async function importFromSquare(
         name,
         description: description.substring(0, 600),
         categoryId,
+        productType: detectProductType(brand, tags),
         colors: [],
         tags: [...new Set([brand.toLowerCase(), ...tags])],
         images: storageUrl ? [storageUrl] : [],

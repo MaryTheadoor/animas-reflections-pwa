@@ -19,6 +19,7 @@ const EMPTY_PRODUCT: ManagedProduct = {
   name: "",
   description: "",
   categoryId: "",
+  productType: "other",
   colors: [],
   tags: [],
   images: [],
@@ -53,6 +54,7 @@ export default function ProductManager({ categories }: Props) {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [pushingToSquare, setPushingToSquare] = useState<string | null>(null); // productId being pushed
 
   const loadProducts = useCallback(async () => {
     try {
@@ -223,6 +225,22 @@ export default function ProductManager({ categories }: Props) {
     }
   };
 
+  const handlePushToSquare = async (productId: string) => {
+    setPushingToSquare(productId);
+    try {
+      const callable = httpsCallable<{ productId: string }, { success: boolean; squareItemId: string }>(
+        functions,
+        "createSquareProduct"
+      );
+      await callable({ productId });
+      await loadProducts();
+    } catch (err) {
+      alert("Failed to push to Square: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setPushingToSquare(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -329,6 +347,15 @@ export default function ProductManager({ categories }: Props) {
                 >
                   Delete
                 </button>
+                {!p.squareItemIds?.length && (
+                  <button
+                    onClick={() => handlePushToSquare(p.id)}
+                    disabled={pushingToSquare === p.id}
+                    className="px-3 py-1 text-xs bg-gold/10 text-gold rounded-lg hover:bg-gold/20 transition-colors disabled:opacity-50"
+                  >
+                    {pushingToSquare === p.id ? "Pushing..." : "Push → Square"}
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -31,6 +31,7 @@ function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
     description: p.description ?? "",
     categoryIds: p.categoryId ? [p.categoryId] : [],
     image_url: images[0] ?? "",
+    images,
     variations: variants.map((v) => ({
       id: v.id ?? "",
       name: v.name ?? "",
@@ -39,6 +40,9 @@ function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
     })),
     colors: Array.isArray(p.colors) ? p.colors : [],
     tags: Array.isArray(p.tags) ? p.tags : [],
+    productType: p.productType,
+    printZones: p.printZones,
+    mockupImages: p.mockupImages,
   };
 }
 

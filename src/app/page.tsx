@@ -42,9 +42,9 @@ export default function Home() {
             <Image
               src="/logo.png"
               alt={`${SITE.name} logo`}
-              width={140}
-              height={140}
-              className="mx-auto mb-6 sm:mb-8 w-24 h-24 sm:w-[140px] sm:h-[140px] rounded-3xl shadow-float animate-fade-in-up"
+              width={180}
+              height={180}
+              className="mx-auto mb-6 sm:mb-8 w-24 h-24 sm:w-[140px] sm:h-[140px] lg:w-[180px] lg:h-[180px] rounded-3xl animate-fade-in-up"
               priority
             />
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight font-display mb-6 animate-fade-in-up animate-delay-100 text-foreground">

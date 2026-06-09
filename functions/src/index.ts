@@ -5,8 +5,9 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { SquareClient, SquareEnvironment, SquareError } from "square";
 import { defineString } from "firebase-functions/params";
-import { genkit, z } from "genkit";
-import { googleAI } from "@genkit-ai/googleai";
+// Genkit AI commented out â€” programmatic search used instead
+// import { genkit, z } from "genkit";
+// import { googleAI } from "@genkit-ai/googleai";
 import { syncProductsFromSquare, getSyncStatus, importFromSquare } from "./sync.js";
 import { runProductPipeline, getPipelineStatus } from "./product-pipeline.js";
 
@@ -43,7 +44,7 @@ function generateDescription(name: string, categories: { id: string }[]): string
   return `Custom ${name}. Professionally printed in Durango, CO.${typeHint}`;
 }
 
-// ─── Fetch Square Catalog ─────────────────────────────────────────
+// â”€â”€â”€ Fetch Square Catalog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface CatalogObjectRaw {
   type: string;
@@ -203,7 +204,7 @@ export const fetchSquareCatalog = onCall(
   }
 );
 
-// ─── Create Square Order & Process Payment ─────────────────────────
+// â”€â”€â”€ Create Square Order & Process Payment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface OrderLineItem {
   catalogObjectId: string;
@@ -319,7 +320,7 @@ export const createSquareOrderAndPay = onCall(
 
       const order = orderResponse.order as Record<string, unknown> | undefined;
       if (!order?.id) {
-        throw new Error("Order creation failed — no order ID returned");
+        throw new Error("Order creation failed â€” no order ID returned");
       }
 
       logger.info("Order created", { orderId: order.id });
@@ -365,7 +366,7 @@ export const createSquareOrderAndPay = onCall(
   }
 );
 
-// ─── Health Check ──────────────────────────────────────────────────
+// â”€â”€â”€ Health Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const health = onRequest(
   { cors: true, region: "us-central1" },
@@ -378,7 +379,7 @@ export const health = onRequest(
   }
 );
 
-// ─── Fetch Site Config ─────────────────────────────────────────────
+// â”€â”€â”€ Fetch Site Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const fetchSiteConfig = onCall(
   { cors: true, region: "us-central1" },
@@ -437,7 +438,7 @@ export const saveAdminEmails = onCall(
   }
 );
 
-// ─── Fetch Recent Orders ───────────────────────────────────────────
+// â”€â”€â”€ Fetch Recent Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const fetchRecentOrders = onCall(
   { cors: true, region: "us-central1" },
@@ -487,7 +488,7 @@ export const fetchRecentOrders = onCall(
   }
 );
 
-// ─── Catalog Sync (Composite Products) ───────────────────────────
+// â”€â”€â”€ Catalog Sync (Composite Products) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const syncProducts = onCall(
   { cors: true, region: "us-central1", timeoutSeconds: 300 },
@@ -594,91 +595,29 @@ export const scheduledSync = onSchedule(
   }
 );
 
-// ─── AI-Powered Catalog Sync ──────────────────────────────────────
+// â”€â”€â”€ AI-Powered Catalog Sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// ─── AI-Powered Product Search ──────────────────────────────────
+// â”€â”€â”€ Programmatic Product Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Replaces the Genkit AI search with fast client-side-style text matching.
+// The frontend /search page already uses fuzzyScore in useSearch.ts;
+// this Cloud Function mirrors that logic for API-based search.
 
-const ai = genkit({
-  plugins: [googleAI()],
-});
-
-const aiSearchSchema = z.object({
-  query: z.string().describe("The user's natural language search query"),
-  products: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string(),
-    categoryNames: z.array(z.string()),
-    colors: z.array(z.string()).optional(),
-    minPrice: z.number(),
-  })).describe("The catalog of products to search through"),
-});
-
-const aiSearchFlow = ai.defineFlow(
-  {
-    name: "aiProductSearch",
-    inputSchema: aiSearchSchema,
-    outputSchema: z.object({
-      matchedIds: z.array(z.string()),
-      explanation: z.string(),
-    }),
-  },
-  async ({ query, products }) => {
-    const productList = products
-      .map((p) => {
-        const parts: string[] = [`ID:${p.id}`, p.name];
-        if (p.description) parts.push(`— ${p.description.substring(0, 150)}`);
-        if (p.colors?.length) parts.push(`colors: ${p.colors.join(", ")}`);
-        if (p.categoryNames.length) parts.push(`categories: ${p.categoryNames.join(", ")}`);
-        parts.push(`from $${p.minPrice.toFixed(2)}`);
-        return parts.join(" | ");
-      })
-      .join("\n");
-
-    const prompt = `You are a helpful product search assistant for Animas Reflections, a custom apparel and merchandise store in Durango, Colorado.
-
-Given a customer's search query, identify which products from the catalog below best match the intent. Consider:
-- Product names and descriptions (semantic meaning)
-- Colors mentioned (e.g., "red", "blue", "navy")
-- Product types (e.g., "t-shirt", "hoodie", "hat", "sticker", "jewelry")
-- Price ranges (e.g., "under $30", "cheap", "premium")
-- Use cases (e.g., "gift", "team", "hockey", "music")
-- Categories
-
-Customer query: "${query}"
-
-Catalog:
-${productList}
-
-Return ONLY the IDs of the matching products as a comma-separated list, followed by a newline and a brief (1-2 sentence) friendly explanation of what you found. If nothing matches, explain why and suggest alternatives.
-Format: 
-MATCHED_IDS: id1,id2,id3
-EXPLANATION: your explanation here`;
-
-    const result = await ai.generate({
-      model: "googleai/gemini-2.0-flash",
-      prompt,
-      config: { temperature: 0.3, maxOutputTokens: 500 },
-    });
-
-    const text = result.text.trim();
-    const idMatch = text.match(/MATCHED_IDS:\s*(.*)/);
-    const explanationMatch = text.match(/EXPLANATION:\s*([\s\S]*)/);
-
-    const matchedIds = idMatch
-      ? idMatch[1].split(",").map((s) => s.trim()).filter(Boolean)
-      : [];
-
-    const validIds = new Set(products.map((p) => p.id));
-    const filteredIds = matchedIds.filter((id) => validIds.has(id));
-
-    const explanation = explanationMatch
-      ? explanationMatch[1].trim()
-      : `Found ${filteredIds.length} product(s) matching "${query}".`;
-
-    return { matchedIds: filteredIds, explanation };
+function fuzzyScore(text: string, query: string): number {
+  const lower = text.toLowerCase();
+  const q = query.toLowerCase();
+  if (lower === q) return 100;
+  if (lower.startsWith(q)) return 80;
+  if (lower.includes(q)) return 60;
+  const words = lower.split(/\s+/);
+  for (const word of words) {
+    if (word.startsWith(q)) return 40;
   }
-);
+  if (lower.includes(q.slice(0, Math.ceil(q.length * 0.6)))) return 20;
+  return 0;
+}
+
+
+// ─── Programmatic Product Search (replaces Genkit AI) ────────────
 
 export const aiSearch = onCall(
   { cors: true, region: "us-central1" },
@@ -688,7 +627,7 @@ export const aiSearch = onCall(
       throw new Error("Query is required");
     }
 
-    logger.info("AI search invoked", { query: query.substring(0, 80) });
+    logger.info("Programmatic search invoked", { query: query.substring(0, 80) });
 
     try {
       const client = getSquareClient();
@@ -730,20 +669,155 @@ export const aiSearch = onCall(
         return { matchedIds: [], explanation: "No products are currently available in the catalog." };
       }
 
-      try {
-        const result = await aiSearchFlow({ query, products });
-        return result;
-      } catch (aiError) {
-        logger.warn("Genkit AI unavailable", aiError);
-        return {
-          matchedIds: [],
-          explanation: "AI search is not configured. Set up a GEMINI_API_KEY secret to enable AI-powered search.",
-        };
-      }
+      // Fuzzy text search - same algorithm as frontend useSearch.ts
+      const scored = products
+        .map((p) => {
+          const score = fuzzyScore(p.name, query) * 3
+            + fuzzyScore(p.description, query)
+            + (p.categoryNames ?? []).reduce((s, c) => s + fuzzyScore(c, query) * 2, 0);
+          return { id: p.id, score };
+        })
+        .filter((s) => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20);
+
+      const matchedIds = scored.map((s) => s.id);
+      const explanation = matchedIds.length > 0
+        ? `Found ${matchedIds.length} product(s) matching "${query}". Results sorted by relevance.`
+        : `No products matched "${query}". Try different keywords or browse the catalog.`;
+
+      return { matchedIds, explanation };
     } catch (err) {
-      logger.error("AI search error", err);
+      logger.error("Search error", err);
       throw new Error(
-        err instanceof Error ? `AI search failed: ${err.message}` : "AI search unavailable"
+        err instanceof Error ? `Search failed: ${err.message}` : "Search unavailable"
+      );
+    }
+  }
+);
+
+
+// â”€â”€â”€ Create Square Product from Firestore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Called by admin UI when saving a locally-created product.
+// Creates matching Square Catalog ITEM + ITEM_VARIATIONs and stores
+// the returned Square IDs back in Firestore for payment processing.
+
+export const createSquareProduct = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const { productId } = request.data as { productId: string };
+    if (!productId) throw new Error("productId is required");
+
+    logger.info("createSquareProduct invoked", { productId });
+
+    const db = getFirestore();
+    const snap = await db.collection("products").doc(productId).get();
+    if (!snap.exists) throw new Error(`Product ${productId} not found`);
+
+    const product = snap.data() as Record<string, unknown>;
+    const variants = (product.variants ?? []) as Array<Record<string, unknown>>;
+    if (!variants.length) throw new Error("Product has no variants");
+
+    const client = getSquareClient();
+
+    // Build temp IDs that Square will replace with real IDs
+    const tempItemId = `#${productId}`;
+    const objects: Array<Record<string, unknown>> = [];
+
+    // ITEM
+    objects.push({
+      type: "ITEM",
+      id: tempItemId,
+      presentAtAllLocations: true,
+      itemData: {
+        name: String(product.name ?? "Untitled"),
+        description: String(product.description ?? "").substring(0, 1024),
+        productType: "REGULAR",
+        variations: variants.map((_, i) => ({
+          type: "ITEM_VARIATION",
+          id: `#var_${i}`,
+        })),
+      },
+    });
+
+    // ITEM_VARIATIONs
+    variants.forEach((v, i) => {
+      const priceCents = Math.round((typeof v.price === "number" ? v.price : 0) * 100);
+      objects.push({
+        type: "ITEM_VARIATION",
+        id: `#var_${i}`,
+        presentAtAllLocations: true,
+        itemVariationData: {
+          itemId: tempItemId,
+          name: String(v.name ?? `Size/Color ${i + 1}`),
+          sku: String(v.sku ?? ""),
+          pricingType: "FIXED_PRICING",
+          priceMoney: {
+            amount: priceCents,
+            currency: "USD",
+          },
+        },
+      });
+    });
+
+    try {
+      const response = await client.catalog.batchUpsert({
+        idempotencyKey: `create-${productId}-${Date.now()}`,
+        batches: [{ objects: objects as never }],
+      });
+
+      const idMap = (response as Record<string, unknown>).idMappings as
+        | Array<{ clientObjectId?: string; objectId?: string }>
+        | undefined;
+
+      if (!idMap?.length) {
+        throw new Error("Square returned no ID mappings");
+      }
+
+      // Build maps from temp IDs â†’ real Square IDs
+      const tempToReal = new Map<string, string>();
+      idMap.forEach((m) => {
+        if (m.clientObjectId && m.objectId) {
+          tempToReal.set(m.clientObjectId, m.objectId);
+        }
+      });
+
+      const squareItemId = tempToReal.get(tempItemId) ?? "";
+      const squareItemIds = squareItemId ? [squareItemId] : [];
+
+      // Update variants with real Square IDs
+      const updatedVariants = variants.map((v, i) => ({
+        ...v,
+        squareItemId,
+        squareVariationId: tempToReal.get(`#var_${i}`) ?? String(v.id ?? ""),
+      }));
+
+      // Write back to Firestore
+      await db.collection("products").doc(productId).set(
+        {
+          squareItemIds,
+          variants: updatedVariants,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      logger.info("createSquareProduct success", {
+        productId,
+        squareItemId,
+        variationCount: updatedVariants.length,
+      });
+
+      return {
+        success: true,
+        squareItemIds,
+        squareItemId,
+        variants: updatedVariants,
+      };
+    } catch (err) {
+      logger.error("createSquareProduct failed", err);
+      throw new Error(
+        err instanceof Error ? `Square API error: ${err.message}` : "Failed to create Square product"
       );
     }
   }

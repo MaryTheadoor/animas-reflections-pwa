@@ -34,8 +34,6 @@ interface DragState {
   startYPercent: number;
 }
 
-const HANDLE_SIZE = 24;
-
 export default function Customizer({
   baseImage,
   viewName,
@@ -76,15 +74,6 @@ export default function Customizer({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-
-  // Convert percent to pixels
-  const toPixels = useCallback(
-    (percent: number, dimension: "width" | "height") => {
-      const size = dimension === "width" ? canvasSize.width : canvasSize.height;
-      return (percent / 100) * size;
-    },
-    [canvasSize]
-  );
 
   // Convert pixels to percent
   const toPercent = useCallback(
@@ -378,7 +367,7 @@ export default function Customizer({
             <input
               type="color"
               value={textColor}
-              onChange={(e) => {
+              onChange={() => {
                 // Color is managed by parent
               }}
               className="w-10 h-10 rounded-lg border border-primary/20 cursor-pointer"

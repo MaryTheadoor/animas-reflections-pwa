@@ -89,7 +89,7 @@ html.dark .nav-dock {
 }
 
 html.dark .nav-dock-link {
-  color: var(--color-gold);
+  color: var(--color-foreground);
   opacity: 0.7;
 }
 
@@ -140,12 +140,12 @@ html.dark .nav-dock-theme {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(240, 235, 227, 0.8);
-  padding: 6px 8px;
+  padding: 4px 4px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   justify-items: center;
   align-items: center;
-  row-gap: 2px;
+  row-gap: 0px;
 }
 
 @media (min-width: 768px) {
@@ -167,11 +167,11 @@ html.dark .nav-dock-theme {
   flex-direction: column;
   align-items: center;
   text-decoration: none;
-  color: var(--color-primary);
+  color: var(--color-foreground);
   opacity: 0.6;
-  padding: 4px 6px;
+  padding: 3px 5px;
   border-radius: 12px;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   white-space: nowrap;
@@ -184,8 +184,8 @@ html.dark .nav-dock-theme {
   transform: translateY(-2px);
 }
 .nav-dock-link svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   margin-bottom: 1px;
 }
 

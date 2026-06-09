@@ -11,9 +11,7 @@ import { useSiteConfig } from "@/hooks/useSiteConfig";
 const NAV_LINKS = [
   { href: "/", label: "Home", d: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" },
   { href: "/shop", label: "Shop", d: "M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" },
-  { href: "/search", label: "Search", d: "M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" },
   { href: "/about", label: "About", d: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" },
-  { href: "/contact", label: "Contact", d: "M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" },
 ];
 
 export default function HeaderBar() {
@@ -40,6 +38,8 @@ export default function HeaderBar() {
     document.documentElement.classList.toggle("has-announcement", config.announcement_active);
   }, [config.announcement_active]);
 
+  const isActive = (href: string) => pathname === href;
+
   return (
     <div ref={ref} className="fixed top-0 left-0 right-0 z-50">
       {config.announcement_active && (
@@ -48,9 +48,10 @@ export default function HeaderBar() {
         </div>
       )}
       <nav className="nav-dock">
+        {/* Home */}
         <Link
           href="/"
-          className={`nav-dock-link${pathname === "/" ? " active" : ""}`}
+          className={`nav-dock-link${isActive("/") ? " active" : ""}`}
           aria-label="Home"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -58,9 +59,11 @@ export default function HeaderBar() {
           </svg>
           <span>Home</span>
         </Link>
+
+        {/* Shop */}
         <Link
           href="/shop"
-          className={`nav-dock-link${pathname === "/shop" ? " active" : ""}`}
+          className={`nav-dock-link${isActive("/shop") ? " active" : ""}`}
           aria-label="Shop"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -68,30 +71,26 @@ export default function HeaderBar() {
           </svg>
           <span>Shop</span>
         </Link>
+
+        {/* Cart */}
         <CartNavButton />
+
+        {/* About */}
         <Link
-          href="/search"
-          className={`nav-dock-link${pathname === "/search" ? " active" : ""}`}
-          aria-label="Search"
+          href="/about"
+          className={`nav-dock-link${isActive("/about") ? " active" : ""}`}
+          aria-label="About"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[2].d} />
           </svg>
-          <span>Search</span>
-        </Link>
-        <Link
-          href="/about"
-          className={`nav-dock-link${pathname === "/about" ? " active" : ""}`}
-          aria-label="About"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d={NAV_LINKS[3].d} />
-          </svg>
           <span>About</span>
         </Link>
+
+        {/* Fundraising */}
         <Link
           href="/fundraising"
-          className={`nav-dock-link${pathname === "/fundraising" ? " active" : ""}`}
+          className={`nav-dock-link${isActive("/fundraising") ? " active" : ""}`}
           aria-label="Fundraising"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -99,9 +98,11 @@ export default function HeaderBar() {
           </svg>
           <span>Fundraising</span>
         </Link>
+
+        {/* FAQ */}
         <Link
           href="/faq"
-          className={`nav-dock-link${pathname === "/faq" ? " active" : ""}`}
+          className={`nav-dock-link${isActive("/faq") ? " active" : ""}`}
           aria-label="FAQ"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -109,17 +110,35 @@ export default function HeaderBar() {
           </svg>
           <span>FAQ</span>
         </Link>
+
+        {/* Contact */}
         <Link
           href="/contact"
-          className={`nav-dock-link${pathname === "/contact" ? " active" : ""}`}
+          className={`nav-dock-link${isActive("/contact") ? " active" : ""}`}
           aria-label="Contact"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d={NAV_LINKS[4].d} />
+            <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
           </svg>
           <span>Contact</span>
         </Link>
+
+        {/* Search — between Contact and Theme */}
+        <Link
+          href="/search"
+          className={`nav-dock-link${isActive("/search") ? " active" : ""}`}
+          aria-label="Search"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </svg>
+          <span>Search</span>
+        </Link>
+
+        {/* Theme toggle */}
         <ThemeToggle />
+
+        {/* Auth */}
         <NavAuth />
       </nav>
     </div>

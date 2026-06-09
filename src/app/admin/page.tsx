@@ -11,6 +11,7 @@ import { useAuth, RequireAdmin } from "@/context/auth-context";
 import { SITE } from "@/lib/content";
 import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
+import ImageManager from "@/components/admin/image-manager";
 import type { ManagedCategory } from "@/types";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -88,7 +89,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function DashboardContent() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "orders" | "users" | "admins">("products");
+  const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "images" | "orders" | "users" | "admins">("products");
   const [config, setConfig] = useState<SiteConfigData>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -304,6 +305,7 @@ function DashboardContent() {
             { key: "categories" as const, label: "Categories" },
             { key: "settings" as const, label: "Settings" },
             { key: "designs" as const, label: "Designs" },
+            { key: "images" as const, label: "Images" },
             { key: "orders" as const, label: "Orders" },
             { key: "users" as const, label: "Users" },
             { key: "admins" as const, label: "Admins" },
@@ -574,6 +576,13 @@ function DashboardContent() {
           )}
           {designs.length === 0 && <p className="text-sm text-primary/40 text-center py-8">No designs uploaded yet.</p>}
         </section>
+        )}
+
+        {/* ── Image Manager ── */}
+        {tab === "images" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <ImageManager />
+          </section>
         )}
 
         {/* ── Recent Orders ── */}

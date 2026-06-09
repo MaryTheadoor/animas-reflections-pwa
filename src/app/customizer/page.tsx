@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,20 +12,50 @@ import Customizer, { type DesignState } from "@/components/customizer/customizer
 import FileUpload from "@/components/customizer/file-upload";
 import { SITE_NAME } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
-import type { AddonType, DesignAsset, SquareCatalogItem } from "@/types";
+import type { AddonType, DesignAsset, SquareCatalogItem, PrintZone, PrintZoneTemplate } from "@/types";
 
-const PRODUCT_VIEWS = [
-  {
-    key: "front",
-    label: "Front",
-    printZone: { x_percent: 30, y_percent: 22, width_percent: 40, height_percent: 48 },
-  },
-  {
-    key: "back",
-    label: "Back",
-    printZone: { x_percent: 25, y_percent: 15, width_percent: 50, height_percent: 35 },
-  },
-];
+const DEFAULT_PRINT_ZONE: PrintZone = {
+  x_percent: 30, y_percent: 22, width_percent: 40, height_percent: 48,
+};
+const DEFAULT_BACK_PRINT_ZONE: PrintZone = {
+  x_percent: 25, y_percent: 15, width_percent: 50, height_percent: 35,
+};
+const DEFAULT_SLEEVE_PRINT_ZONE: PrintZone = {
+  x_percent: 65, y_percent: 20, width_percent: 25, height_percent: 55,
+};
+
+interface ProductViewConfig {
+  key: string;
+  label: string;
+  baseImage: string;
+  printZone: PrintZone;
+}
+
+function getPrintZone(zones: PrintZoneTemplate | undefined, view: string): PrintZone {
+  if (!zones) return view === "back" ? DEFAULT_BACK_PRINT_ZONE : view === "sleeve" ? DEFAULT_SLEEVE_PRINT_ZONE : DEFAULT_PRINT_ZONE;
+  if (view === "back" && zones.back) return zones.back;
+  if (view === "sleeve" && zones.sleeve) return zones.sleeve;
+  return zones.front ?? DEFAULT_PRINT_ZONE;
+}
+
+function getProductViews(product: SquareCatalogItem | null): ProductViewConfig[] {
+  const mockups = product?.mockupImages;
+  const fallback = product?.image_url ?? product?.images?.[0] ?? "/hero-bg.jpg";
+  const frontImage = mockups?.front ?? fallback;
+  const backImage = mockups?.back ?? fallback;
+  const sleeveImage = mockups?.sleeve ?? fallback;
+  const zones = product?.printZones;
+  const views: ProductViewConfig[] = [
+    { key: "front", label: "Front", baseImage: frontImage, printZone: getPrintZone(zones, "front") },
+  ];
+  if (zones?.back || product?.productType === "apparel" || !product) {
+    views.push({ key: "back", label: "Back", baseImage: backImage, printZone: getPrintZone(zones, "back") });
+  }
+  if (zones?.sleeve) {
+    views.push({ key: "sleeve", label: "Sleeve", baseImage: sleeveImage, printZone: getPrintZone(zones, "sleeve") });
+  }
+  return views;
+}
 
 const ADDONS: { type: AddonType; label: string }[] = [
   { type: "back_print", label: "Back Print (+$5)" },
@@ -46,16 +76,6 @@ function getProductPrice(product: SquareCatalogItem | null, variationIndex: numb
   if (!product || !product.variations.length) return BASE_PRICE_FALLBACK;
   const v = product.variations[variationIndex] ?? product.variations[0];
   return v.price > 0 ? v.price : BASE_PRICE_FALLBACK;
-}
-
-function getProductImage(product: SquareCatalogItem | null): string {
-  if (product?.image_url) return product.image_url;
-  return "/hero-bg.jpg";
-}
-
-function getProductViews(product: SquareCatalogItem | null) {
-  const baseImage = getProductImage(product);
-  return PRODUCT_VIEWS.map((v) => ({ ...v, baseImage }));
 }
 
 export default function CustomizerPage() {
@@ -91,11 +111,16 @@ function CustomizerContent() {
   const [libraryOpen, setLibraryOpen] = useState(false);
 
   // Preselect product from query param when catalog loads
+  const preselected = useRef(false);
   useEffect(() => {
-    if (catalogLoading || !catalogItems.length) return;
+    if (catalogLoading || !catalogItems.length || preselected.current) return;
     if (preselectedProductId) {
       const found = catalogItems.find((p) => p.id === preselectedProductId);
-      if (found) setSelectedProduct(found);
+      if (found) {
+        preselected.current = true;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedProduct(found);
+      }
     }
   }, [catalogLoading, catalogItems, preselectedProductId]);
 
@@ -264,7 +289,7 @@ function CustomizerContent() {
                   {selectedProduct && (
                     <div className="mt-3 relative aspect-video bg-warm-sand rounded-xl overflow-hidden">
                       <Image
-                        src={getProductImage(selectedProduct)}
+                        src={selectedProduct.image_url ?? selectedProduct.images?.[0] ?? "/hero-bg.jpg"}
                         alt={selectedProduct.name}
                         fill
                         className="object-contain p-2"

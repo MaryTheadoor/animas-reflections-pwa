@@ -7,6 +7,12 @@ export interface PrintZone {
   height_percent: number;
 }
 
+export interface PrintZoneTemplate {
+  front: PrintZone;
+  back?: PrintZone;
+  sleeve?: PrintZone;
+}
+
 export interface ProductView {
   base_image: string;
   print_zone: PrintZone;
@@ -29,6 +35,25 @@ export interface DesignAsset {
   created_at: string;
 }
 
+/* ─── Product Type Enum ──────────────────────────────────────────── */
+
+export type ProductType =
+  | "apparel"
+  | "sticker"
+  | "sign"
+  | "jewelry"
+  | "accessory"
+  | "other";
+
+export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
+  apparel: "Apparel",
+  sticker: "Sticker / Slap",
+  sign: "Wood Sign",
+  jewelry: "Jewelry",
+  accessory: "Accessory",
+  other: "Other",
+};
+
 /* ─── CMS Managed Product ────────────────────────────────────────── */
 
 export interface ManagedVariant {
@@ -38,6 +63,7 @@ export interface ManagedVariant {
   sku: string;
   squareItemId?: string;
   squareVariationId?: string;
+  inventory?: number;
 }
 
 export interface ManagedProduct {
@@ -45,6 +71,7 @@ export interface ManagedProduct {
   name: string;
   description: string;
   categoryId: string;
+  productType: ProductType;
   colors: string[];
   tags: string[];
   images: string[];
@@ -54,6 +81,22 @@ export interface ManagedProduct {
   createdAt: string;
   updatedAt: string;
   squareItemIds?: string[];
+  /** Custom SEO title — falls back to name if unset */
+  seoTitle?: string;
+  /** Custom SEO meta description — falls back to description if unset */
+  seoDescription?: string;
+  /** Per-view print zone coordinates for the customizer */
+  printZones?: PrintZoneTemplate;
+  /** Per-view mockup image URLs (blank garment photos for customizer base layer) */
+  mockupImages?: {
+    front?: string;
+    back?: string;
+    sleeve?: string;
+  };
+  /** Weight in ounces for calculated shipping */
+  weightOz?: number;
+  /** Parent product ID — groups same-design variants across garment types */
+  baseProductId?: string;
 }
 
 export interface ManagedCategory {
@@ -123,9 +166,17 @@ export interface SquareCatalogItem {
   description: string;
   categoryIds: string[];
   image_url?: string;
+  images?: string[];
   variations: SquareVariation[];
   colors?: string[];
   tags?: string[];
+  productType?: string;
+  printZones?: PrintZoneTemplate;
+  mockupImages?: {
+    front?: string;
+    back?: string;
+    sleeve?: string;
+  };
 }
 
 export interface SquareVariation {

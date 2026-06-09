@@ -68,8 +68,7 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
-    // Initializes Square SDK on mount
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initSquare calls setCardReady internally
     if (!squareInitialized) initSquare();
     return () => {
       if (squareCardRef.current) (squareCardRef.current as { destroy?: () => void }).destroy?.();
@@ -131,7 +130,6 @@ export default function CheckoutPage() {
       const data = orderResult.data as { success: boolean; orderId: string; paymentId: string; paymentStatus: string };
       if (data.success) {
         setResult(data);
-        clearCart();
       } else {
         throw new Error("Order creation failed");
       }
@@ -143,6 +141,16 @@ export default function CheckoutPage() {
   };
 
   const hasSyntheticItems = cart.items.some((item) => item.isSynthetic);
+
+  // Redirect to confirmation page after successful payment (MUST be before any early returns)
+  const redirected = useRef(false);
+  useEffect(() => {
+    if (result && !redirected.current) {
+      redirected.current = true;
+      clearCart();
+      router.replace(`/order-confirmation?orderId=${encodeURIComponent(result.orderId)}&status=${encodeURIComponent(result.paymentStatus)}`);
+    }
+  }, [result, clearCart, router]);
 
   if (cart.items.length === 0 && !result) {
     return (
@@ -169,11 +177,6 @@ export default function CheckoutPage() {
   }
 
   if (result) {
-    // Redirect to dedicated confirmation page with order details
-    useEffect(() => {
-      clearCart();
-      router.replace(`/order-confirmation?orderId=${encodeURIComponent(result.orderId)}&status=${encodeURIComponent(result.paymentStatus)}`);
-    }, []);
     return (
       <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
         <div className="flex gap-3">
