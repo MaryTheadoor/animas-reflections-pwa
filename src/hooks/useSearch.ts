@@ -89,14 +89,18 @@ export function searchProducts(
 
   if (sort === "price-asc") {
     scored.sort((a, b) => {
-      const pa = Math.min(...(a.item.variations ?? []).map((v) => v.price ?? 0).concat(0));
-      const pb = Math.min(...(b.item.variations ?? []).map((v) => v.price ?? 0).concat(0));
+      const pricesA = (a.item.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
+      const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
+      const pricesB = (b.item.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
+      const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
       return pa - pb;
     });
   } else if (sort === "price-desc") {
     scored.sort((a, b) => {
-      const pa = Math.min(...(a.item.variations ?? []).map((v) => v.price ?? 0).concat(0));
-      const pb = Math.min(...(b.item.variations ?? []).map((v) => v.price ?? 0).concat(0));
+      const pricesA = (a.item.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
+      const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
+      const pricesB = (b.item.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
+      const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
       return pb - pa;
     });
   } else if (sort === "name-asc") {
