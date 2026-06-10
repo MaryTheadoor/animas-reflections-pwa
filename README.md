@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Animas Reflections PWA
 
-## Getting Started
+Custom apparel & merchandise e-commerce PWA for Animas Reflections (Durango, CO). Replaces the Square Online template with a headless Next.js frontend, Firebase backend, and Square payment processing.
 
-First, run the development server:
+**Live:** https://animas-reflections-pwa.web.app  
+**Firebase:** `animas-reflections-pwa` (project 508402195460)  
+**GitHub:** `MaryTheadoor/animas-reflections-pwa`
+
+---
+
+## Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16 (App Router, TypeScript, static export) |
+| Styling | Tailwind CSS v4 |
+| Hosting | Firebase Hosting (`out/` directory) |
+| Backend | Firebase Cloud Functions v2 (Node 22) |
+| Database | Cloud Firestore |
+| Storage | Firebase Storage (product images, design assets) |
+| Auth | Firebase Auth (Google + email/password) |
+| Payments | Square Web Payments SDK + Square API v42 |
+
+---
+
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install              # Install frontend deps
+cd functions && npm install  # Install function deps
+npm run dev              # Local dev server (no emulators needed for UI)
+npm run build            # Static export → out/
+firebase deploy          # Deploy hosting + functions + rules
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy `.env.example` → `.env.local` and fill in:
+- `SQUARE_ACCESS_TOKEN` — Square production token
+- `SQUARE_LOCATION_ID` — Square location
+- `NEXT_PUBLIC_FIREBASE_*` — Firebase config (already committed)
+- `NEXT_PUBLIC_ADMIN_EMAIL` — CMS access email
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Functions get their own `.env` at `functions/.env` with Square credentials.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/                 # Next.js App Router pages (18 routes)
+    admin/             # CMS dashboard (products, categories, settings, images, orders)
+    checkout/          # Cart + Square payment form
+    customizer/        # Interactive design customizer
+    product/           # Product detail page (?id=)
+    shop/              # Product catalog with search/filter/sort
+    ...
+  components/
+    admin/             # product-manager, category-manager, image-manager
+    cart/              # cart-drawer, cart-nav-button
+    customizer/        # customizer canvas, file-upload
+    layout/            # header-bar (nav dock), client-layout, json-ld
+    product/           # product-card, product-detail
+    ui/                # placeholder-image
+  context/             # auth, cart, site-config, theme providers
+  hooks/               # useCatalog, useSearch, useSiteConfig
+  lib/                 # firebase init, constants, content, synthetic-data
+  types/               # All TypeScript interfaces
+functions/
+  src/
+    index.ts           # 16 Cloud Functions (catalog, orders, sync, search, config)
+    sync.ts            # Square→Firestore sync with brand detection
+    product-pipeline.ts # Alternative product grouping pipeline
+public/                # Static assets (logo, manifest, sw.js)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Key Architecture Decisions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Firestore is source of truth** for products. Square is used for payment processing.
+- **`syncProducts`** pulls from Square catalog, groups items by brand, writes `ManagedProduct` docs to Firestore.
+- **`createSquareProduct`** pushes admin-created products back to Square for valid payment IDs.
+- **Static export** (`output: "export"` in next.config.ts) — no SSR, deployed as 204 static files.
+- **All writes authenticated** — Firestore and Storage rules require `request.auth != null`.
+- **AI search removed** — Genkit was replaced with programmatic `fuzzyScore` matching (same algorithm in frontend `useSearch.ts` and backend `aiSearch` function).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Documentation
+
+- [Architecture & Data Flow](docs/ARCHITECTURE.md)
+- [Schema Reference](docs/SCHEMA.md)
+- [Development Guide](docs/DEVELOPMENT.md)
+- [Gap Analysis](GAP_ANALYSIS.md)
+- [Project Context](PROJECT_CONTEXT.md)
