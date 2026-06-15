@@ -906,7 +906,7 @@ export const fetchInventoryCounts = onCall(
 
     for (let i = 0; i < variationIds.length; i += BATCH_SIZE) {
       const batch = variationIds.slice(i, i + BATCH_SIZE);
-      const response = await client.inventory.batchRetrieveCounts({
+      const response = await client.inventory.batchGetCounts({
         catalogObjectIds: batch,
         locationIds: [locationId],
       });
