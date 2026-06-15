@@ -11,6 +11,7 @@ import {
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import Image from "next/image";
+import VariantMatrixEditor from "./variant-matrix-editor";
 import { db, storage, functions } from "@/lib/firebase";
 import type { ManagedProduct, ManagedCategory } from "@/types";
 
@@ -55,6 +56,21 @@ export default function ProductManager({ categories }: Props) {
   const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [pushingToSquare, setPushingToSquare] = useState<string | null>(null); // productId being pushed
+
+  // Inventory sync state
+  const [syncingInventory, setSyncingInventory] = useState(false);
+  const [inventoryResult, setInventoryResult] = useState<{
+    updated: number;
+    totalVariations: number;
+    countsReturned: number;
+  } | null>(null);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
+
+  // Matrix editor toggle
+  const [useMatrixEditor, setUseMatrixEditor] = useState(false);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const loadProducts = useCallback(async () => {
     try {
@@ -241,6 +257,81 @@ export default function ProductManager({ categories }: Props) {
     }
   };
 
+  const handleSyncInventory = async () => {
+    setSyncingInventory(true);
+    setInventoryError(null);
+    try {
+      const callable = httpsCallable(functions, "fetchInventoryCounts");
+      const result = await callable({});
+      const data = result.data as { success: boolean; updated: number; totalVariations: number; countsReturned: number };
+      setInventoryResult(data);
+      await loadProducts();
+    } catch (err) {
+      setInventoryError(err instanceof Error ? err.message : "Inventory sync failed");
+    } finally {
+      setSyncingInventory(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map((p) => p.id)));
+    }
+  };
+
+  const bulkSetActive = async (active: boolean) => {
+    const label = active ? "Activate" : "Deactivate";
+    if (!confirm(label + " " + selectedIds.size + " product(s)?")) return;
+    const now = new Date().toISOString();
+    for (const id of selectedIds) {
+      await setDoc(doc(db, "products", id), { active, updatedAt: now }, { merge: true });
+    }
+    setSelectedIds(new Set());
+    loadProducts();
+  };
+
+  const bulkDelete = async () => {
+    if (!confirm("Permanently delete " + selectedIds.size + " product(s)? This cannot be undone.")) return;
+    for (const id of selectedIds) {
+      await deleteDoc(doc(db, "products", id));
+    }
+    setSelectedIds(new Set());
+    loadProducts();
+  };
+
+  const handleDuplicate = async (product: ManagedProduct) => {
+    const newId = crypto.randomUUID();
+    const duplicated: ManagedProduct = {
+      ...product,
+      id: newId,
+      name: product.name + " (Copy)",
+      squareItemIds: undefined,
+      variants: product.variants.map((v) => ({
+        ...v,
+        id: crypto.randomUUID(),
+        squareItemId: undefined,
+        squareVariationId: undefined,
+        inventory: undefined,
+        inventoryUpdatedAt: undefined,
+      })),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, "products", newId), duplicated);
+    loadProducts();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -273,6 +364,14 @@ export default function ProductManager({ categories }: Props) {
             {syncing ? "Syncing..." : "Sync from Square"}
           </button>
           <button
+            onClick={handleSyncInventory}
+            disabled={syncingInventory}
+            className="px-4 py-2 bg-teal/10 text-teal rounded-xl text-sm font-semibold hover:bg-teal/20 transition-colors disabled:opacity-50"
+            title="Fetch current stock counts from Square for all products"
+          >
+            {syncingInventory ? "Syncing..." : "Sync Inventory"}
+          </button>
+          <button
             onClick={() => startEdit(EMPTY_PRODUCT)}
             className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors"
           >
@@ -302,6 +401,47 @@ export default function ProductManager({ categories }: Props) {
         <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{syncError}</div>
       )}
 
+      {/* Inventory Sync Result */}
+      {inventoryResult && (
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="bg-teal/5 rounded-xl p-3">
+            <p className="text-xl font-bold text-teal">{inventoryResult.updated}</p>
+            <p className="text-xs text-teal/60">Products Updated</p>
+          </div>
+          <div className="bg-teal/5 rounded-xl p-3">
+            <p className="text-xl font-bold text-teal">{inventoryResult.totalVariations}</p>
+            <p className="text-xs text-teal/60">Variations Checked</p>
+          </div>
+          <div className="bg-teal/5 rounded-xl p-3">
+            <p className="text-xl font-bold text-teal">{inventoryResult.countsReturned}</p>
+            <p className="text-xs text-teal/60">Counts Returned</p>
+          </div>
+        </div>
+      )}
+      {inventoryError && (
+        <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{inventoryError}</div>
+      )}
+
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && !editing && (
+        <div className="flex items-center gap-3 bg-gold/10 border border-gold/20 rounded-xl px-4 py-3">
+          <span className="text-sm font-medium text-gold">{selectedIds.size} selected</span>
+          <button onClick={selectAll} className="text-xs text-primary/60 hover:text-primary">
+            {selectedIds.size === products.length ? "Deselect All" : "Select All"}
+          </button>
+          <div className="flex-1" />
+          <button onClick={() => bulkSetActive(true)} className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+            Activate
+          </button>
+          <button onClick={() => bulkSetActive(false)} className="px-3 py-1.5 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
+            Deactivate
+          </button>
+          <button onClick={bulkDelete} className="px-3 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+            Delete
+          </button>
+        </div>
+      )}
+
       {products.length > 0 && !editing && (
         <div className="space-y-1">
           {products.map((p) => (
@@ -309,6 +449,12 @@ export default function ProductManager({ categories }: Props) {
               key={p.id}
               className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-3"
             >
+              <input
+                type="checkbox"
+                checked={selectedIds.has(p.id)}
+                onChange={() => toggleSelect(p.id)}
+                className="accent-gold w-4 h-4 shrink-0"
+              />
               {p.images?.[0] ? (
                 <Image
                   src={p.images[0]}
@@ -327,6 +473,8 @@ export default function ProductManager({ categories }: Props) {
                 </p>
                 <p className="text-xs text-primary/40">
                   {p.variants?.length ?? 0} variants · {categories.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
+                  {" · "}
+                  {(p.variants ?? []).reduce((sum, v) => sum + (v.inventory ?? 0), 0)} in stock
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -335,6 +483,12 @@ export default function ProductManager({ categories }: Props) {
                 ) : (
                   <span className="px-2 py-0.5 text-[10px] bg-warm-sand text-primary/40 rounded-full">Manual</span>
                 )}
+                <button
+                  onClick={() => handleDuplicate(p)}
+                  className="px-3 py-1 text-xs bg-teal/10 text-teal rounded-lg hover:bg-teal/20 transition-colors"
+                >
+                  Duplicate
+                </button>
                 <button
                   onClick={() => startEdit(p)}
                   className="px-3 py-1 text-xs bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
@@ -432,62 +586,82 @@ export default function ProductManager({ categories }: Props) {
               <input
                 type="checkbox"
                 checked={form.featured}
-                onChange={(e) => updateField("featured", e.target.checked)}
-                className="accent-gold"
-              />
-              Featured on homepage
-            </label>
-          </div>
-
           {/* Variants */}
           <div>
-            <label className="block text-xs font-medium text-primary mb-2">
-              Variants * (size, style, etc.)
-            </label>
-            <div className="space-y-2 mb-3">
-              {form.variants.map((v) => (
-                <div key={v.id} className="flex items-center gap-2 bg-warm-sand/30 rounded-lg px-3 py-2 text-sm">
-                  <span className="flex-1 font-medium">{v.name}</span>
-                  <span className="text-gold font-medium">${v.price.toFixed(2)}</span>
-                  {v.sku && <span className="text-primary/30 text-xs">{v.sku}</span>}
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-primary">
+                Variants * ({form.variants.length} total)
+              </label>
+              <button
+                onClick={() => setUseMatrixEditor(!useMatrixEditor)}
+                className="text-xs text-gold hover:text-gold-light transition-colors"
+              >
+                {useMatrixEditor ? "Manual Entry" : "Matrix Editor"}
+              </button>
+            </div>
+
+            {useMatrixEditor ? (
+              <VariantMatrixEditor
+                variants={form.variants}
+                onChange={(variants) => updateField("variants", variants)}
+              />
+            ) : (
+              <>
+                <div className="space-y-2 mb-3">
+                  {form.variants.map((v) => (
+                    <div key={v.id} className="flex items-center gap-2 bg-warm-sand/30 rounded-lg px-3 py-2 text-sm">
+                      <span className="flex-1 font-medium">{v.name}</span>
+                      <span className="text-gold font-medium">${v.price.toFixed(2)}</span>
+                      {v.sku && <span className="text-primary/30 text-xs">{v.sku}</span>}
+                      {v.inventory !== undefined && (
+                        <span className="text-teal/60 text-xs">{v.inventory} in stock</span>
+                      )}
+                      <button
+                        onClick={() => removeVariant(v.id)}
+                        className="text-red-400 hover:text-red-600 text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  {form.variants.length === 0 && (
+                    <p className="text-xs text-primary/30">No variants. Add at least one.</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newVariant.name}
+                    onChange={(e) => setNewVariant({ ...newVariant, name: e.target.value })}
+                    placeholder="Name (e.g. Small / Black)"
+                    className="flex-1 px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newVariant.price}
+                    onChange={(e) => setNewVariant({ ...newVariant, price: e.target.value })}
+                    placeholder="Price"
+                    className="w-24 px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={newVariant.sku}
+                    onChange={(e) => setNewVariant({ ...newVariant, sku: e.target.value })}
+                    placeholder="SKU"
+                    className="w-24 px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                  />
                   <button
-                    onClick={() => removeVariant(v.id)}
-                    className="text-red-400 hover:text-red-600 text-xs"
+                    onClick={addVariant}
+                    disabled={!newVariant.name || !newVariant.price}
+                    className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-light transition-colors disabled:opacity-50"
                   >
-                    Remove
+                    Add
                   </button>
                 </div>
-              ))}
-              {form.variants.length === 0 && (
-                <p className="text-xs text-primary/30">No variants. Add at least one.</p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newVariant.name}
-                onChange={(e) => setNewVariant({ ...newVariant, name: e.target.value })}
-                placeholder="Name (e.g. Small)"
-                className="flex-1 px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
-              />
-              <input
-                type="number"
-                step="0.01"
-                value={newVariant.price}
-                onChange={(e) => setNewVariant({ ...newVariant, price: e.target.value })}
-                placeholder="Price"
-                className="w-24 px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
-              />
-              <input
-                type="text"
-                value={newVariant.sku}
-                onChange={(e) => setNewVariant({ ...newVariant, sku: e.target.value })}
-                placeholder="SKU"
-                className="w-24 px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
-              />
-              <button
-                onClick={addVariant}
-                disabled={!newVariant.name || !newVariant.price}
+              </>
+            )}
+          </div>
                 className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-light transition-colors disabled:opacity-50"
               >
                 Add
