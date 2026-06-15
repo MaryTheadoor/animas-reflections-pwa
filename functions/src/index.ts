@@ -910,7 +910,7 @@ export const fetchInventoryCounts = onCall(
         catalogObjectIds: batch,
         locationIds: [locationId],
       });
-      allCounts.push(...(response.counts ?? []));
+      allCounts.push(...(response.data ?? []));
     }
 
     const quantityMap = new Map();
