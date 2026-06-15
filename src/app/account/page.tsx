@@ -76,7 +76,7 @@ export default function AccountPage() {
       setOrders((ordersRes.data as { orders: OrderData[] }).orders ?? []);
       setAddresses((addrRes.data as { addresses: AddressData[] }).addresses ?? []);
       setProfile((profileRes.data as { profile: ProfileData }).profile ?? { firstName: "", lastName: "" });
-    } catch {
+    } catch (err) {
       console.error("Failed to load account data", err);
     } finally {
       setLoading(false);
