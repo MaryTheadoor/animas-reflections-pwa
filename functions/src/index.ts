@@ -897,7 +897,7 @@ export const fetchInventoryCounts = onCall(
     }
 
     const BATCH_SIZE = 100;
-    const allCounts: Array<Record<string, unknown>> = [];
+    const quantityMap = new Map<string, number>();
 
     for (let i = 0; i < variationIds.length; i += BATCH_SIZE) {
       const batch = variationIds.slice(i, i + BATCH_SIZE);
@@ -905,14 +905,16 @@ export const fetchInventoryCounts = onCall(
         catalogObjectIds: batch,
         locationIds: [locationId],
       });
-      allCounts.push(...(response.data ?? []));
-    }
 
-    const quantityMap = new Map();
-    allCounts.forEach((c) => {
-      const qty = parseInt(c.quantity ?? "0", 10);
-      quantityMap.set(c.catalogObjectId, isNaN(qty) ? 0 : qty);
-    });
+      const items = (response.data ?? []) as never[];
+      for (const item of items) {
+        const c = item as { catalogObjectId?: string | null; quantity?: string | null };
+        if (c.catalogObjectId) {
+          const qty = parseInt(c.quantity ?? "0", 10);
+          quantityMap.set(c.catalogObjectId, isNaN(qty) ? 0 : qty);
+        }
+      }
+    }
 
     const now = new Date().toISOString();
     let updated = 0;
