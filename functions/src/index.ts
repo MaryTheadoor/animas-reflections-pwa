@@ -942,14 +942,14 @@ export const fetchInventoryCounts = onCall(
       lastSync: now,
       variationCount: variationIds.length,
       updatedProductCount: updated,
-      countsReturned: allCounts.length,
+      countsReturned: quantityMap.size,
     });
 
     return {
       success: true,
       updated,
       totalVariations: variationIds.length,
-      countsReturned: allCounts.length,
+      countsReturned: quantityMap.size,
     };
   }
 );
