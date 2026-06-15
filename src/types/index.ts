@@ -193,3 +193,66 @@ export interface SquareVariation {
 /bin/bash: line 6: C:/Users/AmosA/.hermes/cache/terminal/hermes-cwd-a45f2e12a6da.txt: No such file or directory
 /bin/bash: line 5: C:/Users/AmosA/.hermes/cache/terminal/hermes-snap-a45f2e12a6da.sh: No such file or directory
 /bin/bash: line 6: C:/Users/AmosA/.hermes/cache/terminal/hermes-cwd-a45f2e12a6da.txt: No such file or directory
+/* ─── Customer & Account Types ─────────────────────────────────── */
+
+export interface CustomerAddress {
+  id: string;
+  label: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  isDefault: boolean;
+}
+
+export interface CustomerProfile {
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  updatedAt: string;
+}
+
+export interface CustomerOrder {
+  id: string;
+  squareOrderId: string;
+  status: OrderStatus;
+  items: OrderLineItem[];
+  shipping?: OrderShipping;
+  totals: OrderTotals;
+  trackingUrl?: string;
+  trackingNumber?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OrderStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'SHIPPED'
+  | 'DELIVERED'
+  | 'CANCELLED';
+
+export interface OrderLineItem {
+  name: string;
+  quantity: number;
+  price: number;
+  variationName?: string;
+}
+
+export interface OrderShipping {
+  name: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+export interface OrderTotals {
+  subtotal: number;
+  shipping: number;
+  tax: number;
+  grandTotal: number;
+}
+

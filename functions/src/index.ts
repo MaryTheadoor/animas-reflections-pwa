@@ -347,6 +347,51 @@ export const createSquareOrderAndPay = onCall(
         status: payment?.status,
       });
 
+      // Mirror order to Firestore for customer account access
+      try {
+        const db = getFirestore();
+        const customerEmail = data.customer?.email || "";
+        const customerName = data.customer
+          ? (data.customer.firstName + " " + data.customer.lastName).trim()
+          : "";
+
+        const orderItems = data.lineItems.map((li) => ({
+          name: li.note?.split(" | ")[0]?.replace("Customer: ", "") || "Item",
+          quantity: parseInt(String(li.quantity ?? 1), 10),
+          price: 0, // Price comes from Square
+        }));
+
+        const firestoreOrder = {
+          squareOrderId: order.id as string,
+          customerEmail,
+          customerName,
+          status: "PENDING",
+          items: orderItems,
+          shipping: data.customer?.address ? {
+            name: customerName,
+            line1: data.customer.address.addressLine1,
+            city: data.customer.address.locality,
+            state: data.customer.address.administrativeDistrictLevel1,
+            zip: data.customer.address.postalCode,
+          } : null,
+          totals: {
+            subtotal: 0,
+            shipping: shippingRate,
+            tax: 0,
+            grandTotal: Number(totalWithShipping) / 100,
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const orderDocId = "order_" + (order.id as string);
+        await db.collection("orders").doc(orderDocId).set(firestoreOrder);
+        logger.info("Order mirrored to Firestore", { orderDocId });
+      } catch (mirrorErr) {
+        logger.error("Failed to mirror order to Firestore", mirrorErr);
+        // Don't fail the payment — the order succeeded
+      }
+
       return {
         success: true,
         orderId: order.id,
@@ -913,3 +958,206 @@ export const fetchInventoryCounts = onCall(
     };
   }
 );
+
+// ─── Customer Orders ───────────────────────────────────────────────
+
+export const fetchCustomerOrders = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new Error("Authentication required");
+
+    const db = getFirestore();
+    const userDoc = await db.collection("users").doc(auth.uid).get();
+    const userEmail = (userDoc.data()?.email as string) || "";
+
+    const ordersSnap = await db
+      .collection("orders")
+      .where("customerEmail", "==", userEmail)
+      .orderBy("createdAt", "desc")
+      .limit(50)
+      .get();
+
+    const orders: Array<Record<string, unknown>> = [];
+    ordersSnap.forEach((doc) => {
+      orders.push({ id: doc.id, ...doc.data() });
+    });
+
+    return { orders };
+  }
+);
+
+// ─── Customer Addresses ────────────────────────────────────────────
+
+export const getCustomerAddresses = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new Error("Authentication required");
+
+    const db = getFirestore();
+    const snap = await db
+      .collection("customers")
+      .doc(auth.uid)
+      .collection("addresses")
+      .get();
+
+    const addresses: Array<Record<string, unknown>> = [];
+    snap.forEach((doc) => {
+      addresses.push({ id: doc.id, ...doc.data() });
+    });
+
+    return { addresses };
+  }
+);
+
+export const saveCustomerAddress = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new Error("Authentication required");
+
+    const data = request.data as {
+      id?: string;
+      label: string;
+      line1: string;
+      line2?: string;
+      city: string;
+      state: string;
+      zip: string;
+      isDefault?: boolean;
+    };
+
+    const db = getFirestore();
+    const addressId = data.id || crypto.randomUUID();
+
+    // If setting as default, unset other defaults
+    if (data.isDefault) {
+      const existing = await db
+        .collection("customers")
+        .doc(auth.uid)
+        .collection("addresses")
+        .where("isDefault", "==", true)
+        .get();
+
+      const batch = db.batch();
+      existing.forEach((doc) => {
+        batch.update(doc.ref, { isDefault: false });
+      });
+      await batch.commit();
+    }
+
+    await db
+      .collection("customers")
+      .doc(auth.uid)
+      .collection("addresses")
+      .doc(addressId)
+      .set({
+        label: data.label,
+        line1: data.line1,
+        line2: data.line2 || "",
+        city: data.city,
+        state: data.state,
+        zip: data.zip,
+        isDefault: data.isDefault ?? false,
+        updatedAt: new Date().toISOString(),
+      });
+
+    return { success: true, addressId };
+  }
+);
+
+export const deleteCustomerAddress = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new Error("Authentication required");
+
+    const { addressId } = request.data as { addressId: string };
+    if (!addressId) throw new Error("addressId is required");
+
+    const db = getFirestore();
+    await db
+      .collection("customers")
+      .doc(auth.uid)
+      .collection("addresses")
+      .doc(addressId)
+      .delete();
+
+    return { success: true };
+  }
+);
+
+// ─── Customer Profile ──────────────────────────────────────────────
+
+export const getCustomerProfile = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new Error("Authentication required");
+
+    const db = getFirestore();
+    const snap = await db.collection("customers").doc(auth.uid).get();
+
+    return {
+      profile: snap.exists ? snap.data() : { firstName: "", lastName: "" },
+    };
+  }
+);
+
+export const saveCustomerProfile = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new Error("Authentication required");
+
+    const data = request.data as {
+      firstName: string;
+      lastName: string;
+      phone?: string;
+    };
+
+    const db = getFirestore();
+    await db.collection("customers").doc(auth.uid).set(
+      {
+        firstName: data.firstName || "",
+        lastName: data.lastName || "",
+        phone: data.phone || "",
+        email: auth.token?.email || "",
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    return { success: true };
+  }
+);
+
+// ─── Order Tracking (Admin) ────────────────────────────────────────
+
+export const updateOrderTracking = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth?.uid) throw new Error("Authentication required");
+
+    const { orderId, trackingUrl, trackingNumber } = request.data as {
+      orderId: string;
+      trackingUrl?: string;
+      trackingNumber?: string;
+    };
+
+    if (!orderId) throw new Error("orderId is required");
+
+    const db = getFirestore();
+    const update: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+    if (trackingUrl !== undefined) update.trackingUrl = trackingUrl;
+    if (trackingNumber !== undefined) update.trackingNumber = trackingNumber;
+    if (trackingUrl || trackingNumber) update.status = "SHIPPED";
+
+    await db.collection("orders").doc(orderId).set(update, { merge: true });
+
+    return { success: true };
+  }
+);
+
