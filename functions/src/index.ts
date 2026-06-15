@@ -822,3 +822,94 @@ export const createSquareProduct = onCall(
     }
   }
 );
+
+
+interface InventoryCount {
+  catalogObjectId: string;
+  quantity: string;
+}
+
+export const fetchInventoryCounts = onCall(
+  { cors: true, region: "us-central1", timeoutSeconds: 300 },
+  async () => {
+    logger.info("fetchInventoryCounts invoked");
+
+    const db = getFirestore();
+    const client = getSquareClient();
+    const locationId = squareLocationId.value();
+
+    const productsSnap = await db.collection("products").get();
+    const variationIds: string[] = [];
+
+    productsSnap.forEach((doc) => {
+      const data = doc.data() as Record<string, unknown>;
+      const variants = (data.variants ?? []) as Array<Record<string, unknown>>;
+      variants.forEach((v) => {
+        const svId = v.squareVariationId as string | undefined;
+        if (svId && !svId.startsWith("#")) {
+          variationIds.push(svId);
+        }
+      });
+    });
+
+    if (variationIds.length === 0) {
+      return { success: true, updated: 0, message: "No Square variation IDs found" };
+    }
+
+    const BATCH_SIZE = 100;
+    const allCounts = [];
+
+    for (let i = 0; i < variationIds.length; i += BATCH_SIZE) {
+      const batch = variationIds.slice(i, i + BATCH_SIZE);
+      const response = await client.inventory.batchRetrieveCounts({
+        catalogObjectIds: batch,
+        locationIds: [locationId],
+      });
+      allCounts.push(...(response.counts ?? []));
+    }
+
+    const quantityMap = new Map();
+    allCounts.forEach((c) => {
+      const qty = parseInt(c.quantity ?? "0", 10);
+      quantityMap.set(c.catalogObjectId, isNaN(qty) ? 0 : qty);
+    });
+
+    const now = new Date().toISOString();
+    let updated = 0;
+    const batchWrite = db.batch();
+
+    productsSnap.forEach((doc) => {
+      const data = doc.data();
+      const variants = (data.variants ?? []);
+      let changed = false;
+      const updatedVariants = variants.map((v) => {
+        const svId = v.squareVariationId;
+        if (svId && quantityMap.has(svId)) {
+          changed = true;
+          return { ...v, inventory: quantityMap.get(svId), inventoryUpdatedAt: now };
+        }
+        return v;
+      });
+      if (changed) {
+        batchWrite.update(doc.ref, { variants: updatedVariants, updatedAt: now });
+        updated++;
+      }
+    });
+
+    await batchWrite.commit();
+
+    await db.collection("config").doc("inventory_sync_status").set({
+      lastSync: now,
+      variationCount: variationIds.length,
+      updatedProductCount: updated,
+      countsReturned: allCounts.length,
+    });
+
+    return {
+      success: true,
+      updated,
+      totalVariations: variationIds.length,
+      countsReturned: allCounts.length,
+    };
+  }
+);
