@@ -61,6 +61,11 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
                     {v.price > 0 && (
                       <span className="ml-1 opacity-70">${v.price.toFixed(2)}</span>
                     )}
+                    {v.inventory !== undefined && v.inventory <= 3 && (
+                      <span className={"ml-1 text-xs " + (v.inventory === 0 ? "text-red-400" : "text-gold")}>
+                        {v.inventory === 0 ? "(sold out)" : "(only " + v.inventory + " left)"}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
