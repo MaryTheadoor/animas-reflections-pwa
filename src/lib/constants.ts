@@ -17,3 +17,14 @@ export const SQUARE_APP_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID || "sq0idp-QA
 export const SQUARE_LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || "L6VCX130RHYQR";
 
 export const FIREBASE_FUNCTIONS_REGION = "us-central1";
+
+/** Standard apparel sizes for the variant matrix editor */
+export const PRODUCT_SIZES = [
+  "XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL",
+] as const;
+
+/** Available product colors for the variant matrix editor */
+export const PRODUCT_COLORS = [
+  "Black", "White", "Navy", "Heather Grey", "Charcoal",
+  "Royal Blue", "Red", "Forest Green", "Maroon", "Sand",
+] as const;
