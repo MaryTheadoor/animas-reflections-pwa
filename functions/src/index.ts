@@ -925,7 +925,7 @@ export const fetchInventoryCounts = onCall(
       const variants = (data.variants ?? []);
       let changed = false;
       const updatedVariants = variants.map((v: Record<string, unknown>) => {
-        const svId = v.squareVariationId;
+        const svId = v.squareVariationId as string | undefined;
         if (svId && quantityMap.has(svId)) {
           changed = true;
           return { ...v, inventory: quantityMap.get(svId), inventoryUpdatedAt: now };
