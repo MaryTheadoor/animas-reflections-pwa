@@ -64,6 +64,8 @@ export interface ManagedVariant {
   squareItemId?: string;
   squareVariationId?: string;
   inventory?: number;
+  /** ISO timestamp of last Square inventory sync */
+  inventoryUpdatedAt?: string;
 }
 
 export interface ManagedProduct {
@@ -184,4 +186,10 @@ export interface SquareVariation {
   name: string;
   price: number;
   sku?: string;
+  inventory?: number;
+  inventoryUpdatedAt?: string;
 }
+/bin/bash: line 5: C:/Users/AmosA/.hermes/cache/terminal/hermes-snap-a45f2e12a6da.sh: No such file or directory
+/bin/bash: line 6: C:/Users/AmosA/.hermes/cache/terminal/hermes-cwd-a45f2e12a6da.txt: No such file or directory
+/bin/bash: line 5: C:/Users/AmosA/.hermes/cache/terminal/hermes-snap-a45f2e12a6da.sh: No such file or directory
+/bin/bash: line 6: C:/Users/AmosA/.hermes/cache/terminal/hermes-cwd-a45f2e12a6da.txt: No such file or directory

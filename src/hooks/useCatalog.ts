@@ -37,6 +37,8 @@ function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
       name: v.name ?? "",
       price: typeof v.price === "number" ? v.price : 0,
       sku: v.sku ?? "",
+      inventory: v.inventory,
+      inventoryUpdatedAt: v.inventoryUpdatedAt,
     })),
     colors: Array.isArray(p.colors) ? p.colors : [],
     tags: Array.isArray(p.tags) ? p.tags : [],
@@ -139,3 +141,5 @@ export function useCatalog(): UseCatalogResult {
 export function getProductImageUrl(item: SquareCatalogItem): string {
   return item.image_url ?? "";
 }
+/bin/bash: line 5: C:/Users/AmosA/.hermes/cache/terminal/hermes-snap-a45f2e12a6da.sh: No such file or directory
+/bin/bash: line 6: C:/Users/AmosA/.hermes/cache/terminal/hermes-cwd-a45f2e12a6da.txt: No such file or directory
