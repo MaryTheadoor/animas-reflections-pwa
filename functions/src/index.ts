@@ -869,11 +869,6 @@ export const createSquareProduct = onCall(
 );
 
 
-interface InventoryCount {
-  catalogObjectId: string;
-  quantity: string;
-}
-
 export const fetchInventoryCounts = onCall(
   { cors: true, region: "us-central1", timeoutSeconds: 300 },
   async () => {
@@ -902,7 +897,7 @@ export const fetchInventoryCounts = onCall(
     }
 
     const BATCH_SIZE = 100;
-    const allCounts: InventoryCount[] = [];
+    const allCounts: Array<Record<string, unknown>> = [];
 
     for (let i = 0; i < variationIds.length; i += BATCH_SIZE) {
       const batch = variationIds.slice(i, i + BATCH_SIZE);
