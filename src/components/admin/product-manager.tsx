@@ -586,6 +586,13 @@ export default function ProductManager({ categories }: Props) {
               <input
                 type="checkbox"
                 checked={form.featured}
+                onChange={(e) => updateField("featured", e.target.checked)}
+                className="accent-gold"
+              />
+              Featured on homepage
+            </label>
+          </div>
+
           {/* Variants */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -661,12 +668,6 @@ export default function ProductManager({ categories }: Props) {
                 </div>
               </>
             )}
-          </div>
-                className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary-light transition-colors disabled:opacity-50"
-              >
-                Add
-              </button>
-            </div>
           </div>
 
           {/* Colors */}

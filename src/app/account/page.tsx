@@ -76,7 +76,7 @@ export default function AccountPage() {
       setOrders((ordersRes.data as { orders: OrderData[] }).orders ?? []);
       setAddresses((addrRes.data as { addresses: AddressData[] }).addresses ?? []);
       setProfile((profileRes.data as { profile: ProfileData }).profile ?? { firstName: "", lastName: "" });
-    } catch (err) {
+    } catch {
       console.error("Failed to load account data", err);
     } finally {
       setLoading(false);
@@ -84,6 +84,7 @@ export default function AccountPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!authLoading && user) fetchData();
   }, [authLoading, user, fetchData]);
 
@@ -98,7 +99,7 @@ export default function AccountPage() {
       setEditingAddress(null);
       resetAddrForm();
       fetchData();
-    } catch (err) {
+    } catch {
       alert("Failed to save address: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setSavingAddr(false);
@@ -110,7 +111,7 @@ export default function AccountPage() {
     try {
       await httpsCallable(functions, "deleteCustomerAddress")({ addressId: id });
       fetchData();
-    } catch (err) {
+    } catch {
       alert("Failed to delete address");
     }
   };
@@ -121,7 +122,7 @@ export default function AccountPage() {
       await httpsCallable(functions, "saveCustomerProfile")(profile);
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 2000);
-    } catch (err) {
+    } catch {
       alert("Failed to save profile");
     } finally {
       setSavingProfile(false);

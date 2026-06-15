@@ -902,7 +902,7 @@ export const fetchInventoryCounts = onCall(
     }
 
     const BATCH_SIZE = 100;
-    const allCounts = [];
+    const allCounts: InventoryCount[] = [];
 
     for (let i = 0; i < variationIds.length; i += BATCH_SIZE) {
       const batch = variationIds.slice(i, i + BATCH_SIZE);

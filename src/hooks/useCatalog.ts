@@ -141,5 +141,3 @@ export function useCatalog(): UseCatalogResult {
 export function getProductImageUrl(item: SquareCatalogItem): string {
   return item.image_url ?? "";
 }
-/bin/bash: line 5: C:/Users/AmosA/.hermes/cache/terminal/hermes-snap-a45f2e12a6da.sh: No such file or directory
-/bin/bash: line 6: C:/Users/AmosA/.hermes/cache/terminal/hermes-cwd-a45f2e12a6da.txt: No such file or directory
