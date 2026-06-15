@@ -99,7 +99,7 @@ export default function AccountPage() {
       setEditingAddress(null);
       resetAddrForm();
       fetchData();
-    } catch {
+    } catch (err) {
       alert("Failed to save address: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setSavingAddr(false);
