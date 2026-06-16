@@ -164,16 +164,18 @@ Location: `animas_reflections_scope_roadmap.md` in Downloads
 
 ## 11. NEXT INSTANCE — START HERE
 
-1. Read this file first
-2. Check USE_SYNTHETIC flag in src/hooks/useCatalog.ts
-3. Run `npm run dev` to test locally
-4. Run `npm run build && firebase deploy --only hosting` to deploy
-5. Fix UI issues BEFORE touching Square API
-6. Every deploy MUST pass: build (16 routes), lint (0 errors), visual check
-7. Do NOT modify nav-dock position — it's inside a fixed wrapper
-8. Do NOT add bottom navigation bars — only top dock
-9. All new images go through PlaceholderImage component
-10. Category filtering uses item.categoryIds array (from itemData.categories)
+1. Read `docs/DEVLOG.md` for last session state + pending items
+2. Read `docs/SCOPE.md` for full feature scope and implementation status
+3. Check `USE_SYNTHETIC` flag in `src/hooks/useCatalog.ts`
+4. Run `npm run dev` to test locally
+5. Run `npm run build && firebase deploy --only hosting` to deploy
+6. Fix UI issues BEFORE touching Square API
+7. Every deploy MUST pass: build (18 routes), lint (0 errors), visual check
+8. Do NOT modify nav-dock position — it's inside a fixed wrapper
+9. Do NOT add bottom navigation bars — only top dock
+10. All new images go through PlaceholderImage component
+11. Category filtering uses item.categoryIds array (from itemData.categories)
+12. Use backup framework: `backup:file` before edits, `backup:commit` after
 
 ---
 

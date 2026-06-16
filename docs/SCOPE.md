@@ -557,6 +557,7 @@ GEMINI_API_KEY (optional, for AI search)
 | Document | Location | Purpose |
 |----------|----------|---------|
 | **SCOPE.md** (this file) | `docs/SCOPE.md` | Master scope, features, phases, status |
+| **DEVLOG.md** | `docs/DEVLOG.md` | Chronological development log for session restore |
 | Architecture | `docs/ARCHITECTURE.md` | System diagrams, data flows, component tree |
 | Schema | `docs/SCHEMA.md` | Firestore collections, types, storage structure |
 | Development | `docs/DEVELOPMENT.md` | Commands, conventions, troubleshooting |
