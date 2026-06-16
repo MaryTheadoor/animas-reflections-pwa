@@ -8,7 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCart } from "@/context/cart-context";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
-import Customizer, { type DesignState } from "@/components/customizer/customizer";
+import Customizer, { type DesignState, defaultDesignPosition } from "@/components/customizer/customizer";
 import FileUpload from "@/components/customizer/file-upload";
 import { SITE_NAME } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
@@ -69,6 +69,14 @@ const DEFAULT_DESIGN_STATE: DesignState = {
   scale: 1,
   rotation: 0,
 };
+
+/** Compute initial design state centered within a view's print zone */
+function defaultStateForView(views: ProductViewConfig[], viewKey: string): DesignState {
+  const view = views.find((v) => v.key === viewKey);
+  const zone = view?.printZone ?? DEFAULT_PRINT_ZONE;
+  const pos = defaultDesignPosition(zone);
+  return { ...pos, scale: 1, rotation: 0 };
+}
 
 const BASE_PRICE_FALLBACK = 20.0;
 
@@ -158,7 +166,14 @@ function CustomizerContent() {
     const product = catalogProducts.find((p) => p.id === productId) ?? null;
     setSelectedProduct(product);
     setVariantIndex(0);
-    setDesignState(DEFAULT_DESIGN_STATE);
+    const views = product ? getProductViews(product) : [];
+    setDesignState(defaultStateForView(views, activeView));
+  };
+
+  const handleViewChange = (view: string) => {
+    setActiveView(view);
+    const views = getProductViews(selectedProduct);
+    setDesignState(defaultStateForView(views, view));
   };
 
   const handleAddToCart = () => {
@@ -230,7 +245,7 @@ function CustomizerContent() {
               viewName={currentView.label}
               views={productViews}
               activeView={activeView}
-              onViewChange={setActiveView}
+              onViewChange={handleViewChange}
               designUrl={designUrl}
               designText={designText}
               onDesignChange={setDesignState}
