@@ -39,8 +39,8 @@ if (-not (Test-Path $CommitLogDir)) { New-Item -ItemType Directory -Path $Commit
 Set-Location -LiteralPath $ProjectRoot
 
 # ── Step 1: Capture changed files BEFORE commit (for redundant copy) ──
-$ChangedBefore = git diff --name-only HEAD 2>$null
-$UntrackedBefore = git ls-files --others --exclude-standard 2>$null
+$ChangedBefore = git diff --name-only HEAD 2>&1 | Where-Object { $_ -notmatch "^warning:" }
+$UntrackedBefore = git ls-files --others --exclude-standard 2>&1 | Where-Object { $_ -notmatch "^warning:" }
 $AllChanged = @($ChangedBefore) + @($UntrackedBefore) | Where-Object { $_ } | Sort-Object -Unique
 
 # ── Step 2: Stage files ──
@@ -83,7 +83,8 @@ if (-not $SkipPush) {
 }
 
 # ── Step 5: Redundant local disk backup of changed files ──
-$SnapshotDir = Join-Path $RedundantRoot "file-snapshots" "${Timestamp}_$CommitHash"
+$SnapshotDir = Join-Path $RedundantRoot "file-snapshots"
+$SnapshotDir = Join-Path $SnapshotDir "${Timestamp}_$CommitHash"
 New-Item -ItemType Directory -Path $SnapshotDir -Force | Out-Null
 
 foreach ($file in $AllChanged) {
