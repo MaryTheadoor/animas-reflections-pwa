@@ -210,9 +210,46 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - Working tree: clean | Branch: master
 
 ### Pending / Next Session
-- [ ] End-to-end checkout test with Square sandbox
-- [ ] Wire "Push to Square" in admin product manager
-- [ ] Wire "Sync from Square" in admin with progress feedback
+- [ ] Run "Sync from Square" from admin — verify products get Square IDs
+- [ ] Test "Push to Square" on an admin-created product
+- [ ] Test checkout flow with Square card (real sandbox data)
+
+---
+
+## Session 5 — 2026-06-16 | 19:30 MST
+
+### Context Restored From
+- `docs/DEVLOG.md` Session 4 — customizer complete
+
+### Actions Taken
+1. **All 24 Cloud Functions redeployed** with updated OrderLineItem schema
+2. **Square sandbox credentials** configured via `functions/.env`
+3. **Admin product manager enhanced:** step-by-step sync progress, elapsed time, dismissable push error banner
+4. **Full deployment:** build (213 files) + hosting + functions all live
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `functions/.env` | Created with Square sandbox credentials |
+| `src/components/admin/product-manager.tsx` | Progress steps, elapsed time, dismissable error banner |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `325516e` | feat: deploy all 24 Cloud Functions + enhanced admin sync feedback |
+
+### Current State at Session End
+- Lint: 0 | Tests: 48/48 | Build: 18 routes
+- 24 functions deployed | Hosting: 213 files live
+- All deployed to https://animas-reflections-pwa.web.app
+- Working tree: clean | Branch: master
+
+### Pending / Next Session
+- [ ] Run "Sync from Square" from admin — verify products get Square IDs
+- [ ] Test "Push to Square" on an admin-created product
+- [ ] Test checkout flow with Square card (real sandbox data)
+
+---
 
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
