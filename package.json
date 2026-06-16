@@ -12,7 +12,12 @@
     "emulators": "firebase emulators:start",
     "deploy": "firebase deploy",
     "deploy:functions": "firebase deploy --only functions",
-    "deploy:hosting": "firebase deploy --only hosting"
+    "deploy:hosting": "firebase deploy --only hosting",
+    "backup:file": "powershell -ExecutionPolicy Bypass -File scripts/backup-file.ps1",
+    "backup:commit": "powershell -ExecutionPolicy Bypass -File scripts/backup-commit.ps1",
+    "backup:snapshot": "powershell -ExecutionPolicy Bypass -File scripts/snapshot-full.ps1",
+    "backup:restore": "powershell -ExecutionPolicy Bypass -File scripts/restore.ps1",
+    "backup:list": "powershell -ExecutionPolicy Bypass -File scripts/restore.ps1 -List"
   },
   "dependencies": {
     "firebase": "^12.14.0",

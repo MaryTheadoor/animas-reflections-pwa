@@ -50,3 +50,6 @@ next-env.d.ts
 
 # keep env example
 !.env.example
+
+# backup framework — pre-edit snapshots (redundant copies on disk + GitHub)
+/_backups
