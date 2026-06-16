@@ -5,10 +5,9 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import PlaceholderImage from "@/components/ui/placeholder-image";
-import { useCatalog } from "@/hooks/useCatalog";
+import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import { useCart } from "@/context/cart-context";
 import PageLayout from "@/components/layout/page-layout";
-import { USE_SYNTHETIC } from "@/hooks/useCatalog";
 
 function ProductJsonLd({
   name,
@@ -63,14 +62,14 @@ export default function ProductPage() {
 function ProductContent() {
   const searchParams = useSearchParams();
   const productId = searchParams.get("id");
-  const { items, loading } = useCatalog();
+  const { products, loading } = useCatalog();
   const { addItem } = useCart();
 
-  const product = productId ? items.find((i) => i.id === productId) ?? null : null;
-  const [selectedVariation, setSelectedVariation] = useState(0);
+  const product = productId ? products.find((p) => p.id === productId) ?? null : null;
+  const [selectedVariant, setSelectedVariant] = useState(0);
   const [customText, setCustomText] = useState("");
 
-  const variation = product?.variations[selectedVariation];
+  const variant = product?.variants[selectedVariant];
 
   if (loading) {
     return (
@@ -99,8 +98,8 @@ function ProductContent() {
     );
   }
 
-  const price = variation?.price ?? 0;
-  const imageUrl = product.image_url ?? "";
+  const price = variant?.price ?? 0;
+  const imageUrl = getProductImageUrl(product);
 
   return (
     <PageLayout>
@@ -112,7 +111,7 @@ function ProductContent() {
           imageUrl={imageUrl}
           price={price}
           productId={product.id}
-          sku={variation?.sku || product.id}
+          sku={variant?.sku || product.id}
         />
 
         {/* Breadcrumb */}
@@ -150,24 +149,24 @@ function ProductContent() {
             {/* Price */}
             <p className="text-3xl font-bold text-gold mb-6">
               ${price.toFixed(2)}
-              {product.variations.length > 1 && (
+              {product.variants.length > 1 && (
                 <span className="text-sm font-normal text-primary/50 ml-2">
-                  Starting at ${Math.min(...product.variations.map((v) => v.price)).toFixed(2)}
+                  Starting at ${Math.min(...product.variants.map((v) => v.price)).toFixed(2)}
                 </span>
               )}
             </p>
 
-            {/* Variation Picker */}
-            {product.variations.length > 1 && (
+            {/* Variant Picker */}
+            {product.variants.length > 1 && (
               <div className="mb-6">
                 <span className="text-xs font-medium text-primary block mb-2">Style / Size</span>
                 <div className="flex flex-wrap gap-2">
-                  {product.variations.map((v, i) => (
+                  {product.variants.map((v, i) => (
                     <button
                       key={v.id}
-                      onClick={() => setSelectedVariation(i)}
+                      onClick={() => setSelectedVariant(i)}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                        i === selectedVariation
+                        i === selectedVariant
                           ? "bg-primary text-white btn-tactile btn-primary-tactile"
                           : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                       }`}
@@ -198,18 +197,19 @@ function ProductContent() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => {
-                  if (!variation) return;
+                  if (!variant) return;
                   addItem({
                     id: crypto.randomUUID(),
                     product_id: product.id,
-                    variation_id: variation.id,
-                    name: `${product.name} — ${variation.name}`,
+                    variant_id: variant.id,
+                    squareVariationId: variant.squareVariationId,
+                    name: product.name,
+                    variant_name: variant.name,
                     base_price: price,
                     quantity: 1,
                     selected_view: "front",
                     design_text: customText || undefined,
                     addons: [],
-                    isSynthetic: USE_SYNTHETIC,
                   });
                 }}
                 className="flex-1 px-6 py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"

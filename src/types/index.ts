@@ -126,21 +126,50 @@ export interface CartAddon {
   type: AddonType;
   label: string;
   price: number;
-  modifier_id?: string;
+  /** Managed addon ID (provider-agnostic) */
+  addon_id?: string;
+  /** Square modifier ID — set during Square sync, used by Square checkout path */
+  squareModifierId?: string;
 }
 
 export interface CartItem {
+  /** Unique cart line item ID (generated client-side via crypto.randomUUID) */
   id: string;
+  /** Managed product ID (provider-agnostic) */
   product_id: string;
-  variation_id: string;
+  /** Managed variant ID (provider-agnostic) */
+  variant_id: string;
+  /** Square variation ID — set during Square sync, used by Square checkout path */
+  squareVariationId?: string;
+  /** Product display name */
   name: string;
+  /** Variant display name (e.g. "Large / Navy") */
+  variant_name: string;
+  /** Base price of the selected variant */
   base_price: number;
   quantity: number;
   selected_view: "front" | "back" | "sleeve";
   design_url?: string;
   design_text?: string;
   addons: CartAddon[];
-  isSynthetic?: boolean;
+}
+
+/** Payment-provider-agnostic checkout line item */
+export interface CheckoutLineItem {
+  /** Managed variant ID */
+  variant_id: string;
+  /** Cached Square variation ID (if synced) — enables Square checkout */
+  squareVariationId?: string;
+  quantity: number;
+  note?: string;
+  addons?: CheckoutAddon[];
+}
+
+export interface CheckoutAddon {
+  addon_id?: string;
+  squareModifierId?: string;
+  label: string;
+  price: number;
 }
 
 export interface ShippingTier {
@@ -160,8 +189,10 @@ export interface SiteConfig {
   updated_at: string;
 }
 
-/* ─── API Response Types ────────────────────────────────────────── */
+/* ─── API Response Types (Bridge / Internal) ────────────────────── */
 
+/** Bridge type used ONLY for Square API responses and legacy compatibility.
+ *  Components should consume ManagedProduct directly. */
 export interface SquareCatalogItem {
   id: string;
   name: string;
@@ -181,6 +212,7 @@ export interface SquareCatalogItem {
   };
 }
 
+/** Bridge type used ONLY for Square API responses and legacy compatibility. */
 export interface SquareVariation {
   id: string;
   name: string;

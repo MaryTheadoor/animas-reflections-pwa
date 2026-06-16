@@ -98,15 +98,22 @@ export default function CheckoutPage() {
       }
 
       const lineItems = cart.items.map((item) => ({
-        catalogObjectId: item.variation_id,
+        variant_id: item.variant_id,
+        squareVariationId: item.squareVariationId,
         quantity: item.quantity,
         note: [
           item.design_url ? `Design: ${item.design_url}` : "",
           item.design_text ? `Text: ${item.design_text}` : "",
           item.addons.length ? `Add-ons: ${item.addons.map((a) => a.label).join(", ")}` : "",
         ].filter(Boolean).join(" | "),
+        addons: item.addons.map((a) => ({
+          squareModifierId: a.squareModifierId,
+          label: a.label,
+          price: a.price,
+        })),
       }));
 
+      // Payment provider: Square
       const createOrder = httpsCallable(functions, "createSquareOrderAndPay");
       const orderResult = await createOrder({
         lineItems,
@@ -140,9 +147,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const hasSyntheticItems = cart.items.some((item) => item.isSynthetic);
-
-  // Redirect to confirmation page after successful payment (MUST be before any early returns)
+  // Redirect to confirmation page after successful payment
   const redirected = useRef(false);
   useEffect(() => {
     if (result && !redirected.current) {
@@ -158,20 +163,6 @@ export default function CheckoutPage() {
         <h1 className="text-4xl font-bold font-display mb-4">Your cart is empty</h1>
         <p className="text-primary/60 mb-6">Add some products to get started.</p>
         <Link href="/shop" className="px-8 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile">Browse Products</Link>
-      </div>
-    );
-  }
-
-  if (hasSyntheticItems) {
-    return (
-      <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
-        <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold font-display mb-4">Demo Mode</h1>
-          <p className="text-primary/60 mb-6">
-            Checkout is disabled while browsing with sample products. Switch to live Square catalog to enable checkout.
-          </p>
-          <Link href="/shop" className="block w-full py-3 bg-primary text-white rounded-2xl font-semibold hover:bg-primary-light transition-colors text-center">Continue Browsing</Link>
-        </div>
       </div>
     );
   }

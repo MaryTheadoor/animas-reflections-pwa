@@ -20,7 +20,7 @@ type CartAction =
   | { type: "ADD_ITEM"; item: CartItem }
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
-  | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; modifierId?: string; addonPrice: number }
+  | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; addonId?: string; addonPrice: number }
   | { type: "SET_SHIPPING_TIER"; tier: "stickers" | "apparel" | "free" }
   | { type: "CLEAR_CART" };
 
@@ -61,7 +61,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
                   ? "Sleeve Print"
                   : "Name/Number Personalization",
             price: action.addonPrice,
-            modifier_id: action.modifierId,
+            addon_id: action.addonId,
           };
           return { ...i, addons: [...i.addons, addon] };
         }),
@@ -121,8 +121,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleAddon = useCallback(
-    (id: string, addonType: AddonType, modifierId?: string) => {
-      dispatch({ type: "TOGGLE_ADDON", id, addonType, modifierId, addonPrice: siteConfig.addon_price });
+    (id: string, addonType: AddonType, addonId?: string) => {
+      dispatch({ type: "TOGGLE_ADDON", id, addonType, addonId, addonPrice: siteConfig.addon_price });
     },
     [siteConfig.addon_price]
   );

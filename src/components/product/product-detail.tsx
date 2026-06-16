@@ -3,17 +3,17 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { SquareCatalogItem } from "@/types";
+import type { ManagedProduct } from "@/types";
 import { getProductImageUrl } from "@/hooks/useCatalog";
 
 interface ProductDetailProps {
-  item: SquareCatalogItem;
+  product: ManagedProduct;
   onClose: () => void;
 }
 
-export default function ProductDetail({ item, onClose }: ProductDetailProps) {
-  const [selectedVariation, setSelectedVariation] = useState(item.variations[0]);
-  const imageUrl = getProductImageUrl(item);
+export default function ProductDetail({ product, onClose }: ProductDetailProps) {
+  const [selectedVariant, setSelectedVariant] = useState(product.variants[0]);
+  const imageUrl = getProductImageUrl(product);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
@@ -31,28 +31,28 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
 
         {/* Image — constrained height */}
         <div className="relative w-full h-48 sm:h-64 bg-warm-sand shrink-0">
-          <Image src={imageUrl} alt={item.name} fill className="object-contain" sizes="400px" />
+          <Image src={imageUrl} alt={product.name} fill className="object-contain" sizes="400px" />
         </div>
 
         {/* Scrollable content */}
         <div className="overflow-y-auto p-4 sm:p-6 flex-1">
-          <h2 className="text-lg sm:text-xl font-bold font-display mb-1">{item.name}</h2>
-          {item.description && (
+          <h2 className="text-lg sm:text-xl font-bold font-display mb-1">{product.name}</h2>
+          {product.description && (
             <p className="text-sm text-primary/60 mb-4 leading-relaxed line-clamp-4">
-              {item.description.replace(/<[^>]*>/g, " ").substring(0, 300)}
+              {product.description.replace(/<[^>]*>/g, " ").substring(0, 300)}
             </p>
           )}
 
-          {item.variations.length > 1 && (
+          {product.variants.length > 1 && (
             <div className="mb-4">
               <span className="text-xs font-medium text-primary block mb-2">Options</span>
               <div className="flex flex-wrap gap-1.5">
-                {item.variations.map((v) => (
+                {product.variants.map((v) => (
                   <button
                     key={v.id}
-                    onClick={() => setSelectedVariation(v)}
+                    onClick={() => setSelectedVariant(v)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                      selectedVariation.id === v.id
+                      selectedVariant.id === v.id
                         ? "bg-primary text-white btn-tactile btn-primary-tactile"
                         : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                     }`}
@@ -63,7 +63,7 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
                     )}
                     {v.inventory !== undefined && v.inventory <= 3 && (
                       <span className={"ml-1 text-xs " + (v.inventory === 0 ? "text-red-400" : "text-gold")}>
-                        {v.inventory === 0 ? "(sold out)" : "(only " + v.inventory + " left)"}
+                        {v.inventory === 0 ? "(sold out)" : ("(only " + v.inventory + " left)")}
                       </span>
                     )}
                   </button>
@@ -73,11 +73,11 @@ export default function ProductDetail({ item, onClose }: ProductDetailProps) {
           )}
 
           <p className="text-2xl font-bold text-gold mb-4">
-            ${selectedVariation.price.toFixed(2)}
+            ${selectedVariant.price.toFixed(2)}
           </p>
 
           <Link
-            href={`/customizer?product=${item.id}&variation=${selectedVariation.id}`}
+            href={`/customizer?product=${product.id}&variant=${selectedVariant.id}`}
             onClick={onClose}
             className="block w-full text-center py-2.5 rounded-xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile text-sm"
           >

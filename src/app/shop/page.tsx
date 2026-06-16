@@ -16,52 +16,52 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
 ];
 
 export default function ShopPage() {
-  const { items, categories, loading, error, refresh } = useCatalog();
+  const { products, categories, loading, error, refresh } = useCatalog();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("default");
   const [browseMode, setBrowseMode] = useState<BrowseMode>("design");
 
-  const filteredItems = useMemo(() => {
-    let result = items;
+  const filteredProducts = useMemo(() => {
+    let result = products;
     if (activeCategory !== "All") {
       const catId = categories.find((c) => c.id === activeCategory)?.id;
       if (catId) {
-        result = result.filter((i) => i.categoryIds.includes(catId));
+        result = result.filter((p) => p.categoryId === catId);
       } else {
         const q = activeCategory.toLowerCase();
         result = result.filter(
-          (i) =>
-            i.name.toLowerCase().includes(q) ||
-            (i.description?.toLowerCase() ?? "").includes(q)
+          (p) =>
+            p.name.toLowerCase().includes(q) ||
+            (p.description?.toLowerCase() ?? "").includes(q)
         );
       }
     }
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
-        (i) =>
-          i.name.toLowerCase().includes(q) ||
-          (i.description?.toLowerCase() ?? "").includes(q)
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.description?.toLowerCase() ?? "").includes(q)
       );
     }
     if (sortMode === "price-asc") {
       result = [...result].sort((a, b) => {
-        const pricesA = (a.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
-        const pricesB = (b.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
+        const pricesA = (a.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
+        const pricesB = (b.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
         return pa - pb;
       });
     } else if (sortMode === "price-desc") {
       result = [...result].sort((a, b) => {
-        const pricesA = (a.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
-        const pricesB = (b.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
+        const pricesA = (a.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
+        const pricesB = (b.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
         return pb - pa;
       });
     } else if (sortMode === "name-asc") {
       result = [...result].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     }
     return result;
-  }, [items, activeCategory, search, sortMode, categories]);
+  }, [products, activeCategory, search, sortMode, categories]);
 
   const activeLabel =
     activeCategory === "All"
@@ -74,7 +74,7 @@ export default function ShopPage() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold font-display mb-3">Shop All Products</h1>
           <p className="text-primary/60 max-w-xl mx-auto">
-            Browse {items.length} products. Click any item to view details and choose options.
+            Browse {products.length} products. Click any item to view details and choose options.
           </p>
         </div>
 
@@ -129,7 +129,7 @@ export default function ShopPage() {
               onChange={(e) => setActiveCategory(e.target.value)}
               className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
             >
-              <option value="All">All Products ({items.length})</option>
+              <option value="All">All Products ({products.length})</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
@@ -145,7 +145,7 @@ export default function ShopPage() {
               </button>
               {activeCategory !== "All" && (
                 <span className="text-xs text-primary/40 ml-2">
-                  {activeLabel} ({filteredItems.length})
+                  {activeLabel} ({filteredProducts.length})
                 </span>
               )}
             </div>
@@ -184,21 +184,21 @@ export default function ShopPage() {
           </div>
         )}
 
-        {!loading && !error && filteredItems.length === 0 && (
+        {!loading && !error && filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <p className="text-primary/50">{search || activeCategory !== "All" ? "No products match your filters." : "No products available yet."}</p>
           </div>
         )}
 
-        {!loading && !error && filteredItems.length > 0 && (
+        {!loading && !error && filteredProducts.length > 0 && (
           <>
             <p className="text-xs text-primary/40 mb-4">
-              Showing {filteredItems.length} of {items.length} products
+              Showing {filteredProducts.length} of {products.length} products
               {activeCategory !== "All" ? ` in "${activeLabel}"` : ""}
             </p>
             <div className="tile-grid-sites">
-              {filteredItems.map((item) => (
-                <ProductCard key={item.id} item={item} />
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           </>

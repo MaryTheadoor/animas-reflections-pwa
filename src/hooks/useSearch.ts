@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { SquareCatalogItem } from "@/types";
+import type { ManagedProduct } from "@/types";
 
 export type SortMode = "relevance" | "price-asc" | "price-desc" | "name-asc";
 
@@ -28,36 +28,36 @@ function fuzzyScore(text: string, query: string): number {
 }
 
 export function searchProducts(
-  items: SquareCatalogItem[],
+  products: ManagedProduct[],
   filters: SearchFilters,
   sort: SortMode = "relevance"
-): SquareCatalogItem[] {
+): ManagedProduct[] {
   const q = filters.query.trim().toLowerCase();
 
-  let scored = items.map((item) => {
+  let scored = products.map((product) => {
     let score = 0;
 
     if (q) {
-      score += fuzzyScore(item.name, q) * 3;
-      score += fuzzyScore(item.description, q);
-      const tags = item.tags ?? [];
+      score += fuzzyScore(product.name, q) * 3;
+      score += fuzzyScore(product.description, q);
+      const tags = product.tags ?? [];
       for (const tag of tags) {
         score += fuzzyScore(tag, q) * 2;
       }
     }
 
-    if (filters.categoryId && item.categoryIds.includes(filters.categoryId)) {
+    if (filters.categoryId && product.categoryId === filters.categoryId) {
       score += 50;
     }
 
     if (filters.colors.length > 0) {
-      const itemColors = (item.colors ?? []).map((c) => c.toLowerCase());
-      if (filters.colors.every((c) => itemColors.includes(c.toLowerCase()))) {
+      const productColors = (product.colors ?? []).map((c) => c.toLowerCase());
+      if (filters.colors.every((c) => productColors.includes(c.toLowerCase()))) {
         score += 30;
       }
     }
 
-    return { item, score };
+    return { product, score };
   });
 
   if (q) {
@@ -66,58 +66,62 @@ export function searchProducts(
 
   if (filters.categoryId) {
     const catId = filters.categoryId;
-    scored = scored.filter((s) => s.item.categoryIds.includes(catId) || s.score >= 50);
+    scored = scored.filter((s) => s.product.categoryId === catId || s.score >= 50);
   }
 
   if (filters.colors.length > 0) {
     scored = scored.filter((s) => {
-      const itemColors = (s.item.colors ?? []).map((c) => c.toLowerCase());
-      return filters.colors.every((c) => itemColors.includes(c.toLowerCase()));
+      const productColors = (s.product.colors ?? []).map((c) => c.toLowerCase());
+      return filters.colors.every((c) => productColors.includes(c.toLowerCase()));
     });
   }
 
   if (filters.minPrice !== null) {
-    scored = scored.filter((s) =>
-      Math.min(...s.item.variations.map((v) => v.price)) >= filters.minPrice!
-    );
+    scored = scored.filter((s) => {
+      const prices = (s.product.variants ?? []).map((v) => v.price).filter((p) => p > 0);
+      if (prices.length === 0) return false;
+      return Math.min(...prices) >= filters.minPrice!;
+    });
   }
   if (filters.maxPrice !== null) {
-    scored = scored.filter((s) =>
-      Math.min(...s.item.variations.map((v) => v.price)) <= filters.maxPrice!
-    );
+    scored = scored.filter((s) => {
+      const prices = (s.product.variants ?? []).map((v) => v.price).filter((p) => p > 0);
+      if (prices.length === 0) return false;
+      return Math.min(...prices) <= filters.maxPrice!;
+    });
   }
 
   if (sort === "price-asc") {
     scored.sort((a, b) => {
-      const pricesA = (a.item.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
+      const pricesA = (a.product.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
       const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
-      const pricesB = (b.item.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
+      const pricesB = (b.product.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
       const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
       return pa - pb;
     });
   } else if (sort === "price-desc") {
     scored.sort((a, b) => {
-      const pricesA = (a.item.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
+      const pricesA = (a.product.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
       const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
-      const pricesB = (b.item.variations ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
+      const pricesB = (b.product.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
       const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
       return pb - pa;
     });
   } else if (sort === "name-asc") {
-    scored.sort((a, b) => (a.item.name ?? "").localeCompare(b.item.name ?? ""));
+    scored.sort((a, b) => (a.product.name ?? "").localeCompare(b.product.name ?? ""));
   } else {
     scored.sort((a, b) => b.score - a.score);
   }
 
-  return scored.map((s) => s.item);
+  return scored.map((s) => s.product);
 }
 
 export function useProductSearch(
-  items: SquareCatalogItem[],
+  products: ManagedProduct[],
   filters: SearchFilters,
   sort: SortMode = "relevance"
 ) {
-  return useMemo(() => searchProducts(items, filters, sort), [items, filters, sort]);
+  return useMemo(() => searchProducts(products, filters, sort), [products, filters, sort]);
 }
 
 export const AVAILABLE_COLORS = [

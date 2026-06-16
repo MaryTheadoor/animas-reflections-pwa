@@ -29,6 +29,9 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               <div key={item.id} className="flex gap-3 p-3 bg-warm-sand/50 rounded-xl">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-sm truncate">{item.name}</h3>
+                  {item.variant_name && (
+                    <p className="text-xs text-primary/40">{item.variant_name}</p>
+                  )}
                   <p className="text-xs text-primary/50">Qty: {item.quantity}</p>
                   {item.addons.map((a) => (
                     <span key={a.type} className="inline-block text-xs bg-plum/10 text-plum rounded-full px-2 py-0.5 mt-1 mr-1">

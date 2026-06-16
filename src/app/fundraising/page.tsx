@@ -6,10 +6,10 @@ import PageLayout from "@/components/layout/page-layout";
 import { FUNDRAISING } from "@/lib/content";
 
 export default function FundraisingPage() {
-  const { items } = useCatalog();
-  const fundraiserProducts = items.filter((item) =>
+  const { products } = useCatalog();
+  const fundraiserProducts = products.filter((product) =>
     FUNDRAISING.featuredCategories.some((catId) =>
-      item.categoryIds.includes(catId)
+      product.categoryId === catId
     )
   );
 
@@ -111,8 +111,8 @@ export default function FundraisingPage() {
               Active Fundraisers
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {fundraiserProducts.map((item) => (
-                <ProductCard key={item.id} item={item} />
+              {fundraiserProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           </section>

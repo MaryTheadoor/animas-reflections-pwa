@@ -5,9 +5,9 @@ import Link from "next/link";
 import ProductCard from "@/components/product/product-card";
 
 export default function FeaturedProducts() {
-  const { items, loading } = useCatalog();
+  const { products, loading } = useCatalog();
 
-  const featured = items.slice(0, 6);
+  const featured = products.slice(0, 6);
 
   if (loading || featured.length === 0) {
     return (
@@ -39,13 +39,13 @@ export default function FeaturedProducts() {
           Discover our diverse collection now and find your perfect style
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {featured.map((item, i) => (
+          {featured.map((product, i) => (
             <div
-              key={item.id}
+              key={product.id}
               style={{ animationDelay: `${i * 0.1}s` }}
               className={`animate-fade-in-up ${i >= 4 ? "hidden lg:block" : ""}`}
             >
-              <ProductCard item={item} />
+              <ProductCard product={product} />
             </div>
           ))}
         </div>
@@ -54,7 +54,7 @@ export default function FeaturedProducts() {
             href="/shop"
             className="inline-flex items-center justify-center h-12 px-8 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
           >
-            Browse All {items.length} Products
+            Browse All {products.length} Products
           </Link>
         </div>
       </section>

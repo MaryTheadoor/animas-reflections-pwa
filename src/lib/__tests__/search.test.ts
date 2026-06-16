@@ -4,11 +4,11 @@
  */
 import { describe, it, expect } from "@jest/globals";
 import { searchProducts, type SearchFilters } from "@/hooks/useSearch";
-import type { SquareCatalogItem } from "@/types";
+import type { ManagedProduct } from "@/types";
 
 // --- Test data ---
 
-function makeItem(
+function makeProduct(
   id: string,
   name: string,
   description: string,
@@ -16,25 +16,31 @@ function makeItem(
   price: number,
   colors: string[] = [],
   tags: string[] = []
-): SquareCatalogItem {
+): ManagedProduct {
   return {
     id,
     name,
     description,
-    categoryIds: [categoryId],
-    variations: [{ id: `v_${id}`, name: "Standard", price }],
+    categoryId,
+    productType: "other",
     colors,
     tags,
+    images: [],
+    variants: [{ id: `v_${id}`, name: "Standard", price, sku: "" }],
+    active: true,
+    featured: false,
+    createdAt: "",
+    updatedAt: "",
   };
 }
 
-const catalog: SquareCatalogItem[] = [
-  makeItem("1", "Biscuit Hockey Tee", "Custom hockey t-shirt design", "cat_hockey", 25, ["black", "white"], ["hockey", "biscuit"]),
-  makeItem("2", "Animas Reflections Hoodie", "Warm hoodie with mountain logo", "cat_apparel", 45, ["navy", "gray"], ["hoodie", "mountain"]),
-  makeItem("3", "Custom Sticker Pack", "Set of 5 vinyl stickers", "cat_stickers", 8, ["white"], ["sticker", "vinyl"]),
-  makeItem("4", "Jewelry Necklace Durango", "Handmade silver necklace", "cat_jewelry", 65, ["silver"], ["jewelry", "necklace"]),
-  makeItem("5", "Wood Sign Custom", "Engraved wood sign 12x18", "cat_signs", 35, [], ["wood", "sign", "custom"]),
-  makeItem("6", "Team Jersey Pro", "Full sublimation team jersey", "cat_apparel", 55, ["red", "blue"], ["team", "jersey"]),
+const catalog: ManagedProduct[] = [
+  makeProduct("1", "Biscuit Hockey Tee", "Custom hockey t-shirt design", "cat_hockey", 25, ["black", "white"], ["hockey", "biscuit"]),
+  makeProduct("2", "Animas Reflections Hoodie", "Warm hoodie with mountain logo", "cat_apparel", 45, ["navy", "gray"], ["hoodie", "mountain"]),
+  makeProduct("3", "Custom Sticker Pack", "Set of 5 vinyl stickers", "cat_stickers", 8, ["white"], ["sticker", "vinyl"]),
+  makeProduct("4", "Jewelry Necklace Durango", "Handmade silver necklace", "cat_jewelry", 65, ["silver"], ["jewelry", "necklace"]),
+  makeProduct("5", "Wood Sign Custom", "Engraved wood sign 12x18", "cat_signs", 35, [], ["wood", "sign", "custom"]),
+  makeProduct("6", "Team Jersey Pro", "Full sublimation team jersey", "cat_apparel", 55, ["red", "blue"], ["team", "jersey"]),
 ];
 
 // --- fuzzyScore (tested indirectly via searchProducts) ---
@@ -78,7 +84,7 @@ describe("searchProducts", () => {
   it("filters by category", () => {
     const result = searchProducts(catalog, { ...emptyFilters, categoryId: "cat_apparel" });
     expect(result).toHaveLength(2);
-    expect(result.every((i) => i.categoryIds.includes("cat_apparel"))).toBe(true);
+    expect(result.every((p) => p.categoryId === "cat_apparel")).toBe(true);
   });
 
   it("filters by color", () => {
@@ -89,7 +95,8 @@ describe("searchProducts", () => {
 
   it("filters by min price", () => {
     const result = searchProducts(catalog, { ...emptyFilters, minPrice: 40 });
-    expect(result.every((i) => Math.min(...i.variations.map((v) => v.price)) >= 40)).toBe(true);
+    const hasVariants = result.filter((p) => p.variants.length > 0);
+    expect(hasVariants.every((p) => Math.min(...p.variants.map((v) => v.price)) >= 40)).toBe(true);
   });
 
   it("filters by max price", () => {
@@ -100,13 +107,13 @@ describe("searchProducts", () => {
 
   it("sorts by price ascending", () => {
     const result = searchProducts(catalog, emptyFilters, "price-asc");
-    const prices = result.map((i) => Math.min(...i.variations.map((v) => v.price)));
+    const prices = result.map((p) => Math.min(...p.variants.map((v) => v.price)));
     expect(prices).toEqual([8, 25, 35, 45, 55, 65]);
   });
 
   it("sorts by price descending", () => {
     const result = searchProducts(catalog, emptyFilters, "price-desc");
-    const prices = result.map((i) => Math.min(...i.variations.map((v) => v.price)));
+    const prices = result.map((p) => Math.min(...p.variants.map((v) => v.price)));
     expect(prices).toEqual([65, 55, 45, 35, 25, 8]);
   });
 
@@ -124,6 +131,6 @@ describe("searchProducts", () => {
     // Category filter keeps items matching category OR with score >= 50
     const result = searchProducts(catalog, { ...emptyFilters, query: "jersey", categoryId: "cat_apparel" });
     expect(result.length).toBeGreaterThanOrEqual(1);
-    expect(result.some((i) => i.id === "6")).toBe(true);
+    expect(result.some((p) => p.id === "6")).toBe(true);
   });
 });

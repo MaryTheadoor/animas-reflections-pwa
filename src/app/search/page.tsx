@@ -10,7 +10,7 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
 
 export default function SearchPage() {
-  const { items, categories, loading: catalogLoading } = useCatalog();
+  const { products, categories, loading: catalogLoading } = useCatalog();
   const [filters, setFilters] = useState<SearchFilters>({
     query: "",
     categoryId: null,
@@ -23,7 +23,7 @@ export default function SearchPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const results = useProductSearch(items, filters, sort);
+  const results = useProductSearch(products, filters, sort);
 
   const handleSearch = useCallback(
     (newFilters: SearchFilters, newSort: SortMode) => {
@@ -113,8 +113,8 @@ export default function SearchPage() {
               {filters.query ? ` for "${filters.query}"` : ""}
             </p>
             <div className="tile-grid-sites">
-              {results.map((item) => (
-                <ProductCard key={item.id} item={item} />
+              {results.map((product) => (
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           </>

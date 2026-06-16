@@ -207,9 +207,12 @@ export const fetchSquareCatalog = onCall(
 // â”€â”€â”€ Create Square Order & Process Payment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface OrderLineItem {
-  catalogObjectId: string;
+  /** Managed variant ID (provider-agnostic) */
+  variant_id: string;
+  /** Square variation ID — cached from sync, used for Square checkout */
+  squareVariationId?: string;
   quantity?: number;
-  modifiers?: { catalogObjectId: string }[];
+  modifiers?: { squareModifierId?: string; catalogObjectId?: string }[];
   note?: string;
 }
 
@@ -257,13 +260,18 @@ export const createSquareOrderAndPay = onCall(
       const shippingRate = data.shippingRate ?? 0;
 
       const lineItems = data.lineItems.map((item) => {
+        // Resolve Square catalog object ID: prefer squareVariationId from sync, fall back to variant_id
+        const catalogObjectId = item.squareVariationId || item.variant_id;
+        if (!catalogObjectId) {
+          throw new Error(`No Square ID available for variant ${item.variant_id}. Sync products first.`);
+        }
         const li: Record<string, unknown> = {
-          catalogObjectId: item.catalogObjectId,
+          catalogObjectId,
           quantity: String(item.quantity ?? 1),
         };
         if (item.modifiers?.length) {
           li.modifiers = item.modifiers.map((m) => ({
-            catalogObjectId: m.catalogObjectId,
+            catalogObjectId: m.catalogObjectId ?? m.squareModifierId ?? "",
           }));
         }
         if (item.note) {

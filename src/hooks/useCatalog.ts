@@ -15,14 +15,18 @@ interface CatalogCategory {
 }
 
 interface UseCatalogResult {
-  items: SquareCatalogItem[];
+  /** Canonical managed products — use these directly in components */
+  products: ManagedProduct[];
   categories: CatalogCategory[];
   loading: boolean;
   error: string | null;
   refresh: () => void;
 }
 
-function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
+/** Convert ManagedProduct → SquareCatalogItem (internal bridge, used only for
+ *  Square API fallback compatibility and search hook. Components should use
+ *  ManagedProduct directly.) */
+export function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
   const images = Array.isArray(p.images) ? p.images : [];
   const variants = Array.isArray(p.variants) ? p.variants : [];
   return {
@@ -48,8 +52,21 @@ function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
   };
 }
 
+/** Get the primary image URL for a managed product */
+export function getProductImageUrl(product: ManagedProduct): string {
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    return product.images[0];
+  }
+  return "";
+}
+
+/** Get the primary image URL from a SquareCatalogItem (legacy) */
+export function getCatalogItemImageUrl(item: SquareCatalogItem): string {
+  return item.image_url ?? "";
+}
+
 export function useCatalog(): UseCatalogResult {
-  const [items, setItems] = useState<SquareCatalogItem[]>([]);
+  const [products, setProducts] = useState<ManagedProduct[]>([]);
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +78,32 @@ export function useCatalog(): UseCatalogResult {
     if (DATA_SOURCE === "synthetic") {
       const { SYNTHETIC_PRODUCTS, SYNTHETIC_CATEGORIES } = await import("@/lib/synthetic-data");
       await new Promise((r) => setTimeout(r, 300));
-      setItems(SYNTHETIC_PRODUCTS);
+      // Synthetic data is in SquareCatalogItem format — convert to ManagedProduct
+      const managed: ManagedProduct[] = SYNTHETIC_PRODUCTS.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        categoryId: item.categoryIds?.[0] ?? "",
+        productType: (item.productType as ManagedProduct["productType"]) ?? "other",
+        colors: item.colors ?? [],
+        tags: item.tags ?? [],
+        images: item.images ?? (item.image_url ? [item.image_url] : []),
+        variants: item.variations.map((v) => ({
+          id: v.id,
+          name: v.name,
+          price: v.price,
+          sku: v.sku ?? "",
+          inventory: v.inventory,
+          inventoryUpdatedAt: v.inventoryUpdatedAt,
+        })),
+        active: true,
+        featured: false,
+        createdAt: "",
+        updatedAt: "",
+        printZones: item.printZones,
+        mockupImages: item.mockupImages,
+      }));
+      setProducts(managed);
       setCategories(SYNTHETIC_CATEGORIES);
       setLoading(false);
       return;
@@ -69,16 +111,16 @@ export function useCatalog(): UseCatalogResult {
 
     try {
       const productsSnap = await getDocs(collection(db, "products"));
-      const products: SquareCatalogItem[] = [];
+      const productsList: ManagedProduct[] = [];
       productsSnap.forEach((doc) => {
         const data = doc.data() as ManagedProduct;
         if (data.active !== false) {
-          products.push(managedToCatalogItem(data));
+          productsList.push(data);
         }
       });
 
-      if (products.length > 0) {
-        setItems(products);
+      if (productsList.length > 0) {
+        setProducts(productsList);
 
         try {
           const catsSnap = await getDocs(collection(db, "categories"));
@@ -100,6 +142,7 @@ export function useCatalog(): UseCatalogResult {
       console.warn("Firestore read failed, falling back to Square API", err);
     }
 
+    // Fallback: fetch from Square via Cloud Function
     try {
       const { httpsCallable } = await import("firebase/functions");
       const { functions } = await import("@/lib/firebase");
@@ -122,7 +165,34 @@ export function useCatalog(): UseCatalogResult {
         });
         setCategories(Array.from(categoryMap.values()));
       }
-      setItems(catalogItems);
+
+      // Convert SquareCatalogItem → ManagedProduct for the Square API fallback path
+      const managedProducts: ManagedProduct[] = catalogItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        categoryId: item.categoryIds?.[0] ?? "",
+        productType: (item.productType as ManagedProduct["productType"]) ?? "other",
+        colors: item.colors ?? [],
+        tags: item.tags ?? [],
+        images: item.images ?? (item.image_url ? [item.image_url] : []),
+        variants: item.variations.map((v) => ({
+          id: v.id,
+          name: v.name,
+          price: v.price,
+          sku: v.sku ?? "",
+          squareVariationId: v.id,
+          inventory: v.inventory,
+          inventoryUpdatedAt: v.inventoryUpdatedAt,
+        })),
+        active: true,
+        featured: false,
+        createdAt: "",
+        updatedAt: "",
+        printZones: item.printZones,
+        mockupImages: item.mockupImages,
+      }));
+      setProducts(managedProducts);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load catalog");
     } finally {
@@ -135,9 +205,5 @@ export function useCatalog(): UseCatalogResult {
     fetchCatalog();
   }, [fetchCatalog]);
 
-  return { items, categories, loading, error, refresh: fetchCatalog };
-}
-
-export function getProductImageUrl(item: SquareCatalogItem): string {
-  return item.image_url ?? "";
+  return { products, categories, loading, error, refresh: fetchCatalog };
 }

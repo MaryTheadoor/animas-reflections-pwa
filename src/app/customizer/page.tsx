@@ -7,12 +7,12 @@ import Link from "next/link";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCart } from "@/context/cart-context";
-import { useCatalog } from "@/hooks/useCatalog";
+import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import Customizer, { type DesignState } from "@/components/customizer/customizer";
 import FileUpload from "@/components/customizer/file-upload";
 import { SITE_NAME } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
-import type { AddonType, DesignAsset, SquareCatalogItem, PrintZone, PrintZoneTemplate } from "@/types";
+import type { AddonType, DesignAsset, ManagedProduct, ManagedVariant, PrintZone, PrintZoneTemplate } from "@/types";
 
 const DEFAULT_PRINT_ZONE: PrintZone = {
   x_percent: 30, y_percent: 22, width_percent: 40, height_percent: 48,
@@ -38,9 +38,9 @@ function getPrintZone(zones: PrintZoneTemplate | undefined, view: string): Print
   return zones.front ?? DEFAULT_PRINT_ZONE;
 }
 
-function getProductViews(product: SquareCatalogItem | null): ProductViewConfig[] {
+function getProductViews(product: ManagedProduct | null): ProductViewConfig[] {
   const mockups = product?.mockupImages;
-  const fallback = product?.image_url ?? product?.images?.[0] ?? "/hero-bg.jpg";
+  const fallback = getProductImageUrl(product!) ?? product?.images?.[0] ?? "/hero-bg.jpg";
   const frontImage = mockups?.front ?? fallback;
   const backImage = mockups?.back ?? fallback;
   const sleeveImage = mockups?.sleeve ?? fallback;
@@ -72,9 +72,9 @@ const DEFAULT_DESIGN_STATE: DesignState = {
 
 const BASE_PRICE_FALLBACK = 20.0;
 
-function getProductPrice(product: SquareCatalogItem | null, variationIndex: number): number {
-  if (!product || !product.variations.length) return BASE_PRICE_FALLBACK;
-  const v = product.variations[variationIndex] ?? product.variations[0];
+function getProductPrice(product: ManagedProduct | null, variantIndex: number): number {
+  if (!product || !product.variants.length) return BASE_PRICE_FALLBACK;
+  const v = product.variants[variantIndex] ?? product.variants[0];
   return v.price > 0 ? v.price : BASE_PRICE_FALLBACK;
 }
 
@@ -97,10 +97,10 @@ function CustomizerContent() {
   const { addItem } = useCart();
   const siteConfig = useSiteConfig();
   const addonPrice = siteConfig.addon_price;
-  const { items: catalogItems, loading: catalogLoading } = useCatalog();
+  const { products: catalogProducts, loading: catalogLoading } = useCatalog();
 
-  const [selectedProduct, setSelectedProduct] = useState<SquareCatalogItem | null>(null);
-  const [variationIndex, setVariationIndex] = useState(0);
+  const [selectedProduct, setSelectedProduct] = useState<ManagedProduct | null>(null);
+  const [variantIndex, setVariantIndex] = useState(0);
   const [activeView, setActiveView] = useState("front");
   const [designUrl, setDesignUrl] = useState<string>();
   const [designText, setDesignText] = useState<string>();
@@ -113,16 +113,16 @@ function CustomizerContent() {
   // Preselect product from query param when catalog loads
   const preselected = useRef(false);
   useEffect(() => {
-    if (catalogLoading || !catalogItems.length || preselected.current) return;
+    if (catalogLoading || !catalogProducts.length || preselected.current) return;
     if (preselectedProductId) {
-      const found = catalogItems.find((p) => p.id === preselectedProductId);
+      const found = catalogProducts.find((p) => p.id === preselectedProductId);
       if (found) {
         preselected.current = true;
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedProduct(found);
       }
     }
-  }, [catalogLoading, catalogItems, preselectedProductId]);
+  }, [catalogLoading, catalogProducts, preselectedProductId]);
 
   // Load design library from Firestore
   useEffect(() => {
@@ -155,23 +155,23 @@ function CustomizerContent() {
   };
 
   const handleProductSelect = (productId: string) => {
-    const product = catalogItems.find((p) => p.id === productId) ?? null;
+    const product = catalogProducts.find((p) => p.id === productId) ?? null;
     setSelectedProduct(product);
-    setVariationIndex(0);
+    setVariantIndex(0);
     setDesignState(DEFAULT_DESIGN_STATE);
   };
 
   const handleAddToCart = () => {
-    const price = getProductPrice(selectedProduct, variationIndex);
-    const variation = selectedProduct?.variations[variationIndex];
+    const price = getProductPrice(selectedProduct, variantIndex);
+    const variant: ManagedVariant | undefined = selectedProduct?.variants[variantIndex];
 
     addItem({
       id: orderId,
       product_id: selectedProduct?.id ?? "custom",
-      variation_id: variation?.id ?? "",
-      name: selectedProduct
-        ? `${selectedProduct.name}${variation ? ` — ${variation.name}` : ""}`
-        : `Custom Design`,
+      variant_id: variant?.id ?? "",
+      squareVariationId: variant?.squareVariationId,
+      name: selectedProduct?.name ?? "Custom Design",
+      variant_name: variant?.name ?? "",
       base_price: price,
       quantity: 1,
       selected_view: activeView as "front" | "back" | "sleeve",
@@ -182,18 +182,17 @@ function CustomizerContent() {
         label: ADDONS.find((a) => a.type === type)?.label ?? type,
         price: addonPrice,
       })),
-      isSynthetic: false,
     });
   };
 
   const productViews = getProductViews(selectedProduct);
   const currentView = productViews.find((v) => v.key === activeView) ?? productViews[0];
-  const basePrice = getProductPrice(selectedProduct, variationIndex);
+  const basePrice = getProductPrice(selectedProduct, variantIndex);
   const addonsCost = selectedAddons.size * addonPrice;
   const totalPrice = basePrice + addonsCost;
 
-  // Sort catalog items for dropdown
-  const sortedCatalog = [...catalogItems].sort((a, b) => a.name.localeCompare(b.name));
+  // Sort catalog products for dropdown
+  const sortedCatalog = [...catalogProducts].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="flex flex-col flex-1">
@@ -261,20 +260,20 @@ function CustomizerContent() {
                     <option value="">Select a product...</option>
                     {sortedCatalog.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — from ${Math.min(...p.variations.map((v) => v.price)).toFixed(2)}
+                        {p.name} — from ${Math.min(...p.variants.map((v) => v.price)).toFixed(2)}
                       </option>
                     ))}
                   </select>
 
                   {/* Variation Picker */}
-                  {selectedProduct && selectedProduct.variations.length > 1 && (
+                  {selectedProduct && selectedProduct.variants.length > 1 && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {selectedProduct.variations.map((v, i) => (
+                      {selectedProduct.variants.map((v, i) => (
                         <button
                           key={v.id}
-                          onClick={() => setVariationIndex(i)}
+                          onClick={() => setVariantIndex(i)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                            i === variationIndex
+                            i === variantIndex
                               ? "bg-primary text-white"
                               : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                           }`}
@@ -289,7 +288,7 @@ function CustomizerContent() {
                   {selectedProduct && (
                     <div className="mt-3 relative aspect-video bg-warm-sand rounded-xl overflow-hidden">
                       <Image
-                        src={selectedProduct.image_url ?? selectedProduct.images?.[0] ?? "/hero-bg.jpg"}
+                        src={getProductImageUrl(selectedProduct) || selectedProduct.images?.[0] || "/hero-bg.jpg"}
                         alt={selectedProduct.name}
                         fill
                         className="object-contain p-2"
