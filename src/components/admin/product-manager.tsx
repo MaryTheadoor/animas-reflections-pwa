@@ -53,9 +53,11 @@ export default function ProductManager({ categories }: Props) {
 
   // Sync state
   const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<string>("");
   const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [pushingToSquare, setPushingToSquare] = useState<string | null>(null); // productId being pushed
+  const [pushError, setPushError] = useState<string | null>(null);
 
   // Inventory sync state
   const [syncingInventory, setSyncingInventory] = useState(false);
@@ -222,20 +224,36 @@ export default function ProductManager({ categories }: Props) {
   const handleSync = async () => {
     setSyncing(true);
     setSyncError(null);
+    setSyncResult(null);
+    const startTime = Date.now();
+
     try {
+      setSyncProgress("Connecting to Square...");
       const callable = httpsCallable<object, { success: boolean; products: number; categories: number; items: number; errors: string[] }>(
         functions,
         "syncProducts"
       );
+
+      setSyncProgress("Fetching catalog from Square...");
       const result = await callable({});
       const data = result.data;
+
+      setSyncProgress("Writing to Firestore...");
       setSyncResult({ products: data.products ?? 0, categories: data.categories ?? 0, items: data.items ?? 0 });
+
       if (data.errors?.length) {
         setSyncError(data.errors.slice(0, 3).join("; "));
       }
+
+      setSyncProgress("Reloading product list...");
       await loadProducts();
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      setSyncProgress(`Done in ${elapsed}s`);
+      setTimeout(() => setSyncProgress(""), 3000);
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Sync failed");
+      setSyncProgress("");
     } finally {
       setSyncing(false);
     }
@@ -243,6 +261,7 @@ export default function ProductManager({ categories }: Props) {
 
   const handlePushToSquare = async (productId: string) => {
     setPushingToSquare(productId);
+    setPushError(null);
     try {
       const callable = httpsCallable<{ productId: string }, { success: boolean; squareItemId: string }>(
         functions,
@@ -251,7 +270,7 @@ export default function ProductManager({ categories }: Props) {
       await callable({ productId });
       await loadProducts();
     } catch (err) {
-      alert("Failed to push to Square: " + (err instanceof Error ? err.message : "Unknown error"));
+      setPushError(err instanceof Error ? err.message : "Failed to push to Square");
     } finally {
       setPushingToSquare(null);
     }
@@ -380,6 +399,14 @@ export default function ProductManager({ categories }: Props) {
         </div>
       </div>
 
+      {/* Sync Progress */}
+      {syncProgress && (
+        <div className="bg-blue-50 text-blue-700 rounded-xl p-3 text-sm flex items-center gap-2">
+          <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          {syncProgress}
+        </div>
+      )}
+
       {/* Sync Status */}
       {syncResult && (
         <div className="grid grid-cols-3 gap-3 text-center">
@@ -399,6 +426,12 @@ export default function ProductManager({ categories }: Props) {
       )}
       {syncError && (
         <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{syncError}</div>
+      )}
+      {pushError && (
+        <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm flex items-center justify-between">
+          <span>{pushError}</span>
+          <button onClick={() => setPushError(null)} className="text-red-400 hover:text-red-600 ml-2">&times;</button>
+        </div>
       )}
 
       {/* Inventory Sync Result */}
