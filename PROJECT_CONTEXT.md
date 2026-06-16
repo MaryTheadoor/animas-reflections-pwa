@@ -71,7 +71,7 @@
 | src/lib/constants.ts | SHIPPING tiers, ADDON_PRICE, SQUARE config |
 | src/lib/firebase.ts | Firebase client init (db, storage, auth, functions) |
 | src/lib/synthetic-data.ts | 24 test products + 21 categories (USE_SYNTHETIC=true) |
-| src/hooks/useCatalog.ts | Catalog hook — toggle USE_SYNTHETIC for Square vs test data |
+| src/hooks/useCatalog.ts | Catalog hook — returns ManagedProduct[] (canonical type), converted from Synthetic/SquareCatalogItem internally |
 | src/context/cart-context.tsx | Cart state (reducer), cartOpen for drawer |
 | src/context/auth-context.tsx | Firebase Auth (login, loginWithGoogle, logout, isAdmin) |
 | src/context/theme-context.tsx | Dark/light mode toggle |
