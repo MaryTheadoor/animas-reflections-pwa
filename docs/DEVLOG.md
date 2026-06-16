@@ -170,11 +170,49 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] End-to-end checkout test with Square sandbox
 - [ ] Wire "Push to Square" in admin product manager
 - [ ] Wire "Sync from Square" in admin with progress feedback
-- [ ] Customizer: finish drag-to-reposition + scale/rotate (pointer events on canvas)
 
 ---
 
-## Session Template
+## Session 4 — 2026-06-16 | 19:15 MST
+
+### Context Restored From
+- `docs/DEVLOG.md` Session 3 — architecture refactor complete, customizer was next priority
+
+### Actions Taken
+1. **Customizer interactive controls — fully implemented**
+   - Drag-to-reposition: pointer capture with pixel-to-percent delta conversion, real-time bounds clamping
+   - Resize handle: bottom-right corner grip, drag to proportionally scale (0.25x–3x)
+   - Wheel/trackpad scroll resize: +/- 3% per tick, position-preserving
+   - Rotation: +-1/15/90 degree preset buttons, proper modulo 360
+   - Auto-center: design resets to print zone center on view/product change via defaultDesignPosition()
+   - Bounds clamping: clampToPrintZone() on all operations accounting for scaled dimensions
+   - Touch/iOS Safari: touch-action:none, pointer events, global pointerup fallback
+   - UI polish: hint text when no design, aria-labels, tabular-nums
+
+2. **Verification:**
+   - `npm run lint` — 0 errors, 0 warnings
+   - `npm test` — 48/48 pass, 4 suites green
+   - `npm run build` — 18 routes, 21 static pages
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `src/components/customizer/customizer.tsx` | Full rewrite: drag/resize/rotate with pointer events, bounds clamping, touch, export defaultDesignPosition |
+| `src/app/customizer/page.tsx` | Auto-center on view/product change, handleViewChange, defaultStateForView |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `75d2ef5` | feat: customizer drag/resize/rotate with bounds clamping and touch support |
+
+### Current State at Session End
+- Lint: 0 errors | Tests: 48/48 | Build: 18 routes | Customizer: fully interactive
+- Working tree: clean | Branch: master
+
+### Pending / Next Session
+- [ ] End-to-end checkout test with Square sandbox
+- [ ] Wire "Push to Square" in admin product manager
+- [ ] Wire "Sync from Square" in admin with progress feedback
 
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
