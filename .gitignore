@@ -43,6 +43,7 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 *.service-account.json
+.firebase/*.cache
 
 # typescript
 *.tsbuildinfo
@@ -53,3 +54,4 @@ next-env.d.ts
 
 # backup framework — pre-edit snapshots (redundant copies on disk + GitHub)
 /_backups
+.firebase/hosting.b3V0.cache
