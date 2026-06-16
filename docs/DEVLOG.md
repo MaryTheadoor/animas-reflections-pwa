@@ -55,6 +55,58 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 2 — 2026-06-16 | 18:30 MST
+
+### Context Restored From
+- `docs/DEVLOG.md` Session 1
+- `docs/SCOPE.md` Section 9 — Immediate priority items
+
+### Actions Taken
+1. **Phase 1: Code Health & Stability — ALL PASS**
+   - `npm run lint` — **0 errors** (clean)
+   - `npm test` — **48/48 tests pass**, 4 suites green (search, catalog, cart, views)
+   - `npm run build` — **18 routes generated** successfully (21 static pages)
+   - `cd functions && npm run build` — **compile clean** (0 errors)
+
+2. **Fixes applied during Phase 1:**
+   - `tsconfig.json`: excluded `functions/` directory — was causing type errors from missing function deps during Next.js build
+   - `.env.local`: created from `.env.example` (Firebase API key was missing at build time, causing `auth/invalid-api-key` during static export)
+
+3. **Discovered:** `USE_SYNTHETIC` was already `false` in `src/hooks/useCatalog.ts` (line 8) — real Firestore data path is active. Previously documented as `true` in PROJECT_CONTEXT.md (stale doc).
+
+### Decisions Made
+- `functions/` should never be type-checked by Next.js — it has its own tsconfig and dependencies
+- `.env.local` must exist at build time even for static export (Firebase SDK initializes at module scope)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `tsconfig.json` | Added `"functions"` to `exclude` array |
+| `.env.local` | Created from `.env.example` (not committed, gitignored) |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `d3c1178` | fix: exclude functions/ from Next.js TypeScript compilation |
+
+### Current State at Session End
+- Lint: 0 errors
+- Tests: 48/48 pass (4 suites)
+- Build: 18 routes, 21 static pages
+- Functions: compile clean
+- USE_SYNTHETIC: false (real Firestore data)
+- Working tree: clean
+- Branch: master
+- `.env.local` exists with Firebase public config
+
+### Pending / Next Session
+- [ ] Customizer: finish drag-to-reposition + scale/rotate (pointer events on canvas)
+- [ ] End-to-end checkout test with Square sandbox
+- [ ] Wire "Push to Square" in admin product manager
+- [ ] Wire "Sync from Square" in admin with progress feedback
+
+---
+
 ## Session Template
 
 ```

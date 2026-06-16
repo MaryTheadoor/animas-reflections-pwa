@@ -125,7 +125,7 @@
 4. **Nav dock stability:** DO NOT use position:fixed on nav-dock directly. Use a SINGLE fixed wrapper div containing both announcement banner and nav-dock. The nav-dock itself should NOT be position:fixed — let the parent wrapper handle positioning.
 5. **Mobile nav:** Use CSS Grid `grid-template-columns: repeat(4, 1fr)` for 2-row layout on mobile. Desktop: centered pill with `max-width: fit-content; margin: 0 auto`.
 6. **Hero overlap:** Add `pt-12 sm:pt-16` to hero section to push content below fixed header.
-7. **Synthetic data:** Currently USE_SYNTHETIC=true. Products load instantly. Switch back when UI is stable.
+7. **Synthetic data:** Currently USE_SYNTHETIC=false. Products load from Firestore (synced from Square).
 8. **Images:** Only Square images should render. All fallbacks use PlaceholderImage SVG component.
 9. **Cart button:** Only the nav dock cart icon (CartNavButton). No floating button. Removed.
 
@@ -183,7 +183,7 @@ Location: `animas_reflections_scope_roadmap.md` in Downloads
 
 ```typescript
 // src/hooks/useCatalog.ts
-const USE_SYNTHETIC = true; // true = test data, false = Square API
+const USE_SYNTHETIC = false; // false = real Firestore data (current production setting)
 ```
 
 When restoring Square: set to false, deploy both functions and hosting.
