@@ -1,13 +1,10 @@
-import * as logger from "firebase-functions/logger";
+﻿import * as logger from "firebase-functions/logger";
 import { onCall, onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { SquareClient, SquareEnvironment, SquareError } from "square";
 import { defineString } from "firebase-functions/params";
-// Genkit AI commented out â€” programmatic search used instead
-// import { genkit, z } from "genkit";
-// import { googleAI } from "@genkit-ai/googleai";
 import { syncProductsFromSquare, getSyncStatus, importFromSquare } from "./sync.js";
 import { runProductPipeline, getPipelineStatus } from "./product-pipeline.js";
 
@@ -44,7 +41,7 @@ function generateDescription(name: string, categories: { id: string }[]): string
   return `Custom ${name}. Professionally printed in Durango, CO.${typeHint}`;
 }
 
-// â”€â”€â”€ Fetch Square Catalog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Fetch Square Catalog Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 interface CatalogObjectRaw {
   type: string;
@@ -204,12 +201,12 @@ export const fetchSquareCatalog = onCall(
   }
 );
 
-// â”€â”€â”€ Create Square Order & Process Payment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Create Square Order & Process Payment Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 interface OrderLineItem {
   /** Managed variant ID (provider-agnostic) */
   variant_id: string;
-  /** Square variation ID — cached from sync, used for Square checkout */
+  /** Square variation ID â€” cached from sync, used for Square checkout */
   squareVariationId?: string;
   quantity?: number;
   modifiers?: { squareModifierId?: string; catalogObjectId?: string }[];
@@ -328,7 +325,7 @@ export const createSquareOrderAndPay = onCall(
 
       const order = orderResponse.order as Record<string, unknown> | undefined;
       if (!order?.id) {
-        throw new Error("Order creation failed â€” no order ID returned");
+        throw new Error("Order creation failed Ã¢â‚¬â€ no order ID returned");
       }
 
       logger.info("Order created", { orderId: order.id });
@@ -397,7 +394,7 @@ export const createSquareOrderAndPay = onCall(
         logger.info("Order mirrored to Firestore", { orderDocId });
       } catch (mirrorErr) {
         logger.error("Failed to mirror order to Firestore", mirrorErr);
-        // Don't fail the payment — the order succeeded
+        // Don't fail the payment â€” the order succeeded
       }
 
       return {
@@ -419,7 +416,7 @@ export const createSquareOrderAndPay = onCall(
   }
 );
 
-// â”€â”€â”€ Health Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Health Check Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const health = onRequest(
   { cors: true, region: "us-central1" },
@@ -432,7 +429,7 @@ export const health = onRequest(
   }
 );
 
-// â”€â”€â”€ Fetch Site Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Fetch Site Config Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const fetchSiteConfig = onCall(
   { cors: true, region: "us-central1" },
@@ -491,7 +488,7 @@ export const saveAdminEmails = onCall(
   }
 );
 
-// â”€â”€â”€ Fetch Recent Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Fetch Recent Orders Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const fetchRecentOrders = onCall(
   { cors: true, region: "us-central1" },
@@ -541,7 +538,7 @@ export const fetchRecentOrders = onCall(
   }
 );
 
-// â”€â”€â”€ Catalog Sync (Composite Products) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Catalog Sync (Composite Products) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const syncProducts = onCall(
   { cors: true, region: "us-central1", timeoutSeconds: 300 },
@@ -648,112 +645,7 @@ export const scheduledSync = onSchedule(
   }
 );
 
-// â”€â”€â”€ AI-Powered Catalog Sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-// â”€â”€â”€ Programmatic Product Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Replaces the Genkit AI search with fast client-side-style text matching.
-// The frontend /search page already uses fuzzyScore in useSearch.ts;
-// this Cloud Function mirrors that logic for API-based search.
-
-function fuzzyScore(text: string, query: string): number {
-  const lower = text.toLowerCase();
-  const q = query.toLowerCase();
-  if (lower === q) return 100;
-  if (lower.startsWith(q)) return 80;
-  if (lower.includes(q)) return 60;
-  const words = lower.split(/\s+/);
-  for (const word of words) {
-    if (word.startsWith(q)) return 40;
-  }
-  if (lower.includes(q.slice(0, Math.ceil(q.length * 0.6)))) return 20;
-  return 0;
-}
-
-
-// ─── Programmatic Product Search (replaces Genkit AI) ────────────
-
-export const aiSearch = onCall(
-  { cors: true, region: "us-central1" },
-  async (request) => {
-    const { query } = request.data as { query: string };
-    if (!query?.trim()) {
-      throw new Error("Query is required");
-    }
-
-    logger.info("Programmatic search invoked", { query: query.substring(0, 80) });
-
-    try {
-      const client = getSquareClient();
-      const response = await client.catalog.search({
-        objectTypes: ["ITEM"],
-        includeRelatedObjects: true,
-      });
-
-      const rawItems = ((response.objects || []) as unknown[]).filter((o) => {
-        const raw = o as Record<string, unknown>;
-        const data = raw.itemData as Record<string, unknown> | undefined;
-        return data?.ecom_visibility === "VISIBLE";
-      }) as Array<Record<string, unknown>>;
-
-      const products = rawItems.map((item) => {
-        const data = (item.itemData || {}) as Record<string, unknown>;
-        const variations = (data.variations || []) as Array<Record<string, unknown>>;
-        const prices = variations
-          .map((v) => {
-            const vd = (v.itemVariationData || {}) as Record<string, unknown>;
-            const pm = vd.priceMoney as { amount?: bigint } | undefined;
-            return pm?.amount ? Number(pm.amount) / 100 : 0;
-          })
-          .filter((p) => p > 0);
-
-        const categories = ((data.categories || []) as Array<{ id?: string }>)
-          .map((c) => c.id ?? "");
-
-        return {
-          id: item.id as string,
-          name: (data.name as string) ?? "",
-          description: (data.description as string) ?? "",
-          categoryNames: categories,
-          minPrice: prices.length > 0 ? Math.min(...prices) : 0,
-        };
-      });
-
-      if (products.length === 0) {
-        return { matchedIds: [], explanation: "No products are currently available in the catalog." };
-      }
-
-      // Fuzzy text search - same algorithm as frontend useSearch.ts
-      const scored = products
-        .map((p) => {
-          const score = fuzzyScore(p.name, query) * 3
-            + fuzzyScore(p.description, query)
-            + (p.categoryNames ?? []).reduce((s, c) => s + fuzzyScore(c, query) * 2, 0);
-          return { id: p.id, score };
-        })
-        .filter((s) => s.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 20);
-
-      const matchedIds = scored.map((s) => s.id);
-      const explanation = matchedIds.length > 0
-        ? `Found ${matchedIds.length} product(s) matching "${query}". Results sorted by relevance.`
-        : `No products matched "${query}". Try different keywords or browse the catalog.`;
-
-      return { matchedIds, explanation };
-    } catch (err) {
-      logger.error("Search error", err);
-      throw new Error(
-        err instanceof Error ? `Search failed: ${err.message}` : "Search unavailable"
-      );
-    }
-  }
-);
-
-
-// â”€â”€â”€ Create Square Product from Firestore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Called by admin UI when saving a locally-created product.
-// Creates matching Square Catalog ITEM + ITEM_VARIATIONs and stores
-// the returned Square IDs back in Firestore for payment processing.
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ AI-Powered Catalog Sync Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const createSquareProduct = onCall(
   { cors: true, region: "us-central1" },
@@ -827,7 +719,7 @@ export const createSquareProduct = onCall(
         throw new Error("Square returned no ID mappings");
       }
 
-      // Build maps from temp IDs â†’ real Square IDs
+      // Build maps from temp IDs Ã¢â€ â€™ real Square IDs
       const tempToReal = new Map<string, string>();
       idMap.forEach((m) => {
         if (m.clientObjectId && m.objectId) {
@@ -964,7 +856,7 @@ export const fetchInventoryCounts = onCall(
   }
 );
 
-// ─── Customer Orders ───────────────────────────────────────────────
+// â”€â”€â”€ Customer Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const fetchCustomerOrders = onCall(
   { cors: true, region: "us-central1" },
@@ -992,7 +884,7 @@ export const fetchCustomerOrders = onCall(
   }
 );
 
-// ─── Customer Addresses ────────────────────────────────────────────
+// â”€â”€â”€ Customer Addresses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const getCustomerAddresses = onCall(
   { cors: true, region: "us-central1" },
@@ -1093,7 +985,7 @@ export const deleteCustomerAddress = onCall(
   }
 );
 
-// ─── Customer Profile ──────────────────────────────────────────────
+// â”€â”€â”€ Customer Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const getCustomerProfile = onCall(
   { cors: true, region: "us-central1" },
@@ -1138,7 +1030,7 @@ export const saveCustomerProfile = onCall(
   }
 );
 
-// ─── Order Tracking (Admin) ────────────────────────────────────────
+// â”€â”€â”€ Order Tracking (Admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const updateOrderTracking = onCall(
   { cors: true, region: "us-central1" },

@@ -7,8 +7,6 @@ import { AVAILABLE_COLORS } from "@/hooks/useSearch";
 interface SearchBarProps {
   categories: { id: string; name: string }[];
   onSearch: (filters: SearchFilters, sort: SortMode) => void;
-  onAiSearch?: (query: string) => void;
-  aiLoading?: boolean;
   initialQuery?: string;
 }
 
@@ -22,8 +20,6 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
 export default function SearchBar({
   categories,
   onSearch,
-  onAiSearch,
-  aiLoading,
   initialQuery = "",
 }: SearchBarProps) {
   const [query, setQuery] = useState(initialQuery);
@@ -55,12 +51,6 @@ export default function SearchBar({
     );
   };
 
-  const handleAiSearch = () => {
-    if (onAiSearch && query.trim()) {
-      onAiSearch(query.trim());
-    }
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex gap-3">
@@ -76,7 +66,7 @@ export default function SearchBar({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder='Search products... or try "red hoodies under $50"'
+            placeholder="Search products..."
             aria-label="Search products"
             className="w-full pl-11 pr-4 py-3 rounded-2xl border border-primary/20 bg-white focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none text-sm transition-all"
           />
@@ -113,24 +103,6 @@ export default function SearchBar({
             <option key={opt.mode} value={opt.mode}>{opt.label}</option>
           ))}
         </select>
-
-        {onAiSearch && query.trim() && (
-          <button
-            type="button"
-            onClick={handleAiSearch}
-            disabled={aiLoading}
-            className="px-3 py-1.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors disabled:opacity-50 flex items-center gap-1"
-          >
-            {aiLoading ? (
-              <>
-                <span className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-                Thinking...
-              </>
-            ) : (
-              <>AI Search</>
-            )}
-          </button>
-        )}
       </div>
 
       {showFilters && (
