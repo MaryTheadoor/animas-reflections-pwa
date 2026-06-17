@@ -112,6 +112,8 @@ function CustomizerContent() {
   const [activeView, setActiveView] = useState("front");
   const [designUrl, setDesignUrl] = useState<string>();
   const [designText, setDesignText] = useState<string>();
+  const [textColor, setTextColor] = useState("#111827");
+  const [textFont, setTextFont] = useState("var(--font-display)");
   const [designState, setDesignState] = useState<DesignState>(DEFAULT_DESIGN_STATE);
   const [selectedAddons, setSelectedAddons] = useState<Set<AddonType>>(new Set());
   const [orderId] = useState(() => crypto.randomUUID());
@@ -188,6 +190,7 @@ function CustomizerContent() {
       name: selectedProduct?.name ?? "Custom Design",
       variant_name: variant?.name ?? "",
       base_price: price,
+      productType: selectedProduct?.productType ?? "other",
       quantity: 1,
       selected_view: activeView as "front" | "back" | "sleeve",
       design_url: designUrl,
@@ -248,6 +251,10 @@ function CustomizerContent() {
               onViewChange={handleViewChange}
               designUrl={designUrl}
               designText={designText}
+              textColor={textColor}
+              textFont={textFont}
+              onTextColorChange={setTextColor}
+              onTextFontChange={setTextFont}
               onDesignChange={setDesignState}
               designState={designState}
               onTextChange={setDesignText}

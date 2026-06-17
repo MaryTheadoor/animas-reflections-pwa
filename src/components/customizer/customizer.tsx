@@ -22,8 +22,10 @@ interface CustomizerProps {
   onViewChange: (key: string) => void;
   designUrl?: string;
   designText?: string;
-  textColor?: string;
-  textFont?: string;
+  textColor: string;
+  textFont: string;
+  onTextColorChange: (color: string) => void;
+  onTextFontChange: (font: string) => void;
   onDesignChange: (state: DesignState) => void;
   designState: DesignState;
   onTextChange: (text?: string) => void;
@@ -57,6 +59,8 @@ export default function Customizer({
   designText,
   textColor = "#111827",
   textFont = "var(--font-display)",
+  onTextColorChange,
+  onTextFontChange,
   onDesignChange,
   designState,
   onTextChange,
@@ -456,7 +460,7 @@ export default function Customizer({
           <label className="block text-sm font-medium text-primary mb-1">
             Name / Number
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-2">
             <input
               type="text"
               value={designText ?? ""}
@@ -467,10 +471,26 @@ export default function Customizer({
             <input
               type="color"
               value={textColor}
-              readOnly
+              onChange={(e) => onTextColorChange(e.target.value)}
               className="w-10 h-10 rounded-lg border border-primary/20 cursor-pointer shrink-0"
               title="Text color"
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-primary/40 w-8">Font</span>
+            <select
+              value={textFont}
+              onChange={(e) => onTextFontChange(e.target.value)}
+              className="flex-1 px-3 py-1.5 rounded-lg border border-primary/20 bg-white text-xs text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+            >
+              <option value="var(--font-display)">Serif (Vesper Libre)</option>
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="Impact, sans-serif">Impact</option>
+              <option value="'Comic Sans MS', cursive">Comic Sans</option>
+            </select>
           </div>
           <p className="text-[10px] text-primary/30 mt-1">
             Drag the design on the garment to reposition. Scroll or use size controls to resize.

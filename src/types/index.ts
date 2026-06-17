@@ -147,6 +147,8 @@ export interface CartItem {
   variant_name: string;
   /** Base price of the selected variant */
   base_price: number;
+  /** Product type — used for shipping tier auto-detection */
+  productType: ProductType;
   quantity: number;
   selected_view: "front" | "back" | "sleeve";
   design_url?: string;

@@ -151,7 +151,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const shipping =
     subtotal >= freeThreshold
       ? 0
-      : cart.shippingTier === "stickers"
+      : cart.items.length > 0 && cart.items.every((i) => i.productType === "sticker")
         ? shippingTierStickers
         : shippingTierApparel;
 

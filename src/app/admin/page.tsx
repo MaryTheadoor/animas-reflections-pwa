@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Component, type ReactNode } from "react";
+import { useState, useEffect, useCallback, Component, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
@@ -606,16 +606,35 @@ function DashboardContent() {
 }
 
 function OrdersSection() {
-  const [orders, setOrders] = useState<{ id: string; state: string; total: number; createdAt: string }[]>([]);
+  const [orders, setOrders] = useState<{ id: string; squareOrderId?: string; state: string; total: number; createdAt: string; customerEmail?: string; customerName?: string; trackingUrl?: string; trackingNumber?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [trackingUrl, setTrackingUrl] = useState("");
+  const [savingTracking, setSavingTracking] = useState(false);
 
-  useEffect(() => {
+  const loadOrders = useCallback(() => {
     httpsCallable(functions, "fetchRecentOrders")({})
       .then((r) => setOrders((r.data as { orders: typeof orders }).orders ?? []))
-      .catch((err) => setError(err.message))
+      .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { loadOrders(); }, [loadOrders]);
+
+  const saveTracking = async (orderId: string, orderDocId: string) => {
+    setSavingTracking(true);
+    try {
+      const callable = httpsCallable(functions, "updateOrderTracking");
+      await callable({ orderId: orderDocId || `order_${orderId}`, trackingUrl, trackingNumber: "" });
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, trackingUrl } : o));
+      setTrackingUrl("");
+    } catch (e) {
+      alert("Failed to save tracking: " + (e instanceof Error ? e.message : "Unknown"));
+    } finally {
+      setSavingTracking(false);
+    }
+  };
 
   if (loading) return <p className="text-sm text-primary/50">Loading orders...</p>;
   if (error) return <p className="text-sm text-red-500">{error}</p>;
@@ -625,19 +644,51 @@ function OrdersSection() {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead><tr className="text-left text-primary/50 border-b border-warm-sand">
-          <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Date</th>
+          <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Customer</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Date</th><th className="pb-2 font-medium">Tracking</th>
         </tr></thead>
         <tbody>
-          {orders.slice(0, 20).map((o) => (
+          {orders.slice(0, 30).map((o) => (
             <tr key={o.id} className="border-b border-warm-sand/30">
               <td className="py-2 font-mono text-xs text-primary/60">{o.id?.slice(0, 12)}</td>
+              <td className="py-2 text-xs text-primary/60">{o.customerEmail || o.customerName || "-"}</td>
               <td className="py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${o.state === "COMPLETED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{o.state}</span></td>
               <td className="py-2 text-right font-mono">${o.total.toFixed(2)}</td>
               <td className="py-2 text-primary/50">{new Date(o.createdAt as string).toLocaleDateString()}</td>
+              <td className="py-2">
+                {o.trackingUrl ? (
+                  <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold text-xs hover:underline">Track</a>
+                ) : (
+                  <button
+                    onClick={() => { setExpandedId(o.id); setTrackingUrl(""); }}
+                    className="text-xs text-primary/30 hover:text-gold"
+                  >
+                    + Add
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {expandedId && (
+        <div className="mt-4 p-4 bg-warm-sand/30 rounded-xl flex items-center gap-2">
+          <input
+            type="url"
+            value={trackingUrl}
+            onChange={(e) => setTrackingUrl(e.target.value)}
+            placeholder="https://track.carrier.com/..."
+            className="flex-1 px-3 py-2 rounded-lg border border-primary/20 bg-white text-sm focus:border-gold outline-none"
+          />
+          <button
+            onClick={() => saveTracking(expandedId, `order_${expandedId}`)}
+            disabled={savingTracking || !trackingUrl}
+            className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+          >
+            {savingTracking ? "Saving..." : "Save"}
+          </button>
+          <button onClick={() => setExpandedId(null)} className="px-3 py-2 text-sm text-primary/40 hover:text-primary">Cancel</button>
+        </div>
+      )}
     </div>
   );
 }

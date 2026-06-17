@@ -206,6 +206,7 @@ function ProductContent() {
                     name: product.name,
                     variant_name: variant.name,
                     base_price: price,
+                    productType: product.productType,
                     quantity: 1,
                     selected_view: "front",
                     design_text: customText || undefined,
