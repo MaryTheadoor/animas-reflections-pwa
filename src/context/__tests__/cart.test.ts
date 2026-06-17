@@ -62,9 +62,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 const makeItem = (id: string, price: number, name = "Test Product"): CartItem => ({
   id,
   product_id: `p_${id}`,
-  variation_id: `v_${id}`,
+  variant_id: `v_${id}`,
   name: `${name} — Standard`,
+  variant_name: "Standard",
   base_price: price,
+  productType: "apparel",
   quantity: 1,
   selected_view: "front" as const,
   addons: [],

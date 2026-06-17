@@ -10,7 +10,8 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const minPrice = Math.min(...product.variants.map((v) => v.price));
+  const variants = product.variants ?? [];
+  const minPrice = variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0;
   const imageUrl = getProductImageUrl(product);
 
   return (
@@ -53,9 +54,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       <div className="flex items-end justify-between mt-auto pt-3 border-t border-warm-sand/50">
         <p className="text-gold font-bold text-lg leading-none">
-          {product.variants.length === 1 && product.variants[0].price > 0
-            ? `$${product.variants[0].price.toFixed(2)}`
-            : `Starting at $${minPrice.toFixed(2)}`}
+          {variants.length === 0
+            ? "Price varies"
+            : variants.length === 1 && variants[0].price > 0
+              ? `$${variants[0].price.toFixed(2)}`
+              : `Starting at $${minPrice.toFixed(2)}`}
         </p>
         <span className="text-xs font-semibold text-gold bg-gold/10 px-3 py-1.5 rounded-full group-hover:bg-gold group-hover:text-white transition-colors">
           View Product

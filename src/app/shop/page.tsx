@@ -47,8 +47,8 @@ export default function ShopPage() {
     }
     if (sortMode === "price-asc") {
       result = [...result].sort((a, b) => {
-        const pricesA = (a.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
-        const pricesB = (b.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
+        const pricesA = (a.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pa = pricesA.length > 0 ? Math.min(...pricesA) : Number.MAX_VALUE;
+        const pricesB = (b.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pb = pricesB.length > 0 ? Math.min(...pricesB) : Number.MAX_VALUE;
         return pa - pb;
       });
     } else if (sortMode === "price-desc") {

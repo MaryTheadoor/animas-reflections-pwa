@@ -282,15 +282,15 @@ function CustomizerContent() {
                     <option value="">Select a product...</option>
                     {sortedCatalog.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — from ${Math.min(...p.variants.map((v) => v.price)).toFixed(2)}
+                        {p.name} — from ${((p.variants ?? [])[0]?.price ?? 0).toFixed(2)}
                       </option>
                     ))}
                   </select>
 
                   {/* Variation Picker */}
-                  {selectedProduct && selectedProduct.variants.length > 1 && (
+                  {selectedProduct && (selectedProduct.variants ?? []).length > 1 && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {selectedProduct.variants.map((v, i) => (
+                      {(selectedProduct.variants ?? []).map((v, i) => (
                         <button
                           key={v.id}
                           onClick={() => setVariantIndex(i)}

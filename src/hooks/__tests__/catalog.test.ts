@@ -24,7 +24,7 @@ function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
     })),
     colors: Array.isArray(p.colors) ? p.colors : [],
     tags: Array.isArray(p.tags) ? p.tags : [],
-    productType: (p as Record<string, unknown>).productType as string | undefined,
+    productType: p.productType as string | undefined,
     printZones: p.printZones,
     mockupImages: p.mockupImages,
   };
