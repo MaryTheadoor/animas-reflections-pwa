@@ -25,7 +25,7 @@ export default function ImageManager() {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [mockupView, setMockupView] = useState<"front" | "back" | "sleeve">("front");
+  const [mockupView, setMockupView] = useState<"front" | "back" | "sleeve" | "sideL" | "sideR">("front");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadProducts = useCallback(async () => {
@@ -202,8 +202,8 @@ export default function ImageManager() {
             <p className="text-xs text-primary/40 mb-3">
               Upload blank garment/product photos for the customizer. One per view.
             </p>
-            <div className="flex gap-2 mb-3">
-              {(["front", "back", "sleeve"] as const).map((v) => (
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((v) => (
                 <button
                   key={v}
                   onClick={() => setMockupView(v)}
@@ -211,7 +211,7 @@ export default function ImageManager() {
                     mockupView === v ? "bg-primary text-white" : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                   }`}
                 >
-                  {v}
+                  {v === "sideL" ? "Left Side" : v === "sideR" ? "Right Side" : v}
                 </button>
               ))}
             </div>
@@ -231,15 +231,11 @@ export default function ImageManager() {
                 )}
               </div>
               <div className="space-y-2 text-xs text-primary/50">
-                <p>
-                  <strong>Front:</strong> {mockups.front ? "✓ Set" : "✗ Not set"}
-                </p>
-                <p>
-                  <strong>Back:</strong> {mockups.back ? "✓ Set" : "✗ Not set"}
-                </p>
-                <p>
-                  <strong>Sleeve:</strong> {mockups.sleeve ? "✓ Set" : "✗ Not set"}
-                </p>
+                <p><strong>Front:</strong> {mockups.front ? "✓ Set" : "✗ Not set"}</p>
+                <p><strong>Back:</strong> {mockups.back ? "✓ Set" : "✗ Not set"}</p>
+                <p><strong>Sleeve:</strong> {mockups.sleeve ? "✓ Set" : "✗ Not set"}</p>
+                <p><strong>Left Side:</strong> {mockups.sideL ? "✓ Set" : "✗ Not set"}</p>
+                <p><strong>Right Side:</strong> {mockups.sideR ? "✓ Set" : "✗ Not set"}</p>
                 {mockups[mockupView] && (
                   <button
                     onClick={removeMockup}

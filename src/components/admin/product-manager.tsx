@@ -50,6 +50,7 @@ export default function ProductManager({ categories }: Props) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [newTag, setNewTag] = useState("");
   const [newVariant, setNewVariant] = useState({ name: "", price: "", sku: "" });
 
@@ -175,12 +176,21 @@ export default function ProductManager({ categories }: Props) {
     if (!file) return;
     setUploading(true);
     setUploadProgress(0);
-    const fileRef = ref(storage, `products/${Date.now()}-${file.name}`);
+    setUploadError(null);
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = editing?.id
+      ? `products/${editing.id}/${Date.now()}_${safeName}`
+      : `products/temp/${Date.now()}_${safeName}`;
+    const fileRef = ref(storage, path);
     const task = uploadBytesResumable(fileRef, file);
     task.on(
       "state_changed",
       (snap) => setUploadProgress((snap.bytesTransferred / snap.totalBytes) * 100),
-      () => setUploading(false),
+      (err) => {
+        setUploading(false);
+        setUploadError(err.message || "Upload failed");
+      },
       async () => {
         const url = await getDownloadURL(task.snapshot.ref);
         setForm((prev) => ({ ...prev, images: [...prev.images, url] }));
@@ -798,6 +808,9 @@ export default function ProductManager({ categories }: Props) {
             <label className="block text-xs font-medium text-primary mb-2">
               Images ({form.images.length})
             </label>
+            {uploadError && (
+              <p className="text-xs text-red-500 mb-2">{uploadError}</p>
+            )}
             <div className="flex flex-wrap gap-3 mb-2">
               {form.images.map((url) => (
                 <div key={url} className="relative group">
