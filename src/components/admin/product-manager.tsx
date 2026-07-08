@@ -669,6 +669,44 @@ export default function ProductManager({ categories }: Props) {
                     placeholder="https://..."
                     className="w-full px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs"
                   />
+                  <label className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] text-primary/40 hover:text-gold cursor-pointer border border-dashed border-primary/20 rounded-lg">
+                    📷 Upload
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploading(true);
+                        setUploadError(null);
+                        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                        const refId = form.id || crypto.randomUUID();
+                        const path = `products/${refId}/mockup_${view}_${Date.now()}_${safeName}`;
+                        const fileRef = ref(storage, path);
+                        const task = uploadBytesResumable(fileRef, file);
+                        task.on("state_changed",
+                          () => {},
+                          (err) => { setUploading(false); setUploadError(err.message || "Upload failed"); },
+                          async () => {
+                            const url = await getDownloadURL(task.snapshot.ref);
+                            const current = form.mockupImages ?? {};
+                            updateField("mockupImages", { ...current, [view]: url });
+                            setUploading(false);
+                          }
+                        );
+                      }}
+                    />
+                  </label>
+                  {form.mockupImages?.[view] && (
+                    <Image
+                      src={form.mockupImages[view]!}
+                      alt={`${view} mockup`}
+                      width={60}
+                      height={60}
+                      className="mt-1 rounded-lg object-cover border border-warm-sand"
+                    />
+                  )}
                 </div>
               ))}
             </div>

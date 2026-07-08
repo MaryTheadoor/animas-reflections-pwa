@@ -99,15 +99,21 @@ function DashboardContent() {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [managedCategories, setManagedCategories] = useState<ManagedCategory[]>([]);
 
+  const loadDesigns = useCallback(async () => {
+    try {
+      const snap = await getDoc(doc(db, "designs", "catalog"));
+      if (snap.exists()) {
+        setDesigns((snap.data() as { items?: DesignAsset[] }).items ?? []);
+      } else {
+        setDesigns([]);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     const loadConfig = async () => {
       try { const snap = await getDoc(doc(db, "config", "site"));
       if (snap.exists()) setConfig({ ...DEFAULT_CONFIG, ...snap.data() } as SiteConfigData);
-      } catch {}
-    };
-    const loadDesigns = async () => {
-      try { const snap = await getDoc(doc(db, "designs", "catalog"));
-      if (snap.exists()) setDesigns((snap.data() as { items?: DesignAsset[] }).items ?? []);
       } catch {}
     };
     const loadSyncStatus = async () => {
@@ -132,11 +138,17 @@ function DashboardContent() {
       } catch {}
     };
     loadConfig();
-    loadDesigns();
     loadSyncStatus();
     loadAdmins();
     loadCats();
   }, []);
+
+  // Reload designs when switching tabs
+  useEffect(() => {
+    if (tab !== "designs") return;
+    const t = setTimeout(() => loadDesigns(), 0);
+    return () => clearTimeout(t);
+  }, [tab, loadDesigns]);
 
   const saveConfig = async () => {
     setSaving(true);
