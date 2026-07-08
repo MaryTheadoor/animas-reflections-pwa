@@ -23,6 +23,9 @@ const DEFAULT_BACK_PRINT_ZONE: PrintZone = {
 const DEFAULT_SLEEVE_PRINT_ZONE: PrintZone = {
   x_percent: 65, y_percent: 20, width_percent: 25, height_percent: 55,
 };
+const DEFAULT_SIDE_PRINT_ZONE: PrintZone = {
+  x_percent: 5, y_percent: 15, width_percent: 30, height_percent: 40,
+};
 
 interface ProductViewConfig {
   key: string;
@@ -32,9 +35,18 @@ interface ProductViewConfig {
 }
 
 function getPrintZone(zones: PrintZoneTemplate | undefined, view: string): PrintZone {
-  if (!zones) return view === "back" ? DEFAULT_BACK_PRINT_ZONE : view === "sleeve" ? DEFAULT_SLEEVE_PRINT_ZONE : DEFAULT_PRINT_ZONE;
+  if (!zones) {
+    switch (view) {
+      case "back": return DEFAULT_BACK_PRINT_ZONE;
+      case "sleeve": return DEFAULT_SLEEVE_PRINT_ZONE;
+      case "sideL": case "sideR": return DEFAULT_SIDE_PRINT_ZONE;
+      default: return DEFAULT_PRINT_ZONE;
+    }
+  }
   if (view === "back" && zones.back) return zones.back;
   if (view === "sleeve" && zones.sleeve) return zones.sleeve;
+  if (view === "sideL" && zones.sideL) return zones.sideL;
+  if (view === "sideR" && zones.sideR) return zones.sideR;
   return zones.front ?? DEFAULT_PRINT_ZONE;
 }
 
@@ -44,16 +56,33 @@ function getProductViews(product: ManagedProduct | null): ProductViewConfig[] {
   const frontImage = mockups?.front ?? fallback;
   const backImage = mockups?.back ?? fallback;
   const sleeveImage = mockups?.sleeve ?? fallback;
+  const sideLImage = mockups?.sideL ?? fallback;
+  const sideRImage = mockups?.sideR ?? fallback;
   const zones = product?.printZones;
+  const pType = product?.productType ?? "other";
+  const isApparel = pType === "apparel";
+
   const views: ProductViewConfig[] = [
     { key: "front", label: "Front", baseImage: frontImage, printZone: getPrintZone(zones, "front") },
   ];
-  if (zones?.back || product?.productType === "apparel" || !product) {
+
+  // Back view: apparel, or if back zone explicitly exists
+  if (isApparel || zones?.back) {
     views.push({ key: "back", label: "Back", baseImage: backImage, printZone: getPrintZone(zones, "back") });
   }
-  if (zones?.sleeve) {
+
+  // Sleeve/side views: only for apparel (or if zones explicitly exist)
+  if (isApparel || zones?.sleeve) {
     views.push({ key: "sleeve", label: "Sleeve", baseImage: sleeveImage, printZone: getPrintZone(zones, "sleeve") });
   }
+
+  if (zones?.sideL) {
+    views.push({ key: "sideL", label: "Left Side", baseImage: sideLImage, printZone: getPrintZone(zones, "sideL") });
+  }
+  if (zones?.sideR) {
+    views.push({ key: "sideR", label: "Right Side", baseImage: sideRImage, printZone: getPrintZone(zones, "sideR") });
+  }
+
   return views;
 }
 
@@ -120,6 +149,9 @@ function CustomizerContent() {
   const [orderId] = useState(() => crypto.randomUUID());
   const [designLibrary, setDesignLibrary] = useState<DesignAsset[]>([]);
   const [libraryOpen, setLibraryOpen] = useState(false);
+
+  // Per-product designs from product.designAssets
+  const productDesigns = selectedProduct?.designAssets ?? [];
 
   // Preselect product from query param when catalog loads
   const preselected = useRef(false);
@@ -354,37 +386,73 @@ function CustomizerContent() {
                 </button>
 
                 {libraryOpen && (
-                  <div className="mt-3 max-h-48 overflow-y-auto space-y-1">
-                    {designLibrary.length === 0 ? (
+                  <div className="mt-3 max-h-64 overflow-y-auto space-y-2">
+                    {/* Per-product designs */}
+                    {productDesigns.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-primary/40 uppercase tracking-wider mb-1 px-1">Product Designs</p>
+                        <div className="space-y-1">
+                          {productDesigns.map((asset) => (
+                            <button
+                              key={asset.id}
+                              onClick={() => handleSelectDesign(asset)}
+                              className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
+                                designUrl === asset.image_url
+                                  ? "bg-gold/10 border border-gold/30"
+                                  : "hover:bg-warm-sand/50 border border-transparent"
+                              }`}
+                            >
+                              <Image
+                                src={asset.image_url}
+                                alt={asset.name}
+                                width={36}
+                                height={36}
+                                className="rounded-lg object-cover shrink-0"
+                              />
+                              <p className="text-xs font-medium truncate">{asset.name}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Global design library */}
+                    {designLibrary.length === 0 && productDesigns.length === 0 ? (
                       <p className="text-xs text-primary/30 text-center py-4">
                         No designs available. Upload designs in the Admin Dashboard.
                       </p>
                     ) : (
-                      designLibrary.map((asset) => (
-                        <button
-                          key={asset.id}
-                          onClick={() => handleSelectDesign(asset)}
-                          className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
-                            designUrl === asset.image_url
-                              ? "bg-gold/10 border border-gold/30"
-                              : "hover:bg-warm-sand/50 border border-transparent"
-                          }`}
-                        >
-                          <Image
-                            src={asset.image_url}
-                            alt={asset.name}
-                            width={36}
-                            height={36}
-                            className="rounded-lg object-cover shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium truncate">{asset.name}</p>
-                            <p className="text-[10px] text-primary/40 truncate">
-                              {asset.category}
-                            </p>
-                          </div>
-                        </button>
-                      ))
+                      <div>
+                        {productDesigns.length > 0 && (
+                          <p className="text-[10px] font-semibold text-primary/40 uppercase tracking-wider mb-1 px-1 mt-2">All Designs</p>
+                        )}
+                        <div className="space-y-1">
+                          {designLibrary.map((asset) => (
+                            <button
+                              key={asset.id}
+                              onClick={() => handleSelectDesign(asset)}
+                              className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
+                                designUrl === asset.image_url
+                                  ? "bg-gold/10 border border-gold/30"
+                                  : "hover:bg-warm-sand/50 border border-transparent"
+                              }`}
+                            >
+                              <Image
+                                src={asset.image_url}
+                                alt={asset.name}
+                                width={36}
+                                height={36}
+                                className="rounded-lg object-cover shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{asset.name}</p>
+                                <p className="text-[10px] text-primary/40 truncate">
+                                  {asset.category}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

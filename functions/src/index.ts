@@ -206,8 +206,12 @@ export const fetchSquareCatalog = onCall(
 interface OrderLineItem {
   /** Managed variant ID (provider-agnostic) */
   variant_id: string;
-  /** Square variation ID â€” cached from sync, used for Square checkout */
+  /** Square variation ID — cached from sync, used for Square checkout */
   squareVariationId?: string;
+  /** Ad-hoc: item name for non-catalog orders */
+  name?: string;
+  /** Ad-hoc: item price in dollars for non-catalog orders */
+  price?: number;
   quantity?: number;
   modifiers?: { squareModifierId?: string; catalogObjectId?: string }[];
   note?: string;
@@ -256,16 +260,23 @@ export const createSquareOrderAndPay = onCall(
 
       const shippingRate = data.shippingRate ?? 0;
 
-      const lineItems = data.lineItems.map((item) => {
-        // Resolve Square catalog object ID: prefer squareVariationId from sync, fall back to variant_id
-        const catalogObjectId = item.squareVariationId || item.variant_id;
-        if (!catalogObjectId) {
-          throw new Error(`No Square ID available for variant ${item.variant_id}. Sync products first.`);
-        }
+      const lineItems = data.lineItems.map((item, index) => {
+        const catalogObjectId = item.squareVariationId || undefined;
         const li: Record<string, unknown> = {
-          catalogObjectId,
           quantity: String(item.quantity ?? 1),
         };
+
+        if (catalogObjectId) {
+          li.catalogObjectId = catalogObjectId;
+        } else {
+          // Ad-hoc line item: provide name and explicit price
+          li.name = item.name ?? `Item ${index + 1}`;
+          li.basePriceMoney = {
+            amount: BigInt(Math.round((item.price ?? 0) * 100)),
+            currency: "USD",
+          };
+        }
+
         if (item.modifiers?.length) {
           li.modifiers = item.modifiers.map((m) => ({
             catalogObjectId: m.catalogObjectId ?? m.squareModifierId ?? "",

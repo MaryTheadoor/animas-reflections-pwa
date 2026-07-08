@@ -100,6 +100,8 @@ export default function CheckoutPage() {
       const lineItems = cart.items.map((item) => ({
         variant_id: item.variant_id,
         squareVariationId: item.squareVariationId,
+        name: `${item.name} — ${item.variant_name}`,
+        price: item.base_price,
         quantity: item.quantity,
         note: [
           item.design_url ? `Design: ${item.design_url}` : "",

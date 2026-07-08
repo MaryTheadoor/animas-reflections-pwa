@@ -44,6 +44,12 @@ export function searchProducts(
       for (const tag of tags) {
         score += fuzzyScore(tag, q) * 2;
       }
+      // Index design asset names for design-based search
+      const designAssets = product.designAssets ?? [];
+      for (const asset of designAssets) {
+        score += fuzzyScore(asset.name, q) * 2;
+        score += fuzzyScore(asset.category, q);
+      }
     }
 
     if (filters.categoryId && product.categoryId === filters.categoryId) {

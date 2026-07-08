@@ -11,6 +11,8 @@ export interface PrintZoneTemplate {
   front: PrintZone;
   back?: PrintZone;
   sleeve?: PrintZone;
+  sideL?: PrintZone;
+  sideR?: PrintZone;
 }
 
 export interface ProductView {
@@ -33,6 +35,8 @@ export interface DesignAsset {
   category: string;
   image_url: string;
   created_at: string;
+  /** Optional product association for per-product designs */
+  productId?: string;
 }
 
 /* ─── Product Type Enum ──────────────────────────────────────────── */
@@ -94,11 +98,15 @@ export interface ManagedProduct {
     front?: string;
     back?: string;
     sleeve?: string;
+    sideL?: string;
+    sideR?: string;
   };
   /** Weight in ounces for calculated shipping */
   weightOz?: number;
   /** Parent product ID — groups same-design variants across garment types */
   baseProductId?: string;
+  /** Per-product pre-loaded design assets (PNG graphics available for this product) */
+  designAssets?: DesignAsset[];
 }
 
 export interface ManagedCategory {
@@ -150,7 +158,7 @@ export interface CartItem {
   /** Product type — used for shipping tier auto-detection */
   productType: ProductType;
   quantity: number;
-  selected_view: "front" | "back" | "sleeve";
+  selected_view: "front" | "back" | "sleeve" | "sideL" | "sideR";
   design_url?: string;
   design_text?: string;
   /** Customizer design position/scale/rotation — preserved for order fulfillment */
@@ -216,6 +224,8 @@ export interface SquareCatalogItem {
     front?: string;
     back?: string;
     sleeve?: string;
+    sideL?: string;
+    sideR?: string;
   };
 }
 
