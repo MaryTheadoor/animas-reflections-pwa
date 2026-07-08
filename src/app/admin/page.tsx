@@ -12,7 +12,7 @@ import { SITE } from "@/lib/content";
 import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
 import ImageManager from "@/components/admin/image-manager";
-import type { ManagedCategory } from "@/types";
+import type { ManagedCategory, DesignAsset } from "@/types";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
   constructor(props: { children: ReactNode }) {
@@ -56,13 +56,6 @@ interface SiteConfigData {
   about_body: string;
 }
 
-interface DesignAsset {
-  id: string;
-  name: string;
-  category: string;
-  image_url: string;
-}
-
 const DEFAULT_CONFIG: SiteConfigData = {
   announcement_text: "Family Owned & Operated From Durango, CO USA — Free shipping on orders over $100",
   announcement_active: true,
@@ -95,6 +88,8 @@ function DashboardContent() {
   const [saved, setSaved] = useState(false);
   const [designs, setDesigns] = useState<DesignAsset[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [designCategory, setDesignCategory] = useState("");
   const [designName, setDesignName] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -159,19 +154,56 @@ function DashboardContent() {
 
   const handleDesignUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !designName || !designCategory) return;
+    if (!file) return;
+    if (!designName.trim() || !designCategory.trim()) {
+      setUploadError("Name and category are required");
+      return;
+    }
+    if (!user) {
+      setUploadError("You must be signed in to upload designs");
+      return;
+    }
     setUploading(true);
-    const fileRef = ref(storage, `designs/${Date.now()}-${file.name}`);
-    const task = uploadBytesResumable(fileRef, file);
-    task.on("state_changed", null, () => setUploading(false), async () => {
-      const url = await getDownloadURL(task.snapshot.ref);
-      const updated = [...designs, { id: crypto.randomUUID(), name: designName, category: designCategory, image_url: url }];
-      setDesigns(updated);
-      await setDoc(doc(db, "designs", "catalog"), { items: updated });
+    setUploadError(null);
+    setUploadProgress(0);
+
+    try {
+      const fileRef = ref(storage, `designs/${Date.now()}-${file.name}`);
+      const task = uploadBytesResumable(fileRef, file);
+
+      task.on("state_changed",
+        (snapshot) => {
+          setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+        },
+        (err) => {
+          setUploading(false);
+          setUploadError(err.message || "Upload failed");
+        },
+        async () => {
+          const url = await getDownloadURL(task.snapshot.ref);
+          const newAsset: DesignAsset = {
+            id: crypto.randomUUID(),
+            name: designName.trim(),
+            category: designCategory.trim(),
+            image_url: url,
+            created_at: new Date().toISOString(),
+          };
+          const updated = [...designs, newAsset];
+          setDesigns(updated);
+          await setDoc(doc(db, "designs", "catalog"), { items: updated });
+          setUploading(false);
+          setUploadProgress(0);
+          setDesignName("");
+          setDesignCategory("");
+        }
+      );
+    } catch (err) {
       setUploading(false);
-      setDesignName("");
-      setDesignCategory("");
-    });
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    }
+
+    // Reset file input
+    e.target.value = "";
   };
 
   const removeDesign = async (id: string) => {
@@ -550,15 +582,25 @@ function DashboardContent() {
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h2 className="text-xl font-bold font-display mb-4">Design Catalog</h2>
             <p className="text-sm text-primary/60 mb-6">Upload brand logos, team designs, and artwork that customers can select in the customizer.</p>
+
+            {uploadError && (
+              <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm flex items-center justify-between">
+                <span>{uploadError}</span>
+                <button onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-600 ml-2">&times;</button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <input type="text" value={designName} onChange={(e) => setDesignName(e.target.value)}
               placeholder="Design name" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
             <input type="text" value={designCategory} onChange={(e) => setDesignCategory(e.target.value)}
               placeholder="Category (e.g. Durango High Football)" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-            <label className="flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed border-primary/20 cursor-pointer hover:border-primary/40 transition-colors text-sm text-primary/50">
-              {uploading ? "Uploading..." : "Choose File"}
+            <label className={`flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${
+              uploading ? "border-gold/50 bg-gold/5 text-gold" : "border-primary/20 text-primary/50 hover:border-primary/40"
+            }`}>
+              {uploading ? `Uploading ${Math.round(uploadProgress)}%` : "Choose File"}
               <input type="file" accept="image/*" onChange={handleDesignUpload}
-                disabled={uploading || !designName || !designCategory} className="hidden" />
+                disabled={uploading || !designName.trim() || !designCategory.trim()} className="hidden" />
             </label>
           </div>
           {designs.length > 0 && (

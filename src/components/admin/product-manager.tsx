@@ -13,7 +13,8 @@ import { httpsCallable } from "firebase/functions";
 import Image from "next/image";
 import VariantMatrixEditor from "./variant-matrix-editor";
 import { db, storage, functions } from "@/lib/firebase";
-import type { ManagedProduct, ManagedCategory } from "@/types";
+import type { ManagedProduct, ManagedCategory, ProductType } from "@/types";
+import { PRODUCT_TYPE_LABELS } from "@/types";
 
 const EMPTY_PRODUCT: ManagedProduct = {
   id: "",
@@ -29,6 +30,7 @@ const EMPTY_PRODUCT: ManagedProduct = {
   featured: false,
   createdAt: "",
   updatedAt: "",
+  designAssets: [],
 };
 
 const AVAILABLE_COLORS = [
@@ -604,8 +606,8 @@ export default function ProductManager({ categories }: Props) {
             />
           </div>
 
-          {/* Status toggles */}
-          <div className="flex gap-6">
+          {/* Status toggles + Product Type */}
+          <div className="flex gap-6 items-center flex-wrap">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -624,6 +626,42 @@ export default function ProductManager({ categories }: Props) {
               />
               Featured on homepage
             </label>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-primary">Type:</label>
+              <select
+                value={form.productType}
+                onChange={(e) => updateField("productType", e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+              >
+                {(Object.entries(PRODUCT_TYPE_LABELS) as [ProductType, string][]).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Mockup Images */}
+          <div>
+            <label className="block text-xs font-medium text-primary mb-2">Mockup Images (blank product shots for customizer)</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => (
+                <div key={view}>
+                  <label className="block text-[10px] font-medium text-primary/50 mb-1 capitalize">
+                    {view === "sideL" ? "Left Side" : view === "sideR" ? "Right Side" : view}
+                  </label>
+                  <input
+                    type="url"
+                    value={(form.mockupImages?.[view]) ?? ""}
+                    onChange={(e) => {
+                      const current = form.mockupImages ?? {};
+                      updateField("mockupImages", { ...current, [view]: e.target.value || undefined });
+                    }}
+                    placeholder="https://..."
+                    className="w-full px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Variants */}
