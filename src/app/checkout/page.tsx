@@ -104,6 +104,10 @@ export default function CheckoutPage() {
         note: [
           item.design_url ? `Design: ${item.design_url}` : "",
           item.design_text ? `Text: ${item.design_text}` : "",
+          `View: ${item.selected_view}`,
+          (item.design_x != null) ? `Pos: ${item.design_x.toFixed(0)}%,${item.design_y?.toFixed(0)}%` : "",
+          (item.design_scale != null) ? `Scale: ${item.design_scale.toFixed(2)}` : "",
+          (item.design_rotation != null) ? `Rot: ${item.design_rotation}\u00B0` : "",
           item.addons.length ? `Add-ons: ${item.addons.map((a) => a.label).join(", ")}` : "",
         ].filter(Boolean).join(" | "),
         addons: item.addons.map((a) => ({

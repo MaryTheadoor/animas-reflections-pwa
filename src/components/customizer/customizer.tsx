@@ -41,10 +41,10 @@ interface DragState {
   startScale: number;
 }
 
-/** Compute the center position for a design within a print zone */
+/** Returns default design position filling the print zone (scale=1 design = zone size) */
 export function defaultDesignPosition(zone: PrintZone): Pick<DesignState, "xPercent" | "yPercent"> {
   return {
-    xPercent: zone.x_percent + (zone.width_percent - zone.width_percent) / 2,
+    xPercent: zone.x_percent,
     yPercent: zone.y_percent,
   };
 }

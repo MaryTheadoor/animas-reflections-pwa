@@ -115,6 +115,7 @@ function CustomizerContent() {
   const [textColor, setTextColor] = useState("#111827");
   const [textFont, setTextFont] = useState("var(--font-display)");
   const [designState, setDesignState] = useState<DesignState>(DEFAULT_DESIGN_STATE);
+  const [perViewDesign, setPerViewDesign] = useState<Record<string, DesignState>>({});
   const [selectedAddons, setSelectedAddons] = useState<Set<AddonType>>(new Set());
   const [orderId] = useState(() => crypto.randomUUID());
   const [designLibrary, setDesignLibrary] = useState<DesignAsset[]>([]);
@@ -168,14 +169,23 @@ function CustomizerContent() {
     const product = catalogProducts.find((p) => p.id === productId) ?? null;
     setSelectedProduct(product);
     setVariantIndex(0);
+    setPerViewDesign({});
     const views = product ? getProductViews(product) : [];
     setDesignState(defaultStateForView(views, activeView));
   };
 
   const handleViewChange = (view: string) => {
+    // Save current view's design state
+    setPerViewDesign((prev) => ({ ...prev, [activeView]: designState }));
+    // Restore target view's saved state, or compute default
+    const saved = perViewDesign[view];
+    if (saved) {
+      setDesignState(saved);
+    } else {
+      const views = getProductViews(selectedProduct);
+      setDesignState(defaultStateForView(views, view));
+    }
     setActiveView(view);
-    const views = getProductViews(selectedProduct);
-    setDesignState(defaultStateForView(views, view));
   };
 
   const handleAddToCart = () => {
@@ -195,6 +205,10 @@ function CustomizerContent() {
       selected_view: activeView as "front" | "back" | "sleeve",
       design_url: designUrl,
       design_text: designText,
+      design_x: designState.xPercent,
+      design_y: designState.yPercent,
+      design_scale: designState.scale,
+      design_rotation: designState.rotation,
       addons: Array.from(selectedAddons).map((type) => ({
         type,
         label: ADDONS.find((a) => a.type === type)?.label ?? type,

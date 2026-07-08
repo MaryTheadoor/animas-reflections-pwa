@@ -153,6 +153,11 @@ export interface CartItem {
   selected_view: "front" | "back" | "sleeve";
   design_url?: string;
   design_text?: string;
+  /** Customizer design position/scale/rotation — preserved for order fulfillment */
+  design_x?: number;
+  design_y?: number;
+  design_scale?: number;
+  design_rotation?: number;
   addons: CartAddon[];
 }
 
