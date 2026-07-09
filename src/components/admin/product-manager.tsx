@@ -520,6 +520,14 @@ export default function ProductManager({ categories }: Props) {
                   {p.variants?.length ?? 0} variants · {categories.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
                   {" · "}
                   {(p.variants ?? []).reduce((sum, v) => sum + (v.inventory ?? 0), 0)} in stock
+                  {p.variants?.some((v) => v.inventory !== undefined) && (
+                    <span className="text-primary/30">
+                      {" · "}
+                      {p.variants.filter((v) => v.inventory !== undefined).map((v) =>
+                        `${v.name}:${v.inventory}`
+                      ).join(", ")}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">

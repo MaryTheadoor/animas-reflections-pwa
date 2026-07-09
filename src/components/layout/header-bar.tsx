@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NavAuth from "@/components/layout/nav-auth";
@@ -18,6 +18,7 @@ export default function HeaderBar() {
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
   const config = useSiteConfig();
+  const [offline, setOffline] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -38,10 +39,28 @@ export default function HeaderBar() {
     document.documentElement.classList.toggle("has-announcement", config.announcement_active);
   }, [config.announcement_active]);
 
+  useEffect(() => {
+    const goOnline = () => setOffline(false);
+    const goOffline = () => setOffline(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initialize offline state on mount
+    setOffline(!navigator.onLine);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
   const isActive = (href: string) => pathname === href;
 
   return (
     <div ref={ref} className="fixed top-0 left-0 right-0 z-50">
+      {offline && (
+        <div className="bg-red-600 text-white text-center text-xs py-1.5 px-4 font-medium">
+          You&apos;re offline — cached pages still available
+        </div>
+      )}
       {config.announcement_active && (
         <div className="bg-gold text-white text-center text-sm py-2 px-4 font-medium">
           {config.announcement_text}

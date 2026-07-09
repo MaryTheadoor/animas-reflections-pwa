@@ -756,6 +756,8 @@ function OrdersSection() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [trackingUrl, setTrackingUrl] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
+  const [page, setPage] = useState(0);
+  const PER_PAGE = 15;
 
   const loadOrders = useCallback(() => {
     httpsCallable(functions, "fetchRecentOrders")({})
@@ -780,18 +782,34 @@ function OrdersSection() {
     }
   };
 
+  const totalPages = Math.ceil(orders.length / PER_PAGE);
+  const pagedOrders = orders.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
   if (loading) return <p className="text-sm text-primary/50">Loading orders...</p>;
   if (error) return <p className="text-sm text-red-500">{error}</p>;
   if (!orders?.length) return <p className="text-sm text-primary/40">No orders yet.</p>;
 
   return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between text-xs text-primary/40">
+        <span>{orders.length} orders</span>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage(0)} disabled={page === 0} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&laquo;</button>
+            <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&lsaquo;</button>
+            <span className="px-2">{page + 1} / {totalPages}</span>
+            <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&rsaquo;</button>
+            <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&raquo;</button>
+          </div>
+        )}
+      </div>
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead><tr className="text-left text-primary/50 border-b border-warm-sand">
           <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Customer</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Date</th><th className="pb-2 font-medium">Tracking</th>
         </tr></thead>
         <tbody>
-          {orders.slice(0, 30).map((o) => (
+          {pagedOrders.map((o) => (
             <tr key={o.id} className="border-b border-warm-sand/30">
               <td className="py-2 font-mono text-xs text-primary/60">{o.id?.slice(0, 12)}</td>
               <td className="py-2 text-xs text-primary/60">{o.customerEmail || o.customerName || "-"}</td>
@@ -833,6 +851,7 @@ function OrdersSection() {
           <button onClick={() => setExpandedId(null)} className="px-3 py-2 text-sm text-primary/40 hover:text-primary">Cancel</button>
         </div>
       )}
+      </div>
     </div>
   );
 }
