@@ -34,8 +34,10 @@ export interface ProductTemplate {
 export interface DesignAsset {
   id: string;
   name: string;
+  description?: string;
   category: string;
   image_url: string;
+  tags?: string[];
   created_at: string;
   /** Optional product association for per-product designs */
   productId?: string;

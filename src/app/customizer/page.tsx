@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCart } from "@/context/cart-context";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
@@ -167,16 +167,30 @@ function CustomizerContent() {
     }
   }, [catalogLoading, catalogProducts, preselectedProductId]);
 
-  // Load design library from Firestore
+  // Load design library from Firestore (individual docs in designs/ collection, fallback to old catalog format)
   useEffect(() => {
-    getDoc(doc(db, "designs", "catalog"))
-      .then((snap) => {
-        if (snap.exists()) {
-          const data = snap.data() as { items?: DesignAsset[] };
-          setDesignLibrary(data.items ?? []);
+    const load = async () => {
+      try {
+        const snap = await getDocs(collection(db, "designs"));
+        const items: DesignAsset[] = [];
+        snap.forEach((d) => {
+          const data = d.data() as DesignAsset;
+          if (data.name && data.image_url) items.push(data);
+        });
+        if (items.length > 0) {
+          setDesignLibrary(items);
+          return;
         }
-      })
-      .catch(() => {});
+      } catch {}
+      // Fallback: old designs/catalog format
+      try {
+        const snap = await getDoc(doc(db, "designs", "catalog"));
+        if (snap.exists()) {
+          setDesignLibrary((snap.data() as { items?: DesignAsset[] }).items ?? []);
+        }
+      } catch {}
+    };
+    load();
   }, []);
 
   const handleUploadComplete = useCallback((url: string) => {

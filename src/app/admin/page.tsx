@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Component, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
@@ -92,6 +92,8 @@ function DashboardContent() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [designCategory, setDesignCategory] = useState("");
   const [designName, setDesignName] = useState("");
+  const [designDescription, setDesignDescription] = useState("");
+  const [designTags, setDesignTags] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
@@ -101,13 +103,28 @@ function DashboardContent() {
 
   const loadDesigns = useCallback(async () => {
     try {
-      const snap = await getDoc(doc(db, "designs", "catalog"));
-      if (snap.exists()) {
-        setDesigns((snap.data() as { items?: DesignAsset[] }).items ?? []);
-      } else {
+      // Read from designs/ collection (individual docs)
+      const snap = await getDocs(collection(db, "designs"));
+      const items: DesignAsset[] = [];
+      snap.forEach((d) => {
+        const data = d.data() as DesignAsset;
+        if (data.name && data.image_url) items.push(data);
+      });
+      items.sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+      setDesigns(items);
+    } catch {
+      // Fallback: old format designs/catalog doc
+      try {
+        const snap = await getDoc(doc(db, "designs", "catalog"));
+        if (snap.exists()) {
+          setDesigns((snap.data() as { items?: DesignAsset[] }).items ?? []);
+        } else {
+          setDesigns([]);
+        }
+      } catch {
         setDesigns([]);
       }
-    } catch {}
+    }
   }, []);
 
   useEffect(() => {
@@ -164,6 +181,30 @@ function DashboardContent() {
     }
   };
 
+  const migrateDesigns = async () => {
+    if (!confirm("Migrate all designs from old catalog format to individual docs?")) return;
+    try {
+      const snap = await getDoc(doc(db, "designs", "catalog"));
+      if (!snap.exists()) {
+        alert("No old catalog to migrate.");
+        return;
+      }
+      const items = (snap.data() as { items?: DesignAsset[] }).items ?? [];
+      if (items.length === 0) {
+        alert("No designs to migrate.");
+        return;
+      }
+      for (const item of items) {
+        await setDoc(doc(db, "designs", item.id), item);
+      }
+      await deleteDoc(doc(db, "designs", "catalog"));
+      setDesigns(items);
+      alert(`Migrated ${items.length} designs to individual docs.`);
+    } catch (err) {
+      alert("Migration failed: " + (err instanceof Error ? err.message : "Unknown"));
+    }
+  };
+
   const handleDesignUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -179,8 +220,14 @@ function DashboardContent() {
     setUploadError(null);
     setUploadProgress(0);
 
+    const designId = crypto.randomUUID();
+    const tags = designTags
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+
     try {
-      const fileRef = ref(storage, `designs/${Date.now()}-${file.name}`);
+      const fileRef = ref(storage, `designs/${designId}_${file.name}`);
       const task = uploadBytesResumable(fileRef, file);
 
       task.on("state_changed",
@@ -194,19 +241,24 @@ function DashboardContent() {
         async () => {
           const url = await getDownloadURL(task.snapshot.ref);
           const newAsset: DesignAsset = {
-            id: crypto.randomUUID(),
+            id: designId,
             name: designName.trim(),
+            description: designDescription.trim() || undefined,
             category: designCategory.trim(),
             image_url: url,
+            tags: tags.length > 0 ? tags : undefined,
             created_at: new Date().toISOString(),
           };
-          const updated = [...designs, newAsset];
-          setDesigns(updated);
-          await setDoc(doc(db, "designs", "catalog"), { items: updated });
+
+          // Write as individual doc in designs/ collection
+          await setDoc(doc(db, "designs", designId), newAsset);
+          setDesigns((prev) => [...prev, newAsset]);
           setUploading(false);
           setUploadProgress(0);
           setDesignName("");
           setDesignCategory("");
+          setDesignDescription("");
+          setDesignTags("");
         }
       );
     } catch (err) {
@@ -214,14 +266,27 @@ function DashboardContent() {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     }
 
-    // Reset file input
     e.target.value = "";
   };
 
   const removeDesign = async (id: string) => {
-    const updated = designs.filter((d) => d.id !== id);
-    setDesigns(updated);
-    await setDoc(doc(db, "designs", "catalog"), { items: updated });
+    if (!confirm("Delete this design?")) return;
+    setDesigns((prev) => prev.filter((d) => d.id !== id));
+    // Delete individual design doc
+    await deleteDoc(doc(db, "designs", id)).catch(() => {});
+    // Also try removing from old catalog format if it exists
+    try {
+      const snap = await getDoc(doc(db, "designs", "catalog"));
+      if (snap.exists()) {
+        const items = (snap.data() as { items?: DesignAsset[] }).items ?? [];
+        const updated = items.filter((d) => d.id !== id);
+        if (updated.length === 0) {
+          await deleteDoc(doc(db, "designs", "catalog"));
+        } else {
+          await setDoc(doc(db, "designs", "catalog"), { items: updated });
+        }
+      }
+    } catch {}
   };
 
   const handleSync = async () => {
@@ -593,7 +658,18 @@ function DashboardContent() {
         {tab === "designs" && (
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h2 className="text-xl font-bold font-display mb-4">Design Catalog</h2>
-            <p className="text-sm text-primary/60 mb-6">Upload brand logos, team designs, and artwork that customers can select in the customizer.</p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-primary/60">
+                {designs.length} designs. Upload brand logos, team designs, and artwork. Each design has its own database record.
+              </p>
+              <button
+                onClick={migrateDesigns}
+                className="px-3 py-1 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors"
+                title="Migrate from old catalog format to individual design docs"
+              >
+                Migrate Old Data
+              </button>
+            </div>
 
             {uploadError && (
               <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm flex items-center justify-between">
@@ -602,26 +678,40 @@ function DashboardContent() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <input type="text" value={designName} onChange={(e) => setDesignName(e.target.value)}
-              placeholder="Design name" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-            <input type="text" value={designCategory} onChange={(e) => setDesignCategory(e.target.value)}
-              placeholder="Category (e.g. Durango High Football)" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-            <label className={`flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${
-              uploading ? "border-gold/50 bg-gold/5 text-gold" : "border-primary/20 text-primary/50 hover:border-primary/40"
-            }`}>
-              {uploading ? `Uploading ${Math.round(uploadProgress)}%` : "Choose File"}
-              <input type="file" accept="image/*" onChange={handleDesignUpload}
-                disabled={uploading || !designName.trim() || !designCategory.trim()} className="hidden" />
-            </label>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <input type="text" value={designName} onChange={(e) => setDesignName(e.target.value)}
+                placeholder="Design name *" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+              <input type="text" value={designCategory} onChange={(e) => setDesignCategory(e.target.value)}
+                placeholder="Category * (e.g. Durango High Football)" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+              <input type="text" value={designDescription} onChange={(e) => setDesignDescription(e.target.value)}
+                placeholder="Description (optional)" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+              <input type="text" value={designTags} onChange={(e) => setDesignTags(e.target.value)}
+                placeholder="Tags: comma, separated" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+            </div>
+            <div className="mb-6">
+              <label className={`flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${
+                uploading ? "border-gold/50 bg-gold/5 text-gold" : "border-primary/20 text-primary/50 hover:border-primary/40"
+              }`}>
+                {uploading ? `Uploading ${Math.round(uploadProgress)}%` : "Choose File"}
+                <input type="file" accept="image/*" onChange={handleDesignUpload}
+                  disabled={uploading || !designName.trim() || !designCategory.trim()} className="hidden" />
+              </label>
+            </div>
           {designs.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {designs.map((d) => (
-                <div key={d.id} className="bg-warm-sand/50 rounded-xl p-3 text-center relative group">
+                <div key={d.id} className="bg-warm-sand/50 rounded-xl p-3 relative group">
                   <Image src={d.image_url} alt={d.name} width={120} height={120} className="mx-auto rounded-lg mb-2 object-contain h-20" />
                   <p className="text-xs font-medium truncate">{d.name}</p>
                   <p className="text-xs text-primary/40 truncate">{d.category}</p>
+                  {d.description && <p className="text-[10px] text-primary/30 truncate mt-0.5">{d.description}</p>}
+                  {d.tags && d.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1 justify-center">
+                      {d.tags.slice(0, 3).map((t) => (
+                        <span key={t} className="text-[9px] bg-primary/10 text-primary/60 px-1.5 py-0.5 rounded-full">{t}</span>
+                      ))}
+                    </div>
+                  )}
                   <button onClick={() => removeDesign(d.id)}
                     className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-opacity">&times;</button>
                 </div>

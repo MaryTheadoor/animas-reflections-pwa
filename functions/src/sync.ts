@@ -37,7 +37,7 @@ export interface ManagedProduct {
     sideL?: string;
     sideR?: string;
   };
-  designAssets?: { id: string; name: string; category: string; image_url: string; created_at: string; productId?: string }[];
+  designAssets?: { id: string; name: string; description?: string; category: string; image_url: string; tags?: string[]; created_at: string; productId?: string }[];
   weightOz?: number;
   baseProductId?: string;
 }
