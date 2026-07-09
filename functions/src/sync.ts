@@ -27,7 +27,17 @@ export interface ManagedProduct {
     front: { x_percent: number; y_percent: number; width_percent: number; height_percent: number };
     back?: { x_percent: number; y_percent: number; width_percent: number; height_percent: number };
     sleeve?: { x_percent: number; y_percent: number; width_percent: number; height_percent: number };
+    sideL?: { x_percent: number; y_percent: number; width_percent: number; height_percent: number };
+    sideR?: { x_percent: number; y_percent: number; width_percent: number; height_percent: number };
   };
+  mockupImages?: {
+    front?: string;
+    back?: string;
+    sleeve?: string;
+    sideL?: string;
+    sideR?: string;
+  };
+  designAssets?: { id: string; name: string; category: string; image_url: string; created_at: string; productId?: string }[];
   weightOz?: number;
   baseProductId?: string;
 }

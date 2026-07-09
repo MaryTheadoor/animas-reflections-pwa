@@ -234,7 +234,7 @@ function CustomizerContent() {
       base_price: price,
       productType: selectedProduct?.productType ?? "other",
       quantity: 1,
-      selected_view: activeView as "front" | "back" | "sleeve",
+      selected_view: activeView as "front" | "back" | "sleeve" | "sideL" | "sideR",
       design_url: designUrl,
       design_text: designText,
       design_x: designState.xPercent,

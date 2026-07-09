@@ -26,6 +26,8 @@ export interface ProductTemplate {
     front: ProductView;
     back?: ProductView;
     sleeve?: ProductView;
+    sideL?: ProductView;
+    sideR?: ProductView;
   };
 }
 
