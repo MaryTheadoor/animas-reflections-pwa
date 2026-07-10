@@ -13,6 +13,7 @@ import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
 import ImageManager from "@/components/admin/image-manager";
 import type { ManagedCategory, DesignAsset } from "@/types";
+import { DismissedTooltipsCount } from "@/components/ui/admin-tooltip";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
   constructor(props: { children: ReactNode }) {
@@ -406,6 +407,7 @@ function DashboardContent() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-4 space-y-6">
+        <DismissedTooltipsCount />
 
         {/* ── Tab Navigation ── */}
         <div className="flex flex-wrap gap-1 bg-white rounded-2xl p-1.5 border border-warm-sand">

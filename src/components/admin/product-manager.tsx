@@ -13,8 +13,9 @@ import { httpsCallable } from "firebase/functions";
 import Image from "next/image";
 import VariantMatrixEditor from "./variant-matrix-editor";
 import { db, storage, functions } from "@/lib/firebase";
-import type { ManagedProduct, ManagedCategory, ProductType } from "@/types";
+import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
+import AdminTooltip from "@/components/ui/admin-tooltip";
 
 const EMPTY_PRODUCT: ManagedProduct = {
   id: "",
@@ -44,6 +45,7 @@ interface Props {
 
 export default function ProductManager({ categories }: Props) {
   const [products, setProducts] = useState<ManagedProduct[]>([]);
+  const [allDesigns, setAllDesigns] = useState<DesignAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ManagedProduct | null>(null);
   const [form, setForm] = useState<ManagedProduct>(EMPTY_PRODUCT);
@@ -111,6 +113,12 @@ export default function ProductManager({ categories }: Props) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProducts();
+    // Load all designs for product-design linking
+    getDocs(collection(db, "designs")).then((snap) => {
+      const designs: DesignAsset[] = [];
+      snap.forEach((d) => { const data = d.data() as DesignAsset; if (data.name && data.image_url) designs.push(data); });
+      setAllDesigns(designs);
+    }).catch(() => {});
   }, [loadProducts]);
 
   const resetForm = () => {
@@ -882,6 +890,54 @@ export default function ProductManager({ categories }: Props) {
                 Add
               </button>
             </div>
+          </div>
+
+          {/* Design Pinning — select which designs are printable on this product */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <AdminTooltip content="Select up to 10 designs that customers can print on this product. These designs appear first in the customizer library when this product is selected." dismissKey="product-designs">
+                <label className="text-xs font-medium text-primary">
+                  Printable Designs ({form.designAssets?.length ?? 0} selected)
+                </label>
+              </AdminTooltip>
+            </div>
+            {allDesigns.length === 0 ? (
+              <p className="text-xs text-primary/30">No designs available. Add designs in the Designs tab first.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1">
+                {allDesigns.slice(0, 50).map((d) => {
+                  const selected = form.designAssets?.some((a) => a.id === d.id);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => {
+                        const current = form.designAssets ?? [];
+                        if (selected) {
+                          updateField("designAssets", current.filter((a) => a.id !== d.id));
+                        } else if (current.length < 10) {
+                          updateField("designAssets", [...current, d]);
+                        }
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                        selected
+                          ? "bg-gold/10 border-gold/30 text-gold"
+                          : "bg-warm-sand/30 border-transparent text-primary/50 hover:border-primary/20"
+                      }`}
+                    >
+                      <Image
+                        src={d.image_url}
+                        alt={d.name}
+                        width={20}
+                        height={20}
+                        className="rounded object-cover shrink-0"
+                      />
+                      <span className="truncate max-w-[120px]">{d.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Images */}
