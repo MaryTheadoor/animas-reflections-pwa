@@ -113,6 +113,8 @@ export interface ManagedProduct {
   baseProductId?: string;
   /** Per-product pre-loaded design assets (PNG graphics available for this product) */
   designAssets?: DesignAsset[];
+  /** Per-product customizable add-ons (admin-defined toggles that adjust price) */
+  productAddons?: ProductAddon[];
 }
 
 export interface ManagedCategory {
@@ -130,6 +132,15 @@ export interface SyncStatus {
   categoryCount: number;
   itemCount: number;
   errors: string[];
+}
+
+/* ─── Product Add-Ons ─────────────────────────────────────────── */
+
+/** Admin-defined per-product add-on (e.g. "Left Sleeve Print" for $7.50) */
+export interface ProductAddon {
+  id: string;
+  name: string;
+  price: number;
 }
 
 /* ─── Cart & Order Types ────────────────────────────────────────── */

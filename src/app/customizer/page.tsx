@@ -12,7 +12,7 @@ import Customizer, { type DesignState, defaultDesignPosition } from "@/component
 import FileUpload from "@/components/customizer/file-upload";
 import { SITE_NAME } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
-import type { AddonType, DesignAsset, ManagedProduct, ManagedVariant, PrintZone, PrintZoneTemplate } from "@/types";
+import type { AddonType, DesignAsset, ManagedProduct, ManagedVariant, PrintZone, PrintZoneTemplate, ProductAddon } from "@/types";
 
 const DEFAULT_PRINT_ZONE: PrintZone = {
   x_percent: 30, y_percent: 22, width_percent: 40, height_percent: 48,
@@ -147,7 +147,13 @@ function CustomizerContent() {
   const [textFont, setTextFont] = useState("var(--font-display)");
   const [designState, setDesignState] = useState<DesignState>(DEFAULT_DESIGN_STATE);
   const [perViewDesign, setPerViewDesign] = useState<Record<string, DesignState>>({});
-  const [selectedAddons, setSelectedAddons] = useState<Set<AddonType>>(new Set());
+  const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
+
+  // Use per-product add-ons if defined, otherwise fall back to hardcoded defaults
+  const effectiveAddons: (ProductAddon | { id: string; name: string; price: number })[] =
+    (selectedProduct?.productAddons?.length ?? 0) > 0
+      ? selectedProduct!.productAddons!
+      : ADDONS.map((a) => ({ id: a.type, name: a.label, price: addonPrice }));
   const [orderId] = useState(() => crypto.randomUUID());
   const [designLibrary, setDesignLibrary] = useState<DesignAsset[]>([]);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -199,11 +205,10 @@ function CustomizerContent() {
     setDesignUrl(url);
   }, []);
 
-  const handleToggleAddon = (type: AddonType) => {
+  const handleToggleAddon = (id: string) => {
     setSelectedAddons((prev) => {
       const next = new Set(prev);
-      if (next.has(type)) next.delete(type);
-      else next.add(type);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
@@ -257,18 +262,25 @@ function CustomizerContent() {
       design_y: designState.yPercent,
       design_scale: designState.scale,
       design_rotation: designState.rotation,
-      addons: Array.from(selectedAddons).map((type) => ({
-        type,
-        label: ADDONS.find((a) => a.type === type)?.label ?? type,
-        price: addonPrice,
-      })),
+      addons: Array.from(selectedAddons).map((id) => {
+        const addon = effectiveAddons.find((a) => a.id === id);
+        return {
+          type: id as AddonType,
+          label: addon?.name ?? id,
+          price: addon?.price ?? addonPrice,
+          addon_id: id,
+        };
+      }),
     });
   };
 
   const productViews = getProductViews(selectedProduct);
   const currentView = productViews.find((v) => v.key === activeView) ?? productViews[0];
   const basePrice = getProductPrice(selectedProduct, variantIndex);
-  const addonsCost = selectedAddons.size * addonPrice;
+  const addonsCost = Array.from(selectedAddons).reduce((sum, id) => {
+    const addon = effectiveAddons.find((a) => a.id === id);
+    return sum + (addon?.price ?? addonPrice);
+  }, 0);
   const totalPrice = basePrice + addonsCost;
 
   // Sort catalog products for dropdown
@@ -492,18 +504,19 @@ function CustomizerContent() {
             <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
               <h2 className="font-bold font-display text-lg mb-4">Add-ons</h2>
               <div className="space-y-2">
-                {ADDONS.map((addon) => (
+                {effectiveAddons.map((addon) => (
                   <label
-                    key={addon.type}
-                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-warm-sand/50 cursor-pointer transition-colors"
+                    key={addon.id}
+                    className="flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-warm-sand/50 transition-colors"
                   >
                     <input
                       type="checkbox"
-                      checked={selectedAddons.has(addon.type)}
-                      onChange={() => handleToggleAddon(addon.type)}
+                      checked={selectedAddons.has(addon.id)}
+                      onChange={() => handleToggleAddon(addon.id)}
                       className="accent-gold w-4 h-4"
                     />
-                    <span className="text-sm text-primary">{addon.label}</span>
+                    <span className="text-sm text-primary">{addon.name}</span>
+                    <span className="ml-auto text-sm text-gold font-medium">+${addon.price.toFixed(2)}</span>
                   </label>
                 ))}
               </div>
@@ -518,8 +531,8 @@ function CustomizerContent() {
                   <span>${basePrice.toFixed(2)}</span>
                 </div>
                 {addonsCost > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-primary/60">Add-ons (+${addonPrice.toFixed(2)} each)</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-primary/60">Add-ons</span>
                     <span>+${addonsCost.toFixed(2)}</span>
                   </div>
                 )}

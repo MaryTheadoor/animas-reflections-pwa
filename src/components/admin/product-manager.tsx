@@ -969,6 +969,38 @@ export default function ProductManager({ categories }: Props) {
             </div>
           </div>
 
+          {/* Product Add-ons */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <AdminTooltip content="Custom add-ons that customers can toggle on/off. Each add-on adjusts the final price." dismissKey="product-addons">
+                <label className="text-xs font-medium text-primary">
+                  Custom Add-ons ({(form.productAddons ?? []).length})
+                </label>
+              </AdminTooltip>
+            </div>
+            <div className="space-y-2">
+              {(form.productAddons ?? []).map((a) => (
+                <div key={a.id} className="flex items-center gap-2 bg-warm-sand/30 rounded-lg px-3 py-2 text-sm">
+                  <input type="text" value={a.name} placeholder="Add-on name"
+                    onChange={(e) => { const addons = (form.productAddons ?? []).map((x) => x.id === a.id ? { ...x, name: e.target.value } : x); updateField("productAddons", addons); }}
+                    className="flex-1 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm focus:border-gold outline-none" />
+                  <span>$</span>
+                  <input type="number" step="0.01" min="0" value={a.price}
+                    onChange={(e) => { const addons = (form.productAddons ?? []).map((x) => x.id === a.id ? { ...x, price: parseFloat(e.target.value) || 0 } : x); updateField("productAddons", addons); }}
+                    className="w-20 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm text-right focus:border-gold outline-none" />
+                  <button onClick={() => { const addons = (form.productAddons ?? []).filter((x) => x.id !== a.id); updateField("productAddons", addons.length > 0 ? addons : undefined); }}
+                    className="text-red-400 hover:text-red-600 text-xs">✕</button>
+                </div>
+              ))}
+              <button
+                onClick={() => updateField("productAddons", [...(form.productAddons ?? []), { id: crypto.randomUUID(), name: "", price: 0 }])}
+                className="w-full py-2 border-2 border-dashed border-primary/20 rounded-xl text-xs text-primary/40 hover:border-primary/40 transition-colors"
+              >
+                + Add Custom Add-on
+              </button>
+            </div>
+          </div>
+
           {/* Design Pinning — select which designs are printable on this product */}
           <div>
             <div className="flex items-center gap-2 mb-2">
