@@ -54,6 +54,7 @@ export default function ProductManager({ categories }: Props) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [newTag, setNewTag] = useState("");
+  const [newColor, setNewColor] = useState("");
   const [newVariant, setNewVariant] = useState({ name: "", price: "", sku: "" });
 
   // Sync state
@@ -143,6 +144,14 @@ export default function ProductManager({ categories }: Props) {
       setForm((prev) => ({ ...prev, tags: [...prev.tags, tag] }));
     }
     setNewTag("");
+  };
+
+  const addCustomColor = () => {
+    const color = newColor.trim().toLowerCase();
+    if (color && !form.colors.includes(color)) {
+      setForm((prev) => ({ ...prev, colors: [...prev.colors, color] }));
+      setNewColor("");
+    }
   };
 
   const removeTag = (tag: string) => {
@@ -845,7 +854,7 @@ export default function ProductManager({ categories }: Props) {
             <label className="block text-xs font-medium text-primary mb-2">
               Colors ({form.colors.length} selected)
             </label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 mb-2">
               {AVAILABLE_COLORS.map((color) => (
                 <button
                   key={color}
@@ -860,6 +869,52 @@ export default function ProductManager({ categories }: Props) {
                 </button>
               ))}
             </div>
+            <div className="flex gap-2 items-center">
+              <div className="flex items-center gap-1">
+                <input
+                  type="color"
+                  id="new-color-picker"
+                  className="w-7 h-7 rounded border border-primary/20 cursor-pointer"
+                  onChange={(e) => {
+                    const hex = e.target.value.toLowerCase();
+                    if (hex && !form.colors.includes(hex)) {
+                      setForm((prev) => ({ ...prev, colors: [...prev.colors, hex] }));
+                    }
+                  }}
+                  title="Pick a custom color"
+                />
+                <label htmlFor="new-color-picker" className="text-[10px] text-primary/40 cursor-pointer">Pick</label>
+              </div>
+              <input
+                type="text"
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); addCustomColor(); }
+                }}
+                placeholder="Add custom color (e.g. neon green)"
+                className="flex-1 px-3 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs"
+              />
+              <button
+                onClick={addCustomColor}
+                disabled={!newColor.trim()}
+                className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 disabled:opacity-50"
+              >
+                Add
+              </button>
+            </div>
+            {form.colors.filter((c) => !AVAILABLE_COLORS.includes(c)).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                <span className="text-[10px] text-primary/30 w-full">Custom colors:</span>
+                {form.colors.filter((c) => !AVAILABLE_COLORS.includes(c)).map((c) => (
+                  <span key={c} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full text-[10px]">
+                    <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: c }} />
+                    {c}
+                    <button onClick={() => toggleColor(c)} className="text-red-400 hover:text-red-600 ml-0.5">&times;</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tags */}
