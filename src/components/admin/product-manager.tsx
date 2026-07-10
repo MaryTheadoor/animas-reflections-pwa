@@ -171,6 +171,15 @@ export default function ProductManager({ categories }: Props) {
     }));
   };
 
+  const updateVariant = (id: string, field: string, value: unknown) => {
+    setForm((prev) => ({
+      ...prev,
+      variants: prev.variants.map((v) =>
+        v.id === id ? { ...v, [field]: value } : v
+      ),
+    }));
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -744,17 +753,43 @@ export default function ProductManager({ categories }: Props) {
                 <div className="space-y-2 mb-3">
                   {form.variants.map((v) => (
                     <div key={v.id} className="flex items-center gap-2 bg-warm-sand/30 rounded-lg px-3 py-2 text-sm">
-                      <span className="flex-1 font-medium">{v.name}</span>
-                      <span className="text-gold font-medium">${v.price.toFixed(2)}</span>
-                      {v.sku && <span className="text-primary/30 text-xs">{v.sku}</span>}
-                      {v.inventory !== undefined && (
-                        <span className="text-teal/60 text-xs">{v.inventory} in stock</span>
-                      )}
+                      <input
+                        type="text"
+                        value={v.name}
+                        onChange={(e) => updateVariant(v.id, "name", e.target.value)}
+                        placeholder="Size / Color"
+                        className="flex-1 min-w-0 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={v.price}
+                        onChange={(e) => updateVariant(v.id, "price", parseFloat(e.target.value) || 0)}
+                        className="w-20 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm text-right focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+                        placeholder="$0.00"
+                      />
+                      <input
+                        type="text"
+                        value={v.sku ?? ""}
+                        onChange={(e) => updateVariant(v.id, "sku", e.target.value)}
+                        placeholder="SKU"
+                        className="w-20 px-2 py-1 rounded-lg border border-primary/10 bg-white text-xs focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        value={v.inventory ?? ""}
+                        onChange={(e) => updateVariant(v.id, "inventory", e.target.value === "" ? undefined : parseInt(e.target.value) || 0)}
+                        placeholder="Stock"
+                        className="w-16 px-2 py-1 rounded-lg border border-primary/10 bg-white text-xs focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+                      />
                       <button
                         onClick={() => removeVariant(v.id)}
-                        className="text-red-400 hover:text-red-600 text-xs"
+                        className="text-red-400 hover:text-red-600 text-xs shrink-0"
+                        title="Remove variant"
                       >
-                        Remove
+                        ✕
                       </button>
                     </div>
                   ))}

@@ -52,7 +52,9 @@ function getPrintZone(zones: PrintZoneTemplate | undefined, view: string): Print
 
 function getProductViews(product: ManagedProduct | null): ProductViewConfig[] {
   const mockups = product?.mockupImages;
-  const fallback = getProductImageUrl(product!) ?? product?.images?.[0] ?? "/hero-bg.jpg";
+  const fallback = product
+    ? (getProductImageUrl(product) || product.images?.[0] || "/hero-bg.jpg")
+    : "/hero-bg.jpg";
   const frontImage = mockups?.front ?? fallback;
   const backImage = mockups?.back ?? fallback;
   const sleeveImage = mockups?.sleeve ?? fallback;
