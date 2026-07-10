@@ -95,6 +95,8 @@ function DashboardContent() {
   const [designName, setDesignName] = useState("");
   const [designDescription, setDesignDescription] = useState("");
   const [designTags, setDesignTags] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
@@ -206,68 +208,30 @@ function DashboardContent() {
     }
   };
 
-  const handleDesignUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!designName.trim() || !designCategory.trim()) {
-      setUploadError("Name and category are required");
-      return;
-    }
-    if (!user) {
-      setUploadError("You must be signed in to upload designs");
-      return;
-    }
-    setUploading(true);
-    setUploadError(null);
-    setUploadProgress(0);
-
+  const handleDesignUpload = async () => {
+    if (!selectedFile) return;
+    if (!designName.trim() || !designCategory.trim()) { setUploadError("Name and category are required"); return; }
+    if (!user) { setUploadError("You must be signed in to upload designs"); return; }
+    setUploading(true); setUploadError(null); setUploadProgress(0); setUploadSuccess(false);
     const designId = crypto.randomUUID();
-    const tags = designTags
-      .split(",")
-      .map((t) => t.trim().toLowerCase())
-      .filter(Boolean);
-
+    const tags = designTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
     try {
-      const fileRef = ref(storage, `designs/${designId}_${file.name}`);
-      const task = uploadBytesResumable(fileRef, file);
-
+      const fileRef = ref(storage, `designs/${designId}_${selectedFile.name}`);
+      const task = uploadBytesResumable(fileRef, selectedFile);
       task.on("state_changed",
-        (snapshot) => {
-          setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        },
-        (err) => {
-          setUploading(false);
-          setUploadError(err.message || "Upload failed");
-        },
+        (snapshot) => { setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100); },
+        (err) => { setUploading(false); setUploadError(err.message || "Upload failed"); },
         async () => {
           const url = await getDownloadURL(task.snapshot.ref);
-          const newAsset: DesignAsset = {
-            id: designId,
-            name: designName.trim(),
-            description: designDescription.trim() || undefined,
-            category: designCategory.trim(),
-            image_url: url,
-            tags: tags.length > 0 ? tags : undefined,
-            created_at: new Date().toISOString(),
-          };
-
-          // Write as individual doc in designs/ collection
+          const newAsset: DesignAsset = { id: designId, name: designName.trim(), description: designDescription.trim() || undefined, category: designCategory.trim(), image_url: url, tags: tags.length > 0 ? tags : undefined, created_at: new Date().toISOString() };
           await setDoc(doc(db, "designs", designId), newAsset);
           setDesigns((prev) => [...prev, newAsset]);
-          setUploading(false);
-          setUploadProgress(0);
-          setDesignName("");
-          setDesignCategory("");
-          setDesignDescription("");
-          setDesignTags("");
-        }
-      );
-    } catch (err) {
-      setUploading(false);
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
-    }
-
-    e.target.value = "";
+          setUploading(false); setUploadProgress(0);
+          setDesignName(""); setDesignCategory(""); setDesignDescription(""); setDesignTags("");
+          setSelectedFile(null); setUploadSuccess(true);
+          setTimeout(() => setUploadSuccess(false), 4000);
+        });
+    } catch (err) { setUploading(false); setUploadError(err instanceof Error ? err.message : "Upload failed"); }
   };
 
   const removeDesign = async (id: string) => {
@@ -679,6 +643,9 @@ function DashboardContent() {
                 <button onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-600 ml-2">&times;</button>
               </div>
             )}
+            {uploadSuccess && (
+              <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-xl text-sm">Design published successfully! It will appear in the product editor under Printable Designs.</div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <input type="text" value={designName} onChange={(e) => setDesignName(e.target.value)}
@@ -690,14 +657,21 @@ function DashboardContent() {
               <input type="text" value={designTags} onChange={(e) => setDesignTags(e.target.value)}
                 placeholder="Tags: comma, separated" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
             </div>
-            <div className="mb-6">
-              <label className={`flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${
-                uploading ? "border-gold/50 bg-gold/5 text-gold" : "border-primary/20 text-primary/50 hover:border-primary/40"
+            <div className="flex items-center gap-3 mb-6">
+              <label className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${
+                selectedFile ? "border-gold bg-gold/5 text-gold" : "border-primary/20 text-primary/50 hover:border-primary/40"
               }`}>
-                {uploading ? `Uploading ${Math.round(uploadProgress)}%` : "Choose File"}
-                <input type="file" accept="image/*" onChange={handleDesignUpload}
-                  disabled={uploading || !designName.trim() || !designCategory.trim()} className="hidden" />
+                {selectedFile ? `File: ${selectedFile.name}` : "Choose Image File"}
+                <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                  disabled={uploading} className="hidden" />
               </label>
+              <button
+                onClick={handleDesignUpload}
+                disabled={uploading || !selectedFile || !designName.trim() || !designCategory.trim()}
+                className="px-6 py-2 rounded-xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors disabled:opacity-40 btn-tactile btn-gold-tactile text-sm shrink-0"
+              >
+                {uploading ? `Uploading ${Math.round(uploadProgress)}%` : "Publish Design"}
+              </button>
             </div>
           {designs.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

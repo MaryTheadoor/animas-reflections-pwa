@@ -808,6 +808,28 @@ export default function ProductManager({ categories }: Props) {
                       >
                         ✕
                       </button>
+                      {/* Custom fields toggle per variant */}
+                      {(v.customFields?.length ?? 0) > 0 ? (
+                        <div className="flex items-center gap-1 text-[10px] text-primary/40">
+                          {v.customFields!.map((f) => (
+                            <span key={f.key} className="bg-primary/5 px-1.5 py-0.5 rounded">{f.key}: {f.value}</span>
+                          ))}
+                          <button
+                            onClick={() => updateVariant(v.id, "customFields", [...(v.customFields ?? []), { key: "", value: "" }])}
+                            className="text-gold hover:text-gold-light"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => updateVariant(v.id, "customFields", [{ key: "", value: "" }])}
+                          className="text-[10px] text-primary/30 hover:text-gold"
+                          title="Add custom attributes like grommets, material, etc."
+                        >
+                          +Attrs
+                        </button>
+                      )}
                     </div>
                   ))}
                   {form.variants.length === 0 && (

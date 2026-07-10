@@ -74,6 +74,8 @@ export interface ManagedVariant {
   inventory?: number;
   /** ISO timestamp of last Square inventory sync */
   inventoryUpdatedAt?: string;
+  /** Custom key-value attributes (e.g. grommets: '4', material: 'cotton') */
+  customFields?: { key: string; value: string }[];
 }
 
 export interface ManagedProduct {
