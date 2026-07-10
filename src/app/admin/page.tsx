@@ -208,22 +208,42 @@ function DashboardContent() {
     try {
       const fileRef = ref(storage, `designs/${designId}_${selectedFile.name}`);
       const task = uploadBytesResumable(fileRef, selectedFile);
-      task.on("state_changed",
-        (snapshot) => { setUploadProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100); },
-        (err) => { setUploading(false); setUploadError(err.message || "Upload failed"); },
-        async () => {
-          const url = await getDownloadURL(task.snapshot.ref);
-          const newAsset: DesignAsset = { id: designId, name: designName.trim(), description: designDescription.trim() || undefined, category: designCategory.trim(), image_url: url, tags: tags.length > 0 ? tags : undefined, created_at: new Date().toISOString() };
-          await setDoc(doc(db, "designs", designId), newAsset);
-          setDesigns((prev) => [...prev, newAsset]);
-          setUploading(false); setUploadProgress(0);
-          setDesignName(""); setDesignCategory(""); setDesignDescription(""); setDesignTags("");
-          setSelectedFile(null); setUploadSuccess(true);
-          setTimeout(() => setUploadSuccess(false), 4000);
-        });
-    } catch (err) { setUploading(false); setUploadError(err instanceof Error ? err.message : "Upload failed"); }
-  };
 
+      // Track progress
+      task.on("state_changed",
+        (snapshot) => {
+          setUploadProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
+        }
+      );
+
+      // Await completion
+      await task;
+      const url = await getDownloadURL(fileRef);
+
+      const newAsset: DesignAsset = {
+        id: designId,
+        name: designName.trim(),
+        description: designDescription.trim() || undefined,
+        category: designCategory.trim(),
+        image_url: url,
+        tags: tags.length > 0 ? tags : undefined,
+        created_at: new Date().toISOString(),
+      };
+
+      await setDoc(doc(db, "designs", designId), newAsset);
+      setDesigns((prev) => [...prev, newAsset]);
+      setUploading(false);
+      setUploadProgress(0);
+      setDesignName(""); setDesignCategory(""); setDesignDescription(""); setDesignTags("");
+      setSelectedFile(null);
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 4000);
+    } catch (err) {
+      console.error("Design upload failed:", err);
+      setUploading(false);
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    }
+  };
   const removeDesign = async (id: string) => {
     if (!confirm("Delete this design?")) return;
     setDesigns((prev) => prev.filter((d) => d.id !== id));
