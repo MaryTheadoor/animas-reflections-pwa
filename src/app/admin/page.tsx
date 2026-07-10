@@ -106,7 +106,6 @@ function DashboardContent() {
 
   const loadDesigns = useCallback(async () => {
     try {
-      // Read from designs/ collection (individual docs)
       const snap = await getDocs(collection(db, "designs"));
       const items: DesignAsset[] = [];
       snap.forEach((d) => {
@@ -115,18 +114,9 @@ function DashboardContent() {
       });
       items.sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
       setDesigns(items);
-    } catch {
-      // Fallback: old format designs/catalog doc
-      try {
-        const snap = await getDoc(doc(db, "designs", "catalog"));
-        if (snap.exists()) {
-          setDesigns((snap.data() as { items?: DesignAsset[] }).items ?? []);
-        } else {
-          setDesigns([]);
-        }
-      } catch {
-        setDesigns([]);
-      }
+    } catch (e) {
+      console.error("Designs load failed:", e);
+      setDesigns([]);
     }
   }, []);
 
