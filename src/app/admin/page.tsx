@@ -94,8 +94,6 @@ const DEFAULT_CONFIG: SiteConfigData = {
   footer_tagline: "Family owned and operated design & print operation based in Durango, CO.",
 };
 
-const SITE = { name: "Animas Reflections" };
-
 function DashboardContent() {
   const { user, logout } = useAuth();
   const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "images" | "orders" | "users" | "admins">("products");
