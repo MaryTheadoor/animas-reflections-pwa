@@ -48,13 +48,24 @@ interface SiteConfigData {
   primary_color: string;
   accent_color: string;
   background_color: string;
+  gold_color: string;
+  plum_color: string;
+  cream_color: string;
+  warm_sand_color: string;
+  text_color: string;
+  heading_font: string;
+  body_font: string;
   shipping_tier_stickers: number;
   shipping_tier_apparel: number;
   free_shipping_threshold: number;
   addon_price: number;
   hero_heading: string;
   hero_subheading: string;
+  about_heading: string;
   about_body: string;
+  fundraising_heading: string;
+  fundraising_subheading: string;
+  footer_tagline: string;
 }
 
 const DEFAULT_CONFIG: SiteConfigData = {
@@ -63,23 +74,27 @@ const DEFAULT_CONFIG: SiteConfigData = {
   primary_color: "#1E4D4F",
   accent_color: "#D97706",
   background_color: "#FAF6F0",
+  gold_color: "#D97706",
+  plum_color: "#935B8A",
+  cream_color: "#FAF6F0",
+  warm_sand_color: "#F5EBE6",
+  text_color: "#111827",
+  heading_font: "Georgia, 'Times New Roman', serif",
+  body_font: "system-ui, -apple-system, sans-serif",
   shipping_tier_stickers: 3.0,
   shipping_tier_apparel: 7.5,
   free_shipping_threshold: 100.0,
   addon_price: 5.0,
   hero_heading: "Custom Designs On An Array Of Products",
   hero_subheading: "Discover Endless Possibilities With Our Custom Designs Printed On An Array Of Products",
-  about_body: "",
+  about_heading: "From Our Family To Yours",
+  about_body: "At Animas Reflections, we are a family-owned and operated design & print operation based in Durango, CO.",
+  fundraising_heading: "Fundraising Made Easy",
+  fundraising_subheading: "Raise money for your team, school, or cause with custom merchandise.",
+  footer_tagline: "Family owned and operated design & print operation based in Durango, CO.",
 };
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-primary mb-1">{label}</label>
-      {children}
-    </div>
-  );
-}
+const SITE = { name: "Animas Reflections" };
 
 function DashboardContent() {
   const { user, logout } = useAuth();
@@ -489,99 +504,166 @@ function DashboardContent() {
           </p>
         </section>
 
-        {/* ── Site Settings ── */}
+        {/* ── Site Settings — Theming Engine ── */}
         <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-          <h2 className="text-xl font-bold font-display mb-6">Site Settings</h2>
+          <h2 className="text-xl font-bold font-display mb-6">Theme Settings</h2>
 
-          {/* Announcement */}
-          <Field label="Announcement Banner">
+          {/* ── Brand Colors ── */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-gold" /> Brand Colors
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {([
+                { key: "primary_color" as const, label: "Primary (Text/Nav)", hint: "Teal" },
+                { key: "accent_color" as const, label: "Accent (Buttons)", hint: "Gold" },
+                { key: "gold_color" as const, label: "Gold (CTAs)", hint: "Warm amber" },
+                { key: "plum_color" as const, label: "Plum (Badges)", hint: "Purple" },
+                { key: "background_color" as const, label: "Background", hint: "Cream" },
+                { key: "cream_color" as const, label: "Cream (Surfaces)", hint: "Warm white" },
+                { key: "warm_sand_color" as const, label: "Warm Sand (Cards)", hint: "Beige" },
+                { key: "text_color" as const, label: "Text Color", hint: "Dark" },
+              ] as const).map(({ key, label, hint }) => (
+                <div key={key}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-5 h-5 rounded border border-primary/20" style={{ backgroundColor: config[key] }} />
+                    <span className="text-xs font-medium text-primary">{label}</span>
+                    <span className="text-[10px] text-primary/30">{hint}</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <input type="color" value={config[key]} onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
+                      className="w-8 h-8 rounded border border-primary/20 cursor-pointer shrink-0" />
+                    <input type="text" value={config[key]} onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
+                      className="flex-1 px-2 py-1 rounded border border-primary/20 focus:border-gold outline-none font-mono text-[11px]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Typography ── */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-plum" /> Typography
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Heading Font</label>
+                <select value={config.heading_font} onChange={(e) => setConfig({ ...config, heading_font: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-primary/20 focus:border-gold outline-none text-sm">
+                  <option value="Georgia, 'Times New Roman', serif">Georgia / Times (Serif)</option>
+                  <option value="system-ui, -apple-system, sans-serif">System UI (Sans-serif)</option>
+                  <option value="'Playfair Display', serif">Playfair Display (Elegant)</option>
+                  <option value="'Arial Black', Impact, sans-serif">Impact / Arial Black</option>
+                  <option value="'Courier New', monospace">Courier New (Monospace)</option>
+                </select>
+                <p className="text-[10px] text-primary/30 mt-1">Used for h1-h4 headings and display text</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Body Font</label>
+                <select value={config.body_font} onChange={(e) => setConfig({ ...config, body_font: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-primary/20 focus:border-gold outline-none text-sm">
+                  <option value="system-ui, -apple-system, sans-serif">System UI (Sans-serif)</option>
+                  <option value="Georgia, 'Times New Roman', serif">Georgia / Times (Serif)</option>
+                  <option value="Arial, Helvetica, sans-serif">Arial / Helvetica</option>
+                  <option value="'Segoe UI', Roboto, sans-serif">Segoe UI / Roboto</option>
+                </select>
+                <p className="text-[10px] text-primary/30 mt-1">Used for paragraphs, inputs, and general text</p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Announcement ── */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-gold" /> Announcement Banner
+            </h3>
             <input type="text" value={config.announcement_text}
               onChange={(e) => setConfig({ ...config, announcement_text: e.target.value })}
-              className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
-            <label className="flex items-center gap-2 mt-2 text-sm text-primary/60 cursor-pointer">
+              className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold outline-none text-sm mb-2" />
+            <label className="flex items-center gap-2 text-sm text-primary/60 cursor-pointer">
               <input type="checkbox" checked={config.announcement_active}
                 onChange={(e) => setConfig({ ...config, announcement_active: e.target.checked })} className="accent-gold" />
               Show announcement banner
             </label>
-          </Field>
-
-          {/* Colors */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
-            {[
-              { key: "primary_color" as const, label: "Primary Color" },
-              { key: "accent_color" as const, label: "Accent Color" },
-              { key: "background_color" as const, label: "Background Color" },
-            ].map(({ key, label }) => (
-              <Field key={key} label={label}>
-                <div className="flex gap-2 items-center">
-                  <input type="color" value={config[key]}
-                    onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
-                    className="w-12 h-10 rounded-lg border border-primary/20 cursor-pointer" />
-                  <input type="text" value={config[key]}
-                    onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
-                    className="flex-1 px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none font-mono text-sm" />
-                </div>
-              </Field>
-            ))}
           </div>
 
-          {/* Website Copy */}
-          <div className="mt-6">
-            <h3 className="font-bold font-display text-sm mb-3 text-primary">Website Copy</h3>
+          {/* ── Website Copy ── */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary" /> Website Copy
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Hero Heading">
-                <input type="text" value={config.hero_heading}
-                  onChange={(e) => setConfig({ ...config, hero_heading: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-              </Field>
-              <Field label="Hero Subheading">
-                <input type="text" value={config.hero_subheading}
-                  onChange={(e) => setConfig({ ...config, hero_subheading: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-              </Field>
-            </div>
-            <div className="mt-4">
-              <Field label="About / Our Story Text">
-                <textarea rows={5} value={config.about_body}
-                  onChange={(e) => setConfig({ ...config, about_body: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm resize-y" />
-              </Field>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Hero Heading</label>
+                <input type="text" value={config.hero_heading} onChange={(e) => setConfig({ ...config, hero_heading: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Hero Subheading</label>
+                <input type="text" value={config.hero_subheading} onChange={(e) => setConfig({ ...config, hero_subheading: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">About Heading</label>
+                <input type="text" value={config.about_heading} onChange={(e) => setConfig({ ...config, about_heading: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Footer Tagline</label>
+                <input type="text" value={config.footer_tagline} onChange={(e) => setConfig({ ...config, footer_tagline: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-primary block mb-1">About / Our Story</label>
+                <textarea rows={4} value={config.about_body} onChange={(e) => setConfig({ ...config, about_body: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm resize-y" />
+              </div>
             </div>
           </div>
 
-          {/* Shipping & Pricing */}
-          <div className="mt-6">
-            <h3 className="font-bold font-display text-sm mb-3 text-primary">Shipping &amp; Pricing</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Field label="Stickers Rate ($)">
+          {/* ── Shipping & Pricing ── */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-teal" /> Shipping &amp; Pricing
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Stickers Rate ($)</label>
                 <input type="number" step="0.01" value={config.shipping_tier_stickers}
                   onChange={(e) => setConfig({ ...config, shipping_tier_stickers: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
-              </Field>
-              <Field label="Apparel Rate ($)">
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Apparel Rate ($)</label>
                 <input type="number" step="0.01" value={config.shipping_tier_apparel}
                   onChange={(e) => setConfig({ ...config, shipping_tier_apparel: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
-              </Field>
-              <Field label="Free Shipping Threshold ($)">
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Free Shipping Over ($)</label>
                 <input type="number" step="0.01" value={config.free_shipping_threshold}
                   onChange={(e) => setConfig({ ...config, free_shipping_threshold: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
-              </Field>
-              <Field label="Add-on Price ($)">
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Default Add-on Price ($)</label>
                 <input type="number" step="0.01" value={config.addon_price}
                   onChange={(e) => setConfig({ ...config, addon_price: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none" />
-              </Field>
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
             </div>
           </div>
 
-          <button onClick={saveConfig} disabled={saving}
-            className="mt-6 px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile">
-            {saved ? "Saved!" : saving ? "Saving..." : "Save Settings"}
-          </button>
+          <div className="flex gap-3 items-center">
+            <button onClick={saveConfig} disabled={saving}
+              className="px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile">
+              {saving ? "Saving..." : "Save Theme"}
+            </button>
+            {saved && <span className="text-sm text-green-600 animate-fade-in-up">Saved!</span>}
+          </div>
         </section>
-        </>
+          </>
         )}
 
         {/* ── Admin Management ── */}
