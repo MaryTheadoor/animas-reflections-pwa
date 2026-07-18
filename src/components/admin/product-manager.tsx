@@ -53,9 +53,15 @@ export default function ProductManager({ categories }: Props) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [newTag, setNewTag] = useState("");
   const [newColor, setNewColor] = useState("");
   const [newVariant, setNewVariant] = useState({ name: "", price: "", sku: "" });
+
+  // Inline category creation
+  const [localCategories, setLocalCategories] = useState<ManagedCategory[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
 
   // Sync state
   const [syncing, setSyncing] = useState(false);
@@ -127,6 +133,9 @@ export default function ProductManager({ categories }: Props) {
     setEditing(null);
     setNewTag("");
     setNewVariant({ name: "", price: "", sku: "" });
+    setNewCategoryName("");
+    setAddingCategory(false);
+    setSaveError(null);
   };
 
   const startEdit = (p: ManagedProduct) => {
@@ -237,6 +246,7 @@ export default function ProductManager({ categories }: Props) {
   const handleSave = async () => {
     if (!form.name.trim() || !form.categoryId || form.variants.length === 0) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const now = new Date().toISOString();
       const docId = editing?.id ?? crypto.randomUUID();
@@ -248,14 +258,35 @@ export default function ProductManager({ categories }: Props) {
         createdAt: editing?.createdAt ?? now,
         updatedAt: now,
       };
-      await setDoc(doc(db, "products", docId), product);
+      // Firestore writes can hang silently on bad network conditions.
+      // Promise.race with a 15s timeout ensures the UI doesn't get stuck permanently.
+      await Promise.race([
+        setDoc(doc(db, "products", docId), product),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Save timed out. Check your connection and try again.")), 15000)),
+      ]);
       setSaving(false);
+      setSaveError(null);
       resetForm();
       loadProducts();
     } catch (err) {
       setSaving(false);
-      setUploadError(err instanceof Error ? err.message : "Failed to save product. Check your connection and try again.");
+      setSaveError(err instanceof Error ? err.message : "Failed to save product");
     }
+  };
+
+  const handleAddCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    setAddingCategory(true);
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const newCat: ManagedCategory = { id, name, slug, order: categories.length + localCategories.length, createdAt: now, updatedAt: now };
+    await setDoc(doc(db, "categories", id), newCat);
+    setLocalCategories((prev) => [...prev, newCat]);
+    setForm((prev) => ({ ...prev, categoryId: id }));
+    setNewCategoryName("");
+    setAddingCategory(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -637,10 +668,40 @@ export default function ProductManager({ categories }: Props) {
                 className="w-full px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
               >
                 <option value="">Select...</option>
-                {categories.map((c) => (
+                {[...categories, ...localCategories].map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+              {!addingCategory ? (
+                <button
+                  onClick={() => setAddingCategory(true)}
+                  className="mt-1 text-xs text-gold hover:text-gold-light transition-colors"
+                >
+                  + New Category
+                </button>
+              ) : (
+                <div className="flex gap-1 mt-1">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddCategory(); } }}
+                    placeholder="Category name"
+                    autoFocus
+                    className="flex-1 px-2 py-1 rounded-lg border border-gold text-xs focus:ring-1 focus:ring-gold outline-none"
+                  />
+                  <button onClick={handleAddCategory} disabled={!newCategoryName.trim()}
+                    className="px-2 py-1 bg-gold text-white rounded-lg text-xs font-medium disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                  <button onClick={() => { setAddingCategory(false); setNewCategoryName(""); }}
+                    className="px-2 py-1 text-xs text-primary/40 hover:text-primary"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1094,21 +1155,28 @@ export default function ProductManager({ categories }: Props) {
           </div>
 
           {/* Save */}
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={handleSave}
-              disabled={saving || !form.name.trim() || !form.categoryId || form.variants.length === 0}
-              className="px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
-            >
-              {saving ? "Saving..." : editing?.id ? "Update Product" : "Create Product"}
-            </button>
-            <button
-              onClick={resetForm}
-              className="px-4 py-2.5 text-sm text-primary/50 hover:text-primary transition-colors"
-            >
-              Cancel
-            </button>
-            {uploadError && !uploading && <p className="text-sm text-red-500 self-center">{uploadError}</p>}
+          <div className="space-y-2 pt-2">
+            {saveError && (
+              <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm flex items-center justify-between">
+                <span>{saveError}</span>
+                <button onClick={() => setSaveError(null)} className="text-red-400 hover:text-red-600 ml-2">&times;</button>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={handleSave}
+                disabled={saving || !form.name.trim() || !form.categoryId || form.variants.length === 0}
+                className="px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
+              >
+                {saving ? "Saving..." : editing?.id ? "Update Product" : "Create Product"}
+              </button>
+              <button
+                onClick={resetForm}
+                className="px-4 py-2.5 text-sm text-primary/50 hover:text-primary transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
