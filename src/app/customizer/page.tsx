@@ -443,45 +443,53 @@ function CustomizerContent() {
                         </div>
                       </div>
                     )}
-                    {/* Global design library */}
-                    {designLibrary.length === 0 && productDesigns.length === 0 ? (
-                      <p className="text-xs text-primary/30 text-center py-4">
-                        No designs available. Upload designs in the Admin Dashboard.
-                      </p>
-                    ) : (
-                      <div>
-                        {productDesigns.length > 0 && (
-                          <p className="text-[10px] font-semibold text-primary/40 uppercase tracking-wider mb-1 px-1 mt-2">All Designs</p>
-                        )}
-                        <div className="space-y-1">
-                          {designLibrary.map((asset) => (
-                            <button
-                              key={asset.id}
-                              onClick={() => handleSelectDesign(asset)}
-                              className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
-                                designUrl === asset.image_url
-                                  ? "bg-gold/10 border border-gold/30"
-                                  : "hover:bg-warm-sand/50 border border-transparent"
-                              }`}
-                            >
-                              <Image
-                                src={asset.image_url}
-                                alt={asset.name}
-                                width={36}
-                                height={36}
-                                className="rounded-lg object-cover shrink-0"
-                              />
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium truncate">{asset.name}</p>
-                                <p className="text-[10px] text-primary/40 truncate">
-                                  {asset.category}
-                                </p>
-                              </div>
-                            </button>
-                          ))}
+                    {/* Global design library — exclude designs already shown above */}
+                    {(() => {
+                      const pinnedIds = new Set(productDesigns.map((d) => d.id));
+                      const filteredLibrary = designLibrary.filter((d) => !pinnedIds.has(d.id));
+                      if (filteredLibrary.length === 0 && productDesigns.length === 0) {
+                        return (
+                          <p className="text-xs text-primary/30 text-center py-4">
+                            No designs available. Upload designs in the Admin Dashboard.
+                          </p>
+                        );
+                      }
+                      if (filteredLibrary.length === 0) return null;
+                      return (
+                        <div>
+                          {productDesigns.length > 0 && (
+                            <p className="text-[10px] font-semibold text-primary/40 uppercase tracking-wider mb-1 px-1 mt-2">All Designs</p>
+                          )}
+                          <div className="space-y-1">
+                            {filteredLibrary.map((asset) => (
+                              <button
+                                key={asset.id}
+                                onClick={() => handleSelectDesign(asset)}
+                                className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
+                                  designUrl === asset.image_url
+                                    ? "bg-gold/10 border border-gold/30"
+                                    : "hover:bg-warm-sand/50 border border-transparent"
+                                }`}
+                              >
+                                <Image
+                                  src={asset.image_url}
+                                  alt={asset.name}
+                                  width={36}
+                                  height={36}
+                                  className="rounded-lg object-cover shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium truncate">{asset.name}</p>
+                                  <p className="text-[10px] text-primary/40 truncate">
+                                    {asset.category}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
               </div>

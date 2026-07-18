@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Component, type ReactNode } from "rea
 import Image from "next/image";
 import Link from "next/link";
 import { doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
 import { useAuth, RequireAdmin } from "@/context/auth-context";
@@ -13,6 +13,7 @@ import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
 import ImageManager from "@/components/admin/image-manager";
 import type { ManagedCategory, DesignAsset } from "@/types";
+import PlaceholderImage from "@/components/ui/placeholder-image";
 import { DismissedTooltipsCount } from "@/components/ui/admin-tooltip";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -259,10 +260,15 @@ function DashboardContent() {
   };
   const removeDesign = async (id: string) => {
     if (!confirm("Delete this design?")) return;
+    const target = designs.find((d) => d.id === id);
     setDesigns((prev) => prev.filter((d) => d.id !== id));
-    // Delete individual design doc
+    try {
+      if (target?.image_url) {
+        const urlPath = decodeURIComponent(target.image_url.split("/o/")[1]?.split("?")[0] ?? "");
+        if (urlPath) await deleteObject(ref(storage, urlPath));
+      }
+    } catch {}
     await deleteDoc(doc(db, "designs", id)).catch(() => {});
-    // Also try removing from old catalog format if it exists
     try {
       const snap = await getDoc(doc(db, "designs", "catalog"));
       if (snap.exists()) {
@@ -767,7 +773,19 @@ function DashboardContent() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {designs.map((d) => (
                 <div key={d.id} className="bg-warm-sand/50 rounded-xl p-3 relative group">
-                  <Image src={d.image_url} alt={d.name} width={120} height={120} className="mx-auto rounded-lg mb-2 object-contain h-20" />
+                  <div className="mx-auto mb-2 h-20 rounded-lg overflow-hidden bg-warm-sand/80 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={d.image_url}
+                      alt={d.name}
+                      className="object-contain h-20 w-full"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+                      }}
+                    />
+                    <PlaceholderImage className="hidden h-full" />
+                  </div>
                   <p className="text-xs font-medium truncate">{d.name}</p>
                   <p className="text-xs text-primary/40 truncate">{d.category}</p>
                   {d.description && <p className="text-[10px] text-primary/30 truncate mt-0.5">{d.description}</p>}
