@@ -237,20 +237,25 @@ export default function ProductManager({ categories }: Props) {
   const handleSave = async () => {
     if (!form.name.trim() || !form.categoryId || form.variants.length === 0) return;
     setSaving(true);
-    const now = new Date().toISOString();
-    const docId = editing?.id ?? crypto.randomUUID();
-    const product: ManagedProduct = {
-      ...form,
-      id: docId,
-      name: form.name.trim(),
-      description: form.description.trim(),
-      createdAt: editing?.createdAt ?? now,
-      updatedAt: now,
-    };
-    await setDoc(doc(db, "products", docId), product);
-    setSaving(false);
-    resetForm();
-    loadProducts();
+    try {
+      const now = new Date().toISOString();
+      const docId = editing?.id ?? crypto.randomUUID();
+      const product: ManagedProduct = {
+        ...form,
+        id: docId,
+        name: form.name.trim(),
+        description: form.description.trim(),
+        createdAt: editing?.createdAt ?? now,
+        updatedAt: now,
+      };
+      await setDoc(doc(db, "products", docId), product);
+      setSaving(false);
+      resetForm();
+      loadProducts();
+    } catch (err) {
+      setSaving(false);
+      setUploadError(err instanceof Error ? err.message : "Failed to save product. Check your connection and try again.");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -1103,6 +1108,7 @@ export default function ProductManager({ categories }: Props) {
             >
               Cancel
             </button>
+            {uploadError && !uploading && <p className="text-sm text-red-500 self-center">{uploadError}</p>}
           </div>
         </div>
       )}
