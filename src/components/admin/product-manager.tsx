@@ -249,7 +249,7 @@ export default function ProductManager({ categories }: Props) {
     setSaveError(null);
     try {
       const now = new Date().toISOString();
-      const docId = editing?.id ?? crypto.randomUUID();
+      const docId = editing?.id || crypto.randomUUID();
       const product: ManagedProduct = {
         ...form,
         id: docId,
