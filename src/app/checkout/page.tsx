@@ -10,6 +10,9 @@ import { useCart } from "@/context/cart-context";
 import { SITE } from "@/lib/content";
 import { SQUARE_APP_ID, SQUARE_LOCATION_ID } from "@/lib/constants";
 
+// Square SDK is loaded once per page lifecycle. The module-level flag prevents
+// re-initialization on React re-renders, but the useEffect cleanup resets it on
+// unmount so re-mounting (route back-and-forth) triggers a fresh setup.
 let squareInitialized = false;
 
 interface CustomerInfo {
@@ -89,6 +92,8 @@ export default function CheckoutPage() {
     setProcessing(true);
     setError(null);
     try {
+      // Card tokenization: the Square Web Payments SDK replaces the raw card number
+      // with a single-use token. The actual card data never touches our server.
       const card = squareCardRef.current as {
         tokenize: () => Promise<{ status: string; errors?: { message: string }[]; token?: string }>;
       };
@@ -125,6 +130,8 @@ export default function CheckoutPage() {
         lineItems,
         shippingRate: shipping,
         sourceId: tokenResult.token,
+        // Idempotency key prevents duplicate charges if the request is retried
+        // (network hiccup, page refresh). Square deduplicates within 24h.
         idempotencyKey: `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
         customer: {
           firstName: customer.firstName,

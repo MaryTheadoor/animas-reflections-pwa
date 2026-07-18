@@ -143,11 +143,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     0
   );
 
+  // Addons are multiplied by quantity (each item gets its own add-ons).
+  // Example: 2 shirts with Back Print (+$5) = $10 addon total.
   const addonsTotal = cart.items.reduce(
     (sum, i) => sum + i.addons.reduce((s, a) => s + a.price, 0) * i.quantity,
     0
   );
 
+  // Shipping auto-detection: all-sticker cart = envelope rate; anything else = parcel rate.
+  // Free shipping applies when subtotal hits the threshold, regardless of item types.
   const shipping =
     subtotal >= freeThreshold
       ? 0

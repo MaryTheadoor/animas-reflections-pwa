@@ -120,7 +120,8 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
       .catch(() => { setLoading(false); });
   }, []);
 
-  // Apply CSS variables to :root for all theme settings
+  // Apply CSS variables to :root for all theme settings.
+  // setIfChanged avoids unnecessary style recalculations when the value matches.
   useEffect(() => {
     const root = document.documentElement;
     const setIfChanged = (prop: string, value: string) => {

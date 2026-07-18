@@ -13,6 +13,12 @@ export interface SearchFilters {
   maxPrice: number | null;
 }
 
+// Fuzzy text matching with weighted scoring:
+// - Exact match: 100, prefix match: 80, contains: 60, word prefix: 40, partial: 20
+// - Product name matches are weighted 3x (most relevant)
+// - Tag and design name matches are weighted 2x
+// - Category match adds a flat +50 bonus
+// - Color match adds a flat +30 bonus
 function fuzzyScore(text: string, query: string): number {
   const lower = text.toLowerCase();
   const q = query.toLowerCase();

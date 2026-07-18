@@ -13,6 +13,8 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Singleton: reuse the existing Firebase app if already initialized (prevents
+// duplicate apps in Next.js HMR/dev mode). All exports share the same app instance.
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 export const db = getFirestore(app);

@@ -96,7 +96,8 @@ export default function Customizer({
   const currentView = views.find((v) => v.key === activeView) ?? views[0];
   const printZone = currentView?.printZone;
 
-  // Clamp design within print zone bounds
+  // Clamp design so it cannot be dragged outside the print zone boundary.
+  // Accounts for the design's scaled width/height so the entire image stays visible.
   const clampToPrintZone = useCallback(
     (xPercent: number, yPercent: number, scale: number) => {
       if (!printZone) return { xPercent, yPercent };
@@ -110,7 +111,8 @@ export default function Customizer({
     [printZone]
   );
 
-  // Convert pixel delta to percent delta
+  // Convert pixel deltas to percentage-of-canvas deltas so drag behavior is
+  // consistent across viewport sizes (mobile vs desktop).
   const deltaToPercent = useCallback(
     (dx: number, dy: number) => {
       return {
@@ -170,7 +172,8 @@ export default function Customizer({
       const { dxPct, dyPct } = deltaToPercent(dx, dy);
 
       if (drag.mode === "resize") {
-        // Proportionally resize based on diagonal drag distance
+        // Resize proportionally using diagonal drag distance.
+        // Scale range: 0.25x – 3x. Divider of 30 controls resize sensitivity.
         const avgDelta = (dxPct + dyPct) / 2;
         const newScale = Math.max(0.25, Math.min(3, drag.startScale + avgDelta / 30));
         const clamped = clampToPrintZone(drag.startXPercent, drag.startYPercent, newScale);
@@ -205,8 +208,7 @@ export default function Customizer({
     return () => window.removeEventListener("pointerup", handleGlobalUp);
   }, [drag.active]);
 
-  // ── Scale with wheel ──
-
+  // Mouse wheel / trackpad scroll resize: ±3% per tick. Same as resize but finer control.
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();

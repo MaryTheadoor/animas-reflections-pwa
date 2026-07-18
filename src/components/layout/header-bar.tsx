@@ -20,6 +20,10 @@ export default function HeaderBar() {
   const config = useSiteConfig();
   const [offline, setOffline] = useState(false);
 
+  // Measure the fixed header wrapper height and expose it as a CSS variable
+  // so page content can offset itself below the header with padding-top.
+  // Do NOT apply position:fixed directly to the nav-dock — the outer wrapper
+  // (this div) is the positioned element. The nav-dock inside is a centered pill.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;

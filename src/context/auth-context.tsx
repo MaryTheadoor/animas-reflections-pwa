@@ -37,6 +37,8 @@ async function getAdminEmails(): Promise<string[]> {
   return [];
 }
 
+// Three-tier admin detection: (1) hardcoded env fallback, (2) @animasreflections.com
+// domain, (3) Firestore config/admin doc managed via Admin → Admins tab.
 async function isUserAdmin(email: string | null): Promise<boolean> {
   if (!email) return false;
   const lowered = email.toLowerCase().trim();
@@ -46,6 +48,9 @@ async function isUserAdmin(email: string | null): Promise<boolean> {
   return adminEmails.includes(lowered);
 }
 
+// Writes a minimal user profile doc on every auth state change so the Users tab
+// in Admin has a record. merge:true preserves existing fields if Firestore rules
+// allow the write (rules may block client writes to users/; that's intentionally silent).
 async function syncUserDoc(u: User) {
   try {
     await setDoc(doc(db, "users", u.uid), {

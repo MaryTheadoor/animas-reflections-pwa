@@ -160,9 +160,9 @@ export interface CartAddon {
 export interface CartItem {
   /** Unique cart line item ID (generated client-side via crypto.randomUUID) */
   id: string;
-  /** Managed product ID (provider-agnostic) */
+  /** Managed product ID (provider-agnostic). Resolved to squareItemId at checkout. */
   product_id: string;
-  /** Managed variant ID (provider-agnostic) */
+  /** Managed variant ID (provider-agnostic). Mapped to squareVariationId at checkout. */
   variant_id: string;
   /** Square variation ID — set during Square sync, used by Square checkout path */
   squareVariationId?: string;
@@ -224,7 +224,10 @@ export interface SiteConfig {
 /* ─── API Response Types (Bridge / Internal) ────────────────────── */
 
 /** Bridge type used ONLY for Square API responses and legacy compatibility.
- *  Components should consume ManagedProduct directly. */
+ *  All components consume ManagedProduct directly via useCatalog().
+ *  managedToCatalogItem() converts ManagedProduct → SquareCatalogItem when
+ *  Square API fallback compatibility is needed (useSearch, square payloads).
+ *  @deprecated Prefer ManagedProduct for all new code. */
 export interface SquareCatalogItem {
   id: string;
   name: string;

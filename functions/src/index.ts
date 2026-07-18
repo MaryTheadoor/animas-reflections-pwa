@@ -171,6 +171,8 @@ export const fetchSquareCatalog = onCall(
             .map((v: CatalogObjectRaw) => {
               const vd = v.itemVariationData;
               const rawAmount = vd?.priceMoney?.amount;
+              // Square SDK v42 returns BigInt for money amounts. Convert to Number
+              // before division; BigDecimal arithmetic in JS would be wrong otherwise.
               const amount = typeof rawAmount === "bigint" ? Number(rawAmount) : (rawAmount ?? 0);
               return { id: v.id, name: vd?.name ?? "", price: amount / 100, sku: vd?.sku ?? "" };
             });
@@ -266,12 +268,17 @@ export const createSquareOrderAndPay = onCall(
           quantity: String(item.quantity ?? 1),
         };
 
+        // Two paths: catalog-based (product was synced from Square, has a
+        // squareVariationId) vs ad-hoc (product was created manually in admin,
+        // no Square catalog ID — we pass name + explicit price instead).
         if (catalogObjectId) {
           li.catalogObjectId = catalogObjectId;
         } else {
-          // Ad-hoc line item: provide name and explicit price
           li.name = item.name ?? `Item ${index + 1}`;
           li.basePriceMoney = {
+            // Square API expects BigInt for price in cents.
+            // JSON serialization converts BigInt to number in transit;
+            // the Square Node SDK handles the conversion back in the request.
             amount: BigInt(Math.round((item.price ?? 0) * 100)),
             currency: "USD",
           };
@@ -363,7 +370,9 @@ export const createSquareOrderAndPay = onCall(
         status: payment?.status,
       });
 
-      // Mirror order to Firestore for customer account access
+      // Mirror order to Firestore so customers can view their orders in /account.
+      // Uses Square order ID prefixed with "order_" to avoid collision.
+      // Mirroring is non-critical — payment succeeded regardless.
       try {
         const db = getFirestore();
         const customerEmail = data.customer?.email || "";

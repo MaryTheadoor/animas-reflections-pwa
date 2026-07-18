@@ -5,6 +5,9 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { SquareCatalogItem, ManagedProduct, ManagedCategory } from "@/types";
 
+// Toggle synthetic (mock) data for UI development. Set to false in production
+// to use real Firestore data synced from Square. The admin "Sync from Square"
+// populates Firestore with ManagedProduct docs.
 export const USE_SYNTHETIC = false;
 
 const DATA_SOURCE: "synthetic" | "firestore" = USE_SYNTHETIC ? "synthetic" : "firestore";
@@ -138,12 +141,14 @@ export function useCatalog(): UseCatalogResult {
         setLoading(false);
         return;
       }
-    } catch (err) {
-      console.warn("Firestore read failed, falling back to Square API", err);
-    }
+      } catch (err) {
+        // If Firestore is empty (first deploy, sync never run), fall back to
+        // fetching the Square catalog directly via the Cloud Function.
+        console.warn("Firestore read failed, falling back to Square API", err);
+      }
 
-    // Fallback: fetch from Square via Cloud Function
-    try {
+      // Fallback: fetch from Square via Cloud Function
+      try {
       const { httpsCallable } = await import("firebase/functions");
       const { functions } = await import("@/lib/firebase");
       const callable = httpsCallable<object, { items: SquareCatalogItem[]; categories?: CatalogCategory[] }>(
