@@ -155,8 +155,8 @@ export default function ImageManager() {
   const deleteImage = async (url: string) => {
     if (!selectedProductId || !confirm("Delete this image?")) return;
     try {
-      const storageRef = ref(storage, url);
-      await deleteObject(storageRef).catch(() => {});
+      const urlPath = decodeURIComponent(url.split("/o/")[1]?.split("?")[0] ?? "");
+      if (urlPath) await deleteObject(ref(storage, urlPath));
     } catch { /* storage ref may be external */ }
 
     const updated = images.filter((img) => img !== url);
