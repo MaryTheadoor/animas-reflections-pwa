@@ -6,6 +6,7 @@ import {
   useReducer,
   useCallback,
   useState,
+  useEffect,
   type ReactNode,
 } from "react";
 import type { CartItem, CartAddon, AddonType } from "@/types";
@@ -96,6 +97,8 @@ interface CartContextValue {
   setShippingTier: (tier: "stickers" | "apparel" | "free") => void;
   cartOpen: boolean;
   setCartOpen: (v: boolean) => void;
+  lastAdded: CartItem | null;
+  dismissToast: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -103,6 +106,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, dispatch] = useReducer(cartReducer, initialCart);
   const [cartOpen, setCartOpen] = useState(false);
+  const [lastAdded, setLastAdded] = useState<CartItem | null>(null);
   const siteConfig = useSiteConfig();
   const freeThreshold = siteConfig.free_shipping_threshold;
   const shippingTierStickers = siteConfig.shipping_tier_stickers;
@@ -110,7 +114,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback((item: CartItem) => {
     dispatch({ type: "ADD_ITEM", item });
+    setLastAdded(item);
   }, []);
+
+  const dismissToast = useCallback(() => setLastAdded(null), []);
+
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (!lastAdded) return;
+    const timer = setTimeout(() => setLastAdded(null), 4000);
+    return () => clearTimeout(timer);
+  }, [lastAdded]);
 
   const removeItem = useCallback((id: string) => {
     dispatch({ type: "REMOVE_ITEM", id });
@@ -179,6 +193,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setShippingTier,
         cartOpen,
         setCartOpen,
+        lastAdded,
+        dismissToast,
       }}
     >
       {children}
