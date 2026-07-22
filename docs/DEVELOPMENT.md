@@ -16,9 +16,28 @@
 ## Pre-Deploy Checklist
 
 1. `npm run lint` — must return 0 errors
-2. `npm run build` — must generate 18 routes
+2. `npm run build` — must generate 19 routes
 3. `cd functions && npm run build` — must compile clean
 4. `firebase deploy` — deploys everything
+
+## Branching & Rollback
+
+Two-branch model on GitHub (established 2026-07-22):
+
+| Branch | Role | Rule |
+|--------|------|------|
+| `master` | Stable / staged | GitHub default. Only merge verified work here. Always deployable. |
+| `development` | Working / integration | All edits land here first. Pushed to `origin/development` as offsite rollback. |
+
+**Flow:** branch/work on `development` → verify (lint 0, tests pass, build 19 routes, live UI check) → merge to `master` → `firebase deploy`.
+
+**Rollback options (most to least granular):**
+1. `git revert <hash>` on the offending commit
+2. `git reset --hard <last-good-hash>` on `development` (never on shared `master` without care)
+3. Local snapshots via `npm run backup:restore` / `npm run backup:list`
+4. Re-deploy a known-good `master` commit: `git checkout <hash> && firebase deploy`
+
+Note: GitHub branch *protection rules* require a Pro plan on private repos — recovery relies on the merge discipline above plus the local snapshot framework, not platform enforcement.
 
 ## Conventions
 
@@ -60,9 +79,9 @@
 
 ## Build Output
 
-Static export generates 18 routes to `out/`:
+Static export generates 19 routes to `out/`:
 ```
-/  /about  /shop  /product  /customizer  /checkout
+/  /about  /account  /shop  /product  /customizer  /checkout
 /admin  /admin/login  /contact  /custom  /terms
 /biscuit-hockey  /im-ok-r-u  /faq  /fundraising
 /search  /order-confirmation  /_not-found

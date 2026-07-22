@@ -115,19 +115,27 @@ The canonical product format. Source of truth for all product data.
 }
 ```
 
-### `designs/catalog` — Design assets for customizer
+### `designs/{designId}` — DesignAsset (individual docs)
+
+Design assets for the customizer library. Stored as **one document per design**
+(migrated away from the old single `designs/catalog` doc holding an `items[]`
+array — a migration tool in Admin → Designs converts any legacy entries).
 
 ```
 {
-  items: {
-    id: string;
-    name: string;
-    category: string;
-    image_url: string;           // Firebase Storage URL
-    created_at: string;
-  }[]
+  id: string;                    // UUID
+  name: string;
+  description?: string;
+  category: string;
+  image_url: string;             // Firebase Storage URL (transparent PNG)
+  tags?: string[];
+  created_at: string;            // ISO timestamp
+  productId?: string;            // set when pinned to a specific product
 }
 ```
+
+> **Deprecated:** `designs/catalog` (`{ items: DesignAsset[] }`) — read-only
+> fallback for un-migrated data; do not write new designs here.
 
 ### `users/{userId}` — User profiles
 

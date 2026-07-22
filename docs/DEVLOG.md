@@ -251,6 +251,54 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 6 — 2026-07-22 | 14:40 MST
+
+### Context Restored From
+- Full doc re-read: PROJECT_CONTEXT, README, MASTER, GAP_ANALYSIS, ARCHITECTURE, SCHEMA, DEVELOPMENT, BUSINESS_MODEL, PROJECT_STATUS_REPORT, MASTER_SPEC_OUTLINE, DEVLOG
+- Fresh health baseline (verified, not from docs): lint 0 errors, 71/71 tests (7 suites), build 19 routes, functions compile clean, 23 functions deployed
+
+### Branching & Recovery Setup (user priority #1)
+- Established stable + working branch model on GitHub:
+  - `master` = stable/staged branch (GitHub default, deployable; only merged-to when verified)
+  - `development` = working branch; all edits land here, pushed to `origin/development` as offsite rollback
+- Branch protection rules require GitHub Pro on a private repo (HTTP 403) — skipped; recovery relies on master-only-when-verified + git history + local snapshot framework
+- **Workflow:** work on `development` → verify (lint/test/build + live UI) → merge to `master` → deploy
+
+### Root-Cause Debugging: Product Save Failures
+- Symptom (user-reported): new product creation in Admin failed/hung. Prior commits treated symptoms (docId `||`, 15s timeout, error display), not the cause.
+- **ROOT CAUSE:** Firestore Web SDK rejects any write containing `undefined` field values ("Unsupported field value: undefined"). The product form leaves optional fields `undefined` (`mockupImages`, `productAddons`, variant `inventory`, `squareItemIds`); `handleSave`'s `{ ...form }` spread carried them into `setDoc`, rejecting the whole write. `handleDuplicate` failed 100% (explicit undefineds).
+- Same bug in `handleDesignUpload` — `description`/`tags` set `undefined` when blank → design doc write rejected (the "live design-catalog errors" from MASTER_SPEC_OUTLINE §12).
+
+### Fixes Applied
+1. New shared helper `src/lib/firestore-utils.ts` → `stripUndefined()` (recursive; preserves null/0/false/""; drops undefined array elements)
+2. `product-manager.tsx` — stripUndefined in `handleSave` + `handleDuplicate`; fixed secondary bug: new products got `createdAt: ""` (`??` doesn't catch empty string → changed to `||`)
+3. `admin/page.tsx` — stripUndefined in `handleDesignUpload`
+4. New test suite `firestore-utils.test.ts` (7 tests) modeling the exact failing payloads
+- Audited all other setDoc sites (auth-context users, image-manager, category-manager): safe — Firebase uses `null` (valid) not `undefined`, or no optional fields
+
+### Verification
+- Lint: 0 errors | Tests: **78/78, 8 suites** | Build: 19 routes, TS clean
+- **User confirmed in live admin:** new product creation + design upload now save correctly
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `ccba14c` | fix: product save rejected by Firestore undefined values — strip undefined before setDoc; fix empty createdAt on new products |
+| `e6a37f7` | fix: design upload rejected by Firestore undefined values — strip blank description/tags before setDoc |
+
+### Current State at Session End
+- Branch: `development` (2 commits ahead of `master`), pushed to origin
+- Lint 0 | Tests 78/78 (8 suites) | Build 19 routes | Functions 23 deployed
+- USE_SYNTHETIC = false (production Firestore)
+
+### Pending / Next Session
+- [ ] Merge `development` → `master` + deploy (awaiting user go-ahead)
+- [ ] Gap list: G11 per-variant inventory, G12 order pagination, G17 checkout retry
+- [ ] Fix doc drift: SCHEMA.md designs format, stale counts (tests/routes/functions)
+- [ ] End-to-end checkout test (production Square)
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 
