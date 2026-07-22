@@ -41,6 +41,11 @@ export default function CheckoutPage() {
   const [cardReady, setCardReady] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const squareCardRef = useRef<unknown>(null);
+  // Held for the lifetime of a single purchase intent. Retrying after an ambiguous
+  // failure (e.g. a network timeout where the server may already have charged the
+  // card) must reuse the SAME idempotency key so Square returns the cached result
+  // instead of charging again. Regenerated only when the order total changes.
+  const idempotencyRef = useRef<{ key: string; total: number } | null>(null);
 
   const initSquare = useCallback(async () => {
     if (squareInitialized || !cardRef.current) return;
@@ -126,13 +131,17 @@ export default function CheckoutPage() {
 
       // Payment provider: Square
       const createOrder = httpsCallable(functions, "createSquareOrderAndPay");
+      // Reuse one idempotency key across retries of this same purchase (keyed by
+      // its total). The previous behavior generated a fresh key per attempt, which
+      // meant Square could not dedupe a retried request — risking a double charge.
+      if (!idempotencyRef.current || idempotencyRef.current.total !== total) {
+        idempotencyRef.current = { key: `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`, total };
+      }
       const orderResult = await createOrder({
         lineItems,
         shippingRate: shipping,
         sourceId: tokenResult.token,
-        // Idempotency key prevents duplicate charges if the request is retried
-        // (network hiccup, page refresh). Square deduplicates within 24h.
-        idempotencyKey: `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+        idempotencyKey: idempotencyRef.current.key,
         customer: {
           firstName: customer.firstName,
           lastName: customer.lastName,
@@ -149,6 +158,7 @@ export default function CheckoutPage() {
 
       const data = orderResult.data as { success: boolean; orderId: string; paymentId: string; paymentStatus: string };
       if (data.success) {
+        idempotencyRef.current = null; // purchase complete — next purchase gets a fresh key
         setResult(data);
       } else {
         throw new Error("Order creation failed");
