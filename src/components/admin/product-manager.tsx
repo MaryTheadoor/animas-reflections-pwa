@@ -13,6 +13,7 @@ import { httpsCallable } from "firebase/functions";
 import Image from "next/image";
 import VariantMatrixEditor from "./variant-matrix-editor";
 import { db, storage, functions } from "@/lib/firebase";
+import { stripUndefined } from "@/lib/firestore-utils";
 import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
 import AdminTooltip from "@/components/ui/admin-tooltip";
@@ -255,13 +256,18 @@ export default function ProductManager({ categories }: Props) {
         id: docId,
         name: form.name.trim(),
         description: form.description.trim(),
-        createdAt: editing?.createdAt ?? now,
+        // For a brand-new product editing.createdAt is "" (empty string, not
+        // null), so use || rather than ?? to fall back to the current timestamp.
+        createdAt: editing?.createdAt || now,
         updatedAt: now,
       };
       // Firestore writes can hang silently on bad network conditions.
       // Promise.race with a 15s timeout ensures the UI doesn't get stuck permanently.
       await Promise.race([
-        setDoc(doc(db, "products", docId), product),
+        // stripUndefined drops optional fields the form leaves undefined —
+        // without it the SDK rejects the whole write ("Unsupported field value:
+        // undefined"), which was the root cause of failed product saves.
+        setDoc(doc(db, "products", docId), stripUndefined(product)),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Save timed out. Check your connection and try again.")), 15000)),
       ]);
       setSaving(false);
@@ -421,7 +427,9 @@ export default function ProductManager({ categories }: Props) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    await setDoc(doc(db, "products", newId), duplicated);
+    // duplicated carries explicit undefineds (squareItemIds, variation IDs,
+    // inventory) cleared for the copy — strip them or the SDK rejects the write.
+    await setDoc(doc(db, "products", newId), stripUndefined(duplicated));
     loadProducts();
   };
 
