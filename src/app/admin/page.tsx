@@ -7,6 +7,7 @@ import { doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/fi
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
+import { stripUndefined } from "@/lib/firestore-utils";
 import { useAuth, RequireAdmin } from "@/context/auth-context";
 import { SITE } from "@/lib/content";
 import ProductManager from "@/components/admin/product-manager";
@@ -244,7 +245,10 @@ function DashboardContent() {
         created_at: new Date().toISOString(),
       };
 
-      await setDoc(doc(db, "designs", designId), newAsset);
+      // description/tags are undefined when left blank — strip them or the SDK
+      // rejects the write ("Unsupported field value: undefined"), which surfaced
+      // as the live design-upload errors.
+      await setDoc(doc(db, "designs", designId), stripUndefined(newAsset));
       setDesigns((prev) => [...prev, newAsset]);
       setUploading(false);
       setUploadProgress(0);
