@@ -53,9 +53,14 @@ async function isUserAdmin(email: string | null): Promise<boolean> {
 // allow the write (rules may block client writes to users/; that's intentionally silent).
 async function syncUserDoc(u: User) {
   try {
-    await setDoc(doc(db, "users", u.uid), {
+    const ref = doc(db, "users", u.uid);
+    // createdAt is written only on the very first sync so each user keeps a real
+    // "joined" date; updatedAt refreshes on every sign-in.
+    const existing = await getDoc(ref);
+    await setDoc(ref, {
       email: u.email,
       displayName: u.displayName,
+      ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch {

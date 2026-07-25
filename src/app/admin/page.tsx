@@ -944,15 +944,59 @@ function OrdersSection() {
   );
 }
 
+// Firestore stores timestamps as Timestamp objects (with .toDate()); some older
+// docs may hold ISO strings. Normalize both to a Date, or null if invalid —
+// calling `new Date()` on a raw Timestamp yields "Invalid Date".
+function toDate(value: unknown): Date | null {
+  if (!value) return null;
+  const d = typeof (value as { toDate?: () => Date }).toDate === "function"
+    ? (value as { toDate: () => Date }).toDate()
+    : new Date(value as string);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatDate(value: unknown): string | null {
+  return toDate(value)?.toLocaleDateString() ?? null;
+}
+
 function UsersSection() {
-  const [users, setUsers] = useState<{ uid: string; email: string; created: string; updatedAt?: string }[]>([]);
+  type UserRow = {
+    uid: string;
+    email: string;
+    displayName?: string;
+    createdAt?: unknown;
+    updatedAt?: unknown;
+    orderCount: number;
+  };
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getDocs(collection(db, "users"))
-      .then((snap) => {
-        setUsers(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as typeof users[0])));
+    // Load users and all orders together, then tally orders per customer email.
+    // (orders/ is readable by any signed-in user per firestore.rules.)
+    Promise.all([getDocs(collection(db, "users")), getDocs(collection(db, "orders"))])
+      .then(([userSnap, orderSnap]) => {
+        const counts = new Map<string, number>();
+        orderSnap.forEach((d) => {
+          const email = (d.data() as { customerEmail?: string }).customerEmail?.toLowerCase();
+          if (email) counts.set(email, (counts.get(email) ?? 0) + 1);
+        });
+        const rows: UserRow[] = userSnap.docs.map((d) => {
+          const data = d.data() as { email?: string; displayName?: string; createdAt?: unknown; updatedAt?: unknown };
+          const email = data.email ?? "";
+          return {
+            uid: d.id,
+            email,
+            displayName: data.displayName,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            orderCount: counts.get(email.toLowerCase()) ?? 0,
+          };
+        });
+        // Most recently active first.
+        rows.sort((a, b) => (toDate(b.updatedAt)?.getTime() ?? 0) - (toDate(a.updatedAt)?.getTime() ?? 0));
+        setUsers(rows);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -1002,15 +1046,20 @@ function UsersSection() {
       <p className="text-xs text-primary/40 mb-3">{users.length} users registered.</p>
       <div className="space-y-2">
         {users.map((u) => (
-          <div key={u.uid} className="flex items-center justify-between text-sm p-2 bg-warm-sand/30 rounded-lg">
-            <span className="font-medium">{u.email}</span>
-            <span className="text-xs text-primary/40">
-              {u.updatedAt
-                ? `Last seen ${new Date(u.updatedAt).toLocaleDateString()}`
-                : u.created
-                  ? `Joined ${new Date(u.created).toLocaleDateString()}`
-                  : ""}
-            </span>
+          <div key={u.uid} className="flex items-center justify-between gap-4 text-sm p-3 bg-warm-sand/30 rounded-lg">
+            <div className="min-w-0">
+              <p className="font-medium truncate">{u.displayName || u.email}</p>
+              {u.displayName && <p className="text-xs text-primary/40 truncate">{u.email}</p>}
+            </div>
+            <div className="flex items-center gap-4 shrink-0 text-xs text-primary/40">
+              <span className="px-2 py-0.5 bg-gold/10 text-gold rounded-full font-medium">
+                {u.orderCount} {u.orderCount === 1 ? "order" : "orders"}
+              </span>
+              <span className="text-right leading-tight">
+                {formatDate(u.createdAt) && <span className="block">Joined {formatDate(u.createdAt)}</span>}
+                {formatDate(u.updatedAt) && <span className="block">Last seen {formatDate(u.updatedAt)}</span>}
+              </span>
+            </div>
           </div>
         ))}
       </div>
