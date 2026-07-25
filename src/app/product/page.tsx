@@ -8,6 +8,7 @@ import PlaceholderImage from "@/components/ui/placeholder-image";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import { useCart } from "@/context/cart-context";
 import PageLayout from "@/components/layout/page-layout";
+import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
 
 function ProductJsonLd({
   name,
@@ -112,6 +113,14 @@ function ProductContent() {
           price={price}
           productId={product.id}
           sku={variant?.sku || product.id}
+        />
+        {/* Breadcrumb structured data — mirrors the visible Shop / product trail below */}
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Home", path: "/" },
+            { name: "Shop", path: "/shop" },
+            { name: product.name, path: `/product?id=${product.id}` },
+          ]}
         />
 
         {/* Breadcrumb */}

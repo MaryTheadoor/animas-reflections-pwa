@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useCatalog } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
+import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
 
 type SortMode = "default" | "price-asc" | "price-desc" | "name-asc";
 type BrowseMode = "design" | "type";
@@ -71,6 +72,7 @@ export default function ShopPage() {
   return (
     <PageLayout>
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 pt-8 sm:pt-12 pb-16 sm:pb-20">
+        <BreadcrumbJsonLd items={[{ name: "Home", path: "/" }, { name: "Shop", path: "/shop" }]} />
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold font-display mb-3">Shop All Products</h1>
           <p className="text-primary/60 max-w-xl mx-auto">
