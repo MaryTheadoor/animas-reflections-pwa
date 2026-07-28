@@ -29,6 +29,9 @@ interface CustomizerProps {
   onDesignChange: (state: DesignState) => void;
   designState: DesignState;
   onTextChange: (text?: string) => void;
+  /** When true, the text tool is hidden — used for single-design products where
+   *  only one design (an image) may be printed per item. */
+  hideTextTool?: boolean;
 }
 
 interface DragState {
@@ -64,6 +67,7 @@ export default function Customizer({
   onDesignChange,
   designState,
   onTextChange,
+  hideTextTool = false,
 }: CustomizerProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -457,7 +461,8 @@ export default function Customizer({
           </span>
         </div>
 
-        {/* Text Input */}
+        {/* Text Input — hidden for single-design products (image only) */}
+        {!hideTextTool && (
         <div>
           <label className="block text-sm font-medium text-primary mb-1">
             Name / Number
@@ -498,6 +503,7 @@ export default function Customizer({
             Drag the design on the garment to reposition. Scroll or use size controls to resize.
           </p>
         </div>
+        )}
       </div>
     </div>
   );

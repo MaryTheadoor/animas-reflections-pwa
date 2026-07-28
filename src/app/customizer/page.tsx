@@ -149,11 +149,14 @@ function CustomizerContent() {
   const [perViewDesign, setPerViewDesign] = useState<Record<string, DesignState>>({});
   const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set());
 
-  // Use per-product add-ons if defined, otherwise fall back to hardcoded defaults
+  // Three-state add-on resolution: undefined = use site-standard defaults,
+  // [] = admin explicitly removed all add-ons for this product, [...] = exactly
+  // these. This lets the admin prune irrelevant add-ons per product instead of
+  // the previous all-or-nothing fallback that dumped every global add-on.
   const effectiveAddons: (ProductAddon | { id: string; name: string; price: number })[] =
-    (selectedProduct?.productAddons?.length ?? 0) > 0
-      ? selectedProduct!.productAddons!
-      : ADDONS.map((a) => ({ id: a.type, name: a.label, price: addonPrice }));
+    selectedProduct?.productAddons === undefined
+      ? ADDONS.map((a) => ({ id: a.type, name: a.label, price: addonPrice }))
+      : selectedProduct.productAddons;
   const [orderId] = useState(() => crypto.randomUUID());
   const [designLibrary, setDesignLibrary] = useState<DesignAsset[]>([]);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -223,6 +226,9 @@ function CustomizerContent() {
     setSelectedProduct(product);
     setVariantIndex(0);
     setPerViewDesign({});
+    // Single-design products hide the text tool — clear any text from a prior
+    // product so it can't leak into the cart while the input is hidden.
+    if (product?.singleDesign) setDesignText(undefined);
     const views = product ? getProductViews(product) : [];
     setDesignState(defaultStateForView(views, activeView));
   };
@@ -332,6 +338,7 @@ function CustomizerContent() {
               onDesignChange={setDesignState}
               designState={designState}
               onTextChange={setDesignText}
+              hideTextTool={!!selectedProduct?.singleDesign}
             />
           </div>
 
@@ -398,6 +405,11 @@ function CustomizerContent() {
             {/* Design Source */}
             <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
               <h2 className="font-bold font-display text-lg mb-4">Design</h2>
+              {selectedProduct?.singleDesign && (
+                <p className="text-xs text-primary/50 mb-3 -mt-2">
+                  This item takes a single design — pick one image.
+                </p>
+              )}
 
               <FileUpload
                 onUploadComplete={handleUploadComplete}
@@ -508,7 +520,8 @@ function CustomizerContent() {
               )}
             </div>
 
-            {/* Add-ons */}
+            {/* Add-ons — hidden entirely when the product offers none */}
+            {effectiveAddons.length > 0 && (
             <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
               <h2 className="font-bold font-display text-lg mb-4">Add-ons</h2>
               <div className="space-y-2">
@@ -529,6 +542,7 @@ function CustomizerContent() {
                 ))}
               </div>
             </div>
+            )}
 
             {/* Price & Add to Cart */}
             <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">

@@ -14,7 +14,9 @@ import Image from "next/image";
 import VariantMatrixEditor from "./variant-matrix-editor";
 import { db, storage, functions } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
-import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset } from "@/types";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { ADDON_PRICE } from "@/lib/constants";
+import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, AddonType, ProductAddon } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
 import AdminTooltip from "@/components/ui/admin-tooltip";
 
@@ -38,6 +40,14 @@ const EMPTY_PRODUCT: ManagedProduct = {
 const AVAILABLE_COLORS = [
   "black", "white", "gray", "navy", "blue", "red", "green", "sage",
   "cream", "heather", "charcoal", "maroon", "purple", "pink", "orange",
+];
+
+// The three site-standard add-ons. An unconfigured product (productAddons
+// undefined) shows these by default; the admin toggles/re-prices them per product.
+const STANDARD_ADDONS: { id: AddonType; name: string }[] = [
+  { id: "back_print", name: "Back Print" },
+  { id: "sleeve_print", name: "Sleeve Print" },
+  { id: "personalization", name: "Name/Number" },
 ];
 
 interface Props {
@@ -86,6 +96,29 @@ export default function ProductManager({ categories }: Props) {
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // ── Add-on editor ────────────────────────────────────────────────────────
+  const siteConfig = useSiteConfig();
+  const defaultAddonPrice = siteConfig.addon_price ?? ADDON_PRICE;
+  // Working list = the product's configured add-ons, or the 3 site-standard ones
+  // (as a starting template) when the product hasn't been configured yet. Any edit
+  // below materializes form.productAddons; leaving it untouched keeps it undefined
+  // so the storefront keeps showing site defaults.
+  const workingAddons: ProductAddon[] =
+    form.productAddons ?? STANDARD_ADDONS.map((a) => ({ id: a.id, name: a.name, price: defaultAddonPrice }));
+  const standardIds = new Set<string>(STANDARD_ADDONS.map((a) => a.id));
+  const standardAddons = workingAddons.filter((a) => standardIds.has(a.id));
+  const customAddons = workingAddons.filter((a) => !standardIds.has(a.id));
+
+  const setAddons = (next: ProductAddon[]) => updateField("productAddons", next);
+  const toggleStandardAddon = (id: AddonType, name: string) => {
+    const exists = workingAddons.some((a) => a.id === id);
+    setAddons(exists ? workingAddons.filter((a) => a.id !== id) : [...workingAddons, { id, name, price: defaultAddonPrice }]);
+  };
+  const updateAddon = (id: string, field: "name" | "price", value: string | number) =>
+    setAddons(workingAddons.map((a) => (a.id === id ? { ...a, [field]: value } : a)));
+  const addCustomAddon = () => setAddons([...workingAddons, { id: crypto.randomUUID(), name: "", price: 0 }]);
+  const removeAddon = (id: string) => setAddons(workingAddons.filter((a) => a.id !== id));
 
   const loadProducts = useCallback(async () => {
     try {
@@ -1043,36 +1076,74 @@ export default function ProductManager({ categories }: Props) {
             </div>
           </div>
 
-          {/* Product Add-ons */}
+          {/* Product Add-ons — modular per-product control */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <AdminTooltip content="Custom add-ons that customers can toggle on/off. Each add-on adjusts the final price." dismissKey="product-addons">
+              <AdminTooltip content="Add-ons customers can toggle in the customizer. Uncheck standard ones that don't apply to this product, edit any price, or add your own. Remove all to offer no add-ons." dismissKey="product-addons">
                 <label className="text-xs font-medium text-primary">
-                  Custom Add-ons ({(form.productAddons ?? []).length})
+                  Add-ons for this product ({workingAddons.length})
                 </label>
               </AdminTooltip>
+              {form.productAddons === undefined && (
+                <span className="text-[10px] text-primary/40 italic">using site defaults</span>
+              )}
             </div>
+
+            {/* Standard add-ons */}
+            <div className="space-y-1 mb-3">
+              {STANDARD_ADDONS.map((std) => {
+                const active = standardAddons.find((a) => a.id === std.id);
+                return (
+                  <div key={std.id} className="flex items-center gap-2 bg-warm-sand/30 rounded-lg px-3 py-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={!!active}
+                      onChange={() => toggleStandardAddon(std.id, std.name)}
+                      className="accent-gold w-4 h-4 shrink-0"
+                    />
+                    <span className="flex-1">{std.name}</span>
+                    {active && (
+                      <>
+                        <span className="text-primary/40">$</span>
+                        <input
+                          type="number" step="0.01" min="0" value={active.price}
+                          onChange={(e) => updateAddon(std.id, "price", parseFloat(e.target.value) || 0)}
+                          className="w-20 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm text-right focus:border-gold outline-none"
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Custom add-ons */}
             <div className="space-y-2">
-              {(form.productAddons ?? []).map((a) => (
+              {customAddons.map((a) => (
                 <div key={a.id} className="flex items-center gap-2 bg-warm-sand/30 rounded-lg px-3 py-2 text-sm">
                   <input type="text" value={a.name} placeholder="Add-on name"
-                    onChange={(e) => { const addons = (form.productAddons ?? []).map((x) => x.id === a.id ? { ...x, name: e.target.value } : x); updateField("productAddons", addons); }}
+                    onChange={(e) => updateAddon(a.id, "name", e.target.value)}
                     className="flex-1 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm focus:border-gold outline-none" />
-                  <span>$</span>
+                  <span className="text-primary/40">$</span>
                   <input type="number" step="0.01" min="0" value={a.price}
-                    onChange={(e) => { const addons = (form.productAddons ?? []).map((x) => x.id === a.id ? { ...x, price: parseFloat(e.target.value) || 0 } : x); updateField("productAddons", addons); }}
+                    onChange={(e) => updateAddon(a.id, "price", parseFloat(e.target.value) || 0)}
                     className="w-20 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm text-right focus:border-gold outline-none" />
-                  <button onClick={() => { const addons = (form.productAddons ?? []).filter((x) => x.id !== a.id); updateField("productAddons", addons.length > 0 ? addons : undefined); }}
-                    className="text-red-400 hover:text-red-600 text-xs">✕</button>
+                  <button onClick={() => removeAddon(a.id)} className="text-red-400 hover:text-red-600 text-xs">✕</button>
                 </div>
               ))}
               <button
-                onClick={() => updateField("productAddons", [...(form.productAddons ?? []), { id: crypto.randomUUID(), name: "", price: 0 }])}
+                onClick={addCustomAddon}
                 className="w-full py-2 border-2 border-dashed border-primary/20 rounded-xl text-xs text-primary/40 hover:border-primary/40 transition-colors"
               >
                 + Add Custom Add-on
               </button>
             </div>
+
+            {form.productAddons !== undefined && (
+              <button onClick={() => updateField("productAddons", undefined)} className="mt-2 text-xs text-primary/40 hover:text-gold transition-colors">
+                Reset to site defaults
+              </button>
+            )}
           </div>
 
           {/* Design Pinning — select which designs are printable on this product */}
@@ -1121,6 +1192,21 @@ export default function ProductManager({ categories }: Props) {
                 })}
               </div>
             )}
+          </div>
+
+          {/* Single-design constraint */}
+          <div>
+            <AdminTooltip content="When enabled, customers pick only ONE design for this item (a single image — the Name/Number text tool is hidden). Use for items that can only take one printed design." dismissKey="single-design">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!form.singleDesign}
+                  onChange={(e) => updateField("singleDesign", e.target.checked ? true : undefined)}
+                  className="accent-gold"
+                />
+                Limit to one design per item
+              </label>
+            </AdminTooltip>
           </div>
 
           {/* Images */}

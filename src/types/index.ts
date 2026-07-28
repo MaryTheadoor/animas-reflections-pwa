@@ -113,8 +113,15 @@ export interface ManagedProduct {
   baseProductId?: string;
   /** Per-product pre-loaded design assets (PNG graphics available for this product) */
   designAssets?: DesignAsset[];
-  /** Per-product customizable add-ons (admin-defined toggles that adjust price) */
+  /** Per-product customizable add-ons (admin-defined toggles that adjust price).
+   *  Three-state meaning:
+   *    undefined = not configured → storefront shows the site-standard add-ons
+   *    []        = explicitly none → storefront shows no add-ons
+   *    [...]     = exactly these add-ons */
   productAddons?: ProductAddon[];
+  /** When true, the customizer restricts the customer to a single design
+   *  (one image; the text tool is hidden). Only one design prints per item. */
+  singleDesign?: boolean;
 }
 
 export interface ManagedCategory {
