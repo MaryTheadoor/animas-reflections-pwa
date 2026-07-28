@@ -520,8 +520,8 @@ function CustomizerContent() {
               )}
             </div>
 
-            {/* Add-ons — hidden entirely when the product offers none */}
-            {effectiveAddons.length > 0 && (
+            {/* Add-ons — hidden when no product or when the product offers none */}
+            {selectedProduct && effectiveAddons.length > 0 && (
             <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
               <h2 className="font-bold font-display text-lg mb-4">Add-ons</h2>
               <div className="space-y-2">
