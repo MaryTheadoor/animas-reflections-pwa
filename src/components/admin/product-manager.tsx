@@ -94,7 +94,10 @@ export default function ProductManager({ categories }: Props) {
 
   // Matrix editor toggle
   const [useMatrixEditor, setUseMatrixEditor] = useState(false);
-  const descRef = useRef<HTMLTextAreaElement>(null);
+  const descRef = useRef<HTMLDivElement>(null);
+  // Tracks whether the contentEditable has focus so we don't clobber the user's
+  // cursor position when form.description syncs (e.g. loading a different product).
+  const descFocused = useRef(false);
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -164,12 +167,15 @@ export default function ProductManager({ categories }: Props) {
     }).catch(() => {});
   }, [loadProducts]);
 
-  // Auto-grow description textarea to fit content without scrolling
+  // Sync contentEditable div ← form.description only when the user isn't
+  // actively editing (preserves cursor position). ContentEditable grows
+  // naturally — no explicit height management needed.
   useEffect(() => {
     const el = descRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = el.scrollHeight + 4 + "px";
+    if (!el || descFocused.current) return;
+    if (el.innerHTML !== (form.description || "")) {
+      el.innerHTML = form.description || "";
+    }
   }, [form.description]);
 
   const resetForm = () => {
@@ -757,14 +763,30 @@ export default function ProductManager({ categories }: Props) {
             </div>
           </div>
 
-          {/* Description */}
+          {/* Description — rich text with formatting toolbar */}
           <div>
             <label className="block text-xs font-medium text-primary mb-1">Description</label>
-            <textarea
+            {/* Formatting toolbar */}
+            <div className="flex gap-1 mb-1">
+              <button type="button" onClick={() => { descRef.current?.focus(); document.execCommand("bold"); }}
+                className="px-2.5 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand font-bold transition-colors" title="Bold">B</button>
+              <button type="button" onClick={() => { descRef.current?.focus(); document.execCommand("italic"); }}
+                className="px-2.5 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand italic transition-colors" title="Italic">I</button>
+              <span className="w-px bg-primary/10 mx-0.5 self-stretch" />
+              <button type="button" onClick={() => { descRef.current?.focus(); document.execCommand("insertUnorderedList"); }}
+                className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors" title="Bullet list">• List</button>
+              <button type="button" onClick={() => { descRef.current?.focus(); document.execCommand("insertOrderedList"); }}
+                className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors" title="Numbered list">1. List</button>
+            </div>
+            <div
               ref={descRef}
-              value={form.description}
-              onChange={(e) => updateField("description", e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm resize-y"
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) => updateField("description", e.currentTarget.innerHTML)}
+              onFocus={() => { descFocused.current = true; }}
+              onBlur={(e) => { descFocused.current = false; updateField("description", e.currentTarget.innerHTML); }}
+              className="w-full min-h-[6rem] px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm bg-white"
+              style={{ whiteSpace: "pre-wrap" }}
             />
           </div>
 

@@ -31,7 +31,7 @@ export const NAVIGATION = {
     { label: "Search", href: "/search" },
     { label: "Fundraising", href: "/fundraising" },
     { label: "FAQ", href: "/faq" },
-    { label: "About Us", href: "/about" },
+    { label: "Our Story", href: "/about" },
     { label: "Contact", href: "/contact" },
     { label: "Terms of Sale", href: "/terms" },
   ],
@@ -213,20 +213,6 @@ export const BAND_MERCH = {
   ],
   cta: { label: "Start Your Band's Merch", href: "/contact" },
   ctaBrowse: { label: "Browse Band Merch", href: "/shop" },
-} as const;
-
-export const FEATURED_PRODUCTS = {
-  heading: "Featured Items",
-  subheading: "Discover our diverse collection now and find your perfect style",
-  items: [
-    { name: "Custom Designed T-shirt", priceDisplay: "$20.00" },
-    { name: "2 Inch Slaps", priceDisplay: "$0.54 – $0.77" },
-    { name: "Vapor Apparel Products", priceDisplay: "See it in Action" },
-    { name: "Personalized Chromaluxe HD Metal Panels", priceDisplay: "Contact Us For Affordable Pricing" },
-    { name: "Personalized Pet Products", priceDisplay: "Contact Us For Affordable Pricing" },
-    { name: "Personalized Auto Products", priceDisplay: "Contact Us For Affordable Pricing" },
-    { name: "ChromaLuxe Wood Panels", priceDisplay: "Contact Us For Affordable Pricing" },
-  ],
 } as const;
 
 export const CATEGORIES = {

@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import PlaceholderImage from "@/components/ui/placeholder-image";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
+import { sanitizeHTML } from "@/lib/html-utils";
 import { useCart } from "@/context/cart-context";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
@@ -156,11 +157,16 @@ function ProductContent() {
             {product.description && (() => {
               const stripped = product.description.replace(/<[^>]*>/g, " ");
               const isLong = stripped.length > 200;
+              const hasHTML = /<[a-z][\s\S]*?>/i.test(product.description);
               return (
                 <div className="mb-4">
-                  <p className={`text-sm text-primary/60 leading-relaxed ${!descExpanded && isLong ? "line-clamp-3" : ""}`}>
-                    {stripped}
-                  </p>
+                  <div className={`text-sm text-primary/60 leading-relaxed ${!descExpanded && isLong ? "line-clamp-3" : ""}`}>
+                    {descExpanded && hasHTML ? (
+                      <div dangerouslySetInnerHTML={{ __html: sanitizeHTML(product.description) }} className="rich-desc" />
+                    ) : (
+                      <p>{stripped}</p>
+                    )}
+                  </div>
                   {isLong && (
                     <button
                       onClick={() => setDescExpanded(!descExpanded)}
