@@ -347,6 +347,21 @@ export default function ProductManager({ categories }: Props) {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
+    // Clean up product images from Storage before removing the doc — prevents
+    // orphaned files from accumulating in the bucket over time.
+    const product = products.find((p) => p.id === id);
+    if (product) {
+      const urls = [...(product.images ?? [])];
+      if (product.mockupImages) {
+        urls.push(...Object.values(product.mockupImages).filter(Boolean) as string[]);
+      }
+      for (const url of urls) {
+        try {
+          const urlPath = decodeURIComponent(url.split("/o/")[1]?.split("?")[0] ?? "");
+          if (urlPath) await deleteObject(ref(storage, urlPath));
+        } catch { /* already deleted or external URL — ignore */ }
+      }
+    }
     await deleteDoc(doc(db, "products", id));
     loadProducts();
   };

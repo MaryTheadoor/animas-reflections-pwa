@@ -843,6 +843,7 @@ function OrdersSection() {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [trackingUrl, setTrackingUrl] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
   const [page, setPage] = useState(0);
   const PER_PAGE = 15;
@@ -860,9 +861,10 @@ function OrdersSection() {
     setSavingTracking(true);
     try {
       const callable = httpsCallable(functions, "updateOrderTracking");
-      await callable({ orderId: orderDocId || `order_${orderId}`, trackingUrl, trackingNumber: "" });
-      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, trackingUrl } : o));
+      await callable({ orderId: orderDocId || `order_${orderId}`, trackingUrl, trackingNumber });
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, trackingUrl, trackingNumber } : o));
       setTrackingUrl("");
+      setTrackingNumber("");
     } catch (e) {
       alert("Failed to save tracking: " + (e instanceof Error ? e.message : "Unknown"));
     } finally {
@@ -909,7 +911,7 @@ function OrdersSection() {
                   <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold text-xs hover:underline">Track</a>
                 ) : (
                   <button
-                    onClick={() => { setExpandedId(o.id); setTrackingUrl(""); }}
+                    onClick={() => { setExpandedId(o.id); setTrackingUrl(""); setTrackingNumber(""); }}
                     className="text-xs text-primary/30 hover:text-gold"
                   >
                     + Add
@@ -921,22 +923,31 @@ function OrdersSection() {
         </tbody>
       </table>
       {expandedId && (
-        <div className="mt-4 p-4 bg-warm-sand/30 rounded-xl flex items-center gap-2">
+        <div className="mt-4 p-4 bg-warm-sand/30 rounded-xl space-y-2">
           <input
             type="url"
             value={trackingUrl}
             onChange={(e) => setTrackingUrl(e.target.value)}
             placeholder="https://track.carrier.com/..."
-            className="flex-1 px-3 py-2 rounded-lg border border-primary/20 bg-white text-sm focus:border-gold outline-none"
+            className="w-full px-3 py-2 rounded-lg border border-primary/20 bg-white text-sm focus:border-gold outline-none"
           />
-          <button
-            onClick={() => saveTracking(expandedId, `order_${expandedId}`)}
-            disabled={savingTracking || !trackingUrl}
-            className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-semibold disabled:opacity-50"
-          >
-            {savingTracking ? "Saving..." : "Save"}
-          </button>
-          <button onClick={() => setExpandedId(null)} className="px-3 py-2 text-sm text-primary/40 hover:text-primary">Cancel</button>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder="Tracking number (e.g. 1Z999AA10123456784)"
+              className="flex-1 px-3 py-2 rounded-lg border border-primary/20 bg-white text-sm focus:border-gold outline-none"
+            />
+            <button
+              onClick={() => saveTracking(expandedId, `order_${expandedId}`)}
+              disabled={savingTracking || (!trackingUrl && !trackingNumber)}
+              className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+            >
+              {savingTracking ? "Saving..." : "Save"}
+            </button>
+            <button onClick={() => setExpandedId(null)} className="px-3 py-2 text-sm text-primary/40 hover:text-primary">Cancel</button>
+          </div>
         </div>
       )}
       </div>
