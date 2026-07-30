@@ -177,6 +177,38 @@ function ProductContent() {
                   )}
                 </div>
               );
+            })(            )}
+
+            {/* Product Attributes — shown only when configured */}
+            {(() => {
+              const attrs = product.attributes;
+              if (!attrs) return null;
+              const visible = attrs.backgroundColor || attrs.patchShape || attrs.borderStyle || (attrs.customFields?.length ?? 0) > 0;
+              if (!visible) return null;
+              return (
+                <div className="border-t border-warm-sand pt-3 mt-3 mb-4">
+                  <span className="text-[10px] font-medium text-primary/40 uppercase tracking-wider block mb-1.5">Specifications</span>
+                  <div className="flex flex-wrap gap-2 text-xs text-primary/60">
+                    {attrs.backgroundColor && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-warm-sand/30 rounded-full">
+                        <span className="w-3 h-3 rounded-full border border-primary/20 inline-block shrink-0" style={{ backgroundColor: attrs.backgroundColor }} />
+                        {attrs.backgroundColor}
+                      </span>
+                    )}
+                    {attrs.patchShape && (
+                      <span className="px-2 py-0.5 bg-warm-sand/30 rounded-full capitalize">{attrs.patchShape}</span>
+                    )}
+                    {attrs.borderStyle && attrs.borderStyle !== "none" && (
+                      <span className="px-2 py-0.5 bg-warm-sand/30 rounded-full capitalize">{attrs.borderStyle} border</span>
+                    )}
+                    {(attrs.customFields ?? []).map((f) => (
+                      <span key={f.key} className="px-2 py-0.5 bg-warm-sand/30 rounded-full">
+                        {f.key}: {f.value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
             })()}
 
             {/* Price */}

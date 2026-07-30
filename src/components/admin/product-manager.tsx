@@ -1261,6 +1261,91 @@ export default function ProductManager({ categories }: Props) {
             </AdminTooltip>
           </div>
 
+          {/* Product Attributes — optional visual specs (bg, shape, border, custom fields) */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <AdminTooltip content="Optional visual attributes shown on the product page. Leave fields empty to hide them. Custom key-value pairs can hold any extra spec (e.g. material, grommets)." dismissKey="product-attrs">
+                <label className="text-xs font-medium text-primary">Product Attributes (optional)</label>
+              </AdminTooltip>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[10px] font-medium text-primary/50 mb-1">Background Color</label>
+                <div className="flex gap-1 items-center">
+                  <input
+                    type="color"
+                    value={form.attributes?.backgroundColor ?? "#ffffff"}
+                    onChange={(e) => updateField("attributes", { ...form.attributes, backgroundColor: e.target.value })}
+                    className="w-8 h-8 rounded-lg border border-primary/20 cursor-pointer shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={form.attributes?.backgroundColor ?? ""}
+                    onChange={(e) => updateField("attributes", { ...form.attributes, backgroundColor: e.target.value || undefined })}
+                    placeholder="#1E4D4F"
+                    className="flex-1 px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs font-mono"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-medium text-primary/50 mb-1">Patch Shape</label>
+                <select
+                  value={form.attributes?.patchShape ?? ""}
+                  onChange={(e) => updateField("attributes", { ...form.attributes, patchShape: e.target.value || undefined })}
+                  className="w-full px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs"
+                >
+                  <option value="">—</option>
+                  <option value="circle">Circle</option>
+                  <option value="square">Square</option>
+                  <option value="rounded">Rounded</option>
+                  <option value="oval">Oval</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-medium text-primary/50 mb-1">Border Style</label>
+                <select
+                  value={form.attributes?.borderStyle ?? ""}
+                  onChange={(e) => updateField("attributes", { ...form.attributes, borderStyle: e.target.value || undefined })}
+                  className="w-full px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs"
+                >
+                  <option value="">—</option>
+                  <option value="none">None</option>
+                  <option value="solid">Solid</option>
+                  <option value="dashed">Dashed</option>
+                  <option value="dotted">Dotted</option>
+                </select>
+              </div>
+            </div>
+            {/* Custom key-value pairs */}
+            <div className="mt-3">
+              <label className="block text-[10px] font-medium text-primary/50 mb-1">Custom Fields</label>
+              <div className="space-y-1">
+                {(form.attributes?.customFields ?? []).map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input type="text" value={f.key} placeholder="Key" onChange={(e) => {
+                      const fields = [...(form.attributes?.customFields ?? [])];
+                      fields[i] = { ...fields[i], key: e.target.value };
+                      updateField("attributes", { ...form.attributes, customFields: fields });
+                    }} className="flex-1 px-2 py-1 rounded-lg border border-primary/20 focus:border-gold outline-none text-xs" />
+                    <input type="text" value={f.value} placeholder="Value" onChange={(e) => {
+                      const fields = [...(form.attributes?.customFields ?? [])];
+                      fields[i] = { ...fields[i], value: e.target.value };
+                      updateField("attributes", { ...form.attributes, customFields: fields });
+                    }} className="flex-1 px-2 py-1 rounded-lg border border-primary/20 focus:border-gold outline-none text-xs" />
+                    <button onClick={() => {
+                      const fields = (form.attributes?.customFields ?? []).filter((_, j) => j !== i);
+                      updateField("attributes", { ...form.attributes, customFields: fields.length > 0 ? fields : undefined });
+                    }} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
+                  </div>
+                ))}
+                <button onClick={() => {
+                  const fields = [...(form.attributes?.customFields ?? []), { key: "", value: "" }];
+                  updateField("attributes", { ...form.attributes, customFields: fields });
+                }} className="text-xs text-gold hover:text-gold-light transition-colors">+ Add field</button>
+              </div>
+            </div>
+          </div>
+
           {/* Images */}
           <div>
             <label className="block text-xs font-medium text-primary mb-2">

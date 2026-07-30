@@ -125,6 +125,9 @@ export interface ManagedProduct {
   /** When true, the customizer restricts the customer to a single design
    *  (one image; the text tool is hidden). Only one design prints per item. */
   singleDesign?: boolean;
+  /** Optional per-product visual attributes — background tint, design patch shape,
+   *  border style, and arbitrary custom key-value pairs. Shown on the product page. */
+  attributes?: ProductAttributes;
 }
 
 export interface ManagedCategory {
@@ -151,6 +154,18 @@ export interface ProductAddon {
   id: string;
   name: string;
   price: number;
+}
+
+/* ─── Modular Product Attributes ──────────────────────────────── */
+
+/** Optional per-product visual attributes shown on the product page and used
+ *  by the mockup generator. All fields are optional — a product without them
+ *  simply shows nothing extra. */
+export interface ProductAttributes {
+  backgroundColor?: string;
+  patchShape?: "circle" | "square" | "rounded" | "oval";
+  borderStyle?: "none" | "solid" | "dashed" | "dotted";
+  customFields?: { key: string; value: string }[];
 }
 
 /* ─── Cart & Order Types ────────────────────────────────────────── */
