@@ -69,6 +69,7 @@ function ProductContent() {
   const product = productId ? products.find((p) => p.id === productId) ?? null : null;
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [customText, setCustomText] = useState("");
+  const [descExpanded, setDescExpanded] = useState(false);
 
   const variant = product?.variants[selectedVariant];
 
@@ -152,11 +153,25 @@ function ProductContent() {
           {/* Product Details */}
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-display mb-2">{product.name}</h1>
-            {product.description && (
-              <p className="text-sm text-primary/60 mb-4 leading-relaxed line-clamp-4">
-                {product.description.replace(/<[^>]*>/g, " ").substring(0, 400)}
-              </p>
-            )}
+            {product.description && (() => {
+              const stripped = product.description.replace(/<[^>]*>/g, " ");
+              const isLong = stripped.length > 200;
+              return (
+                <div className="mb-4">
+                  <p className={`text-sm text-primary/60 leading-relaxed ${!descExpanded && isLong ? "line-clamp-3" : ""}`}>
+                    {stripped}
+                  </p>
+                  {isLong && (
+                    <button
+                      onClick={() => setDescExpanded(!descExpanded)}
+                      className="text-xs text-gold hover:text-gold-light mt-1 transition-colors"
+                    >
+                      {descExpanded ? "Show less" : "Read more"}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Price */}
             <p className="text-3xl font-bold text-gold mb-6">
@@ -224,6 +239,7 @@ function ProductContent() {
                     quantity: 1,
                     selected_view: "front",
                     design_text: showPersonalization ? (customText || undefined) : undefined,
+                    shipping_rate: product.shippingRate,
                     addons: [],
                   });
                 }}

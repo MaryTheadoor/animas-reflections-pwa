@@ -802,6 +802,22 @@ export default function ProductManager({ categories }: Props) {
             </div>
           </div>
 
+          {/* Per-product shipping override (optional — falls back to global tier) */}
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-primary">Shipping rate</label>
+            <span className="text-primary/40">$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.shippingRate ?? ""}
+              onChange={(e) => updateField("shippingRate", e.target.value === "" ? undefined : parseFloat(e.target.value) || 0)}
+              placeholder="Site default"
+              className="w-24 px-3 py-1.5 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+            />
+            <span className="text-[10px] text-primary/30">leave empty for site default</span>
+          </div>
+
           {/* Mockup Images */}
           <div>
             <label className="block text-xs font-medium text-primary mb-2">Mockup Images (blank product shots for customizer)</label>

@@ -111,6 +111,9 @@ export interface ManagedProduct {
   weightOz?: number;
   /** Parent product ID — groups same-design variants across garment types */
   baseProductId?: string;
+  /** Optional per-product flat shipping rate. When set, the cart uses the higher
+   *  of this rate or the global shipping tier. If unset, the global tier applies. */
+  shippingRate?: number;
   /** Per-product pre-loaded design assets (PNG graphics available for this product) */
   designAssets?: DesignAsset[];
   /** Per-product customizable add-ons (admin-defined toggles that adjust price).
@@ -191,6 +194,9 @@ export interface CartItem {
   design_scale?: number;
   design_rotation?: number;
   addons: CartAddon[];
+  /** Per-product flat shipping rate, if set on the product. Used by the cart to
+   *  override the global shipping tier for this item. */
+  shipping_rate?: number;
 }
 
 /** Payment-provider-agnostic checkout line item */

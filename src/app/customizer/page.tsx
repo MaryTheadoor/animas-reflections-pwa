@@ -268,6 +268,7 @@ function CustomizerContent() {
       design_y: designState.yPercent,
       design_scale: designState.scale,
       design_rotation: designState.rotation,
+      shipping_rate: selectedProduct?.shippingRate,
       addons: Array.from(selectedAddons).map((id) => {
         const addon = effectiveAddons.find((a) => a.id === id);
         return {

@@ -164,14 +164,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     0
   );
 
-  // Shipping auto-detection: all-sticker cart = envelope rate; anything else = parcel rate.
-  // Free shipping applies when subtotal hits the threshold, regardless of item types.
+  // Shipping: free above threshold. Otherwise the highest applicable rate wins —
+  // per-product shippingRate (when set on a product) or the global sticker/apparel tier.
   const shipping =
     subtotal >= freeThreshold
       ? 0
-      : cart.items.length > 0 && cart.items.every((i) => i.productType === "sticker")
-        ? shippingTierStickers
-        : shippingTierApparel;
+      : (() => {
+          const perProductMax = cart.items.reduce((max, i) => Math.max(max, i.shipping_rate ?? 0), 0);
+          const tierRate =
+            cart.items.length > 0 && cart.items.every((i) => i.productType === "sticker")
+              ? shippingTierStickers
+              : shippingTierApparel;
+          return Math.max(perProductMax, tierRate);
+        })();
 
   const total = subtotal + addonsTotal + shipping;
   const itemCount = cart.items.reduce((sum, i) => sum + i.quantity, 0);
