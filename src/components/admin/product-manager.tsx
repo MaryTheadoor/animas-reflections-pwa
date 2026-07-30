@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   collection,
   getDocs,
@@ -38,8 +38,8 @@ const EMPTY_PRODUCT: ManagedProduct = {
 };
 
 const AVAILABLE_COLORS = [
-  "black", "white", "gray", "navy", "blue", "red", "green", "sage",
-  "cream", "heather", "charcoal", "maroon", "purple", "pink", "orange",
+  "black", "white", "gray", "navy", "royal blue", "red",
+  "forest green", "cream", "charcoal", "maroon",
 ];
 
 // The three site-standard add-ons. An unconfigured product (productAddons
@@ -67,6 +67,7 @@ export default function ProductManager({ categories }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [newTag, setNewTag] = useState("");
   const [newColor, setNewColor] = useState("");
+  const [newHex, setNewHex] = useState("#1E4D4F");
   const [newVariant, setNewVariant] = useState({ name: "", price: "", sku: "" });
 
   // Inline category creation
@@ -93,6 +94,7 @@ export default function ProductManager({ categories }: Props) {
 
   // Matrix editor toggle
   const [useMatrixEditor, setUseMatrixEditor] = useState(false);
+  const descRef = useRef<HTMLTextAreaElement>(null);
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -162,6 +164,14 @@ export default function ProductManager({ categories }: Props) {
     }).catch(() => {});
   }, [loadProducts]);
 
+  // Auto-grow description textarea to fit content without scrolling
+  useEffect(() => {
+    const el = descRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + 4 + "px";
+  }, [form.description]);
+
   const resetForm = () => {
     setForm(EMPTY_PRODUCT);
     setEditing(null);
@@ -190,11 +200,12 @@ export default function ProductManager({ categories }: Props) {
   };
 
   const addCustomColor = () => {
-    const color = newColor.trim().toLowerCase();
-    if (color && !form.colors.includes(color)) {
-      setForm((prev) => ({ ...prev, colors: [...prev.colors, color] }));
-      setNewColor("");
+    const value = newColor.trim().toLowerCase() || newHex.toLowerCase();
+    if (value && !form.colors.includes(value)) {
+      setForm((prev) => ({ ...prev, colors: [...prev.colors, value] }));
     }
+    setNewColor("");
+    setNewHex("#1E4D4F");
   };
 
   const removeTag = (tag: string) => {
@@ -750,7 +761,7 @@ export default function ProductManager({ categories }: Props) {
           <div>
             <label className="block text-xs font-medium text-primary mb-1">Description</label>
             <textarea
-              rows={3}
+              ref={descRef}
               value={form.description}
               onChange={(e) => updateField("description", e.target.value)}
               className="w-full px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm resize-y"
@@ -998,39 +1009,42 @@ export default function ProductManager({ categories }: Props) {
                 </button>
               ))}
             </div>
-            <div className="flex gap-2 items-center">
-              <div className="flex items-center gap-1">
+            {/* Custom color — prominent picker + hex input + name */}
+            <div className="mt-3 pt-3 border-t border-primary/10">
+              <label className="text-xs font-medium text-primary block mb-2">Add Custom Color</label>
+              <div className="flex gap-2 items-center flex-wrap">
+                <div className="flex items-center gap-1">
+                  <input
+                    type="color"
+                    value={newHex}
+                    onChange={(e) => setNewHex(e.target.value)}
+                    className="w-9 h-9 rounded-lg border-2 border-primary/20 cursor-pointer hover:border-gold transition-colors shrink-0"
+                    title="Pick color"
+                  />
+                  <input
+                    type="text"
+                    value={newHex}
+                    onChange={(e) => setNewHex(e.target.value)}
+                    placeholder="#1E4D4F"
+                    className="w-24 px-2 py-2 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs font-mono"
+                  />
+                </div>
                 <input
-                  type="color"
-                  id="new-color-picker"
-                  className="w-7 h-7 rounded border border-primary/20 cursor-pointer"
-                  onChange={(e) => {
-                    const hex = e.target.value.toLowerCase();
-                    if (hex && !form.colors.includes(hex)) {
-                      setForm((prev) => ({ ...prev, colors: [...prev.colors, hex] }));
-                    }
-                  }}
-                  title="Pick a custom color"
+                  type="text"
+                  value={newColor}
+                  onChange={(e) => setNewColor(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomColor(); } }}
+                  placeholder="Color name (e.g. neon green)"
+                  className="flex-1 min-w-[120px] px-3 py-2 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
                 />
-                <label htmlFor="new-color-picker" className="text-[10px] text-primary/40 cursor-pointer">Pick</label>
+                <button
+                  onClick={addCustomColor}
+                  disabled={!newColor.trim()}
+                  className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-medium hover:bg-gold-light transition-colors disabled:opacity-50 shrink-0"
+                >
+                  Add
+                </button>
               </div>
-              <input
-                type="text"
-                value={newColor}
-                onChange={(e) => setNewColor(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); addCustomColor(); }
-                }}
-                placeholder="Add custom color (e.g. neon green)"
-                className="flex-1 px-3 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs"
-              />
-              <button
-                onClick={addCustomColor}
-                disabled={!newColor.trim()}
-                className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 disabled:opacity-50"
-              >
-                Add
-              </button>
             </div>
             {form.colors.filter((c) => !AVAILABLE_COLORS.includes(c)).length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">

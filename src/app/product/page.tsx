@@ -101,6 +101,9 @@ function ProductContent() {
 
   const price = variant?.price ?? 0;
   const imageUrl = getProductImageUrl(product);
+  // Gated by productAddons so the Name/Number field only shows when the
+  // personalization add-on is enabled per product (undefined = site defaults).
+  const showPersonalization = product.productAddons === undefined || product.productAddons.some((a) => a.id === "personalization");
 
   return (
     <PageLayout>
@@ -138,8 +141,8 @@ function ProductContent() {
             ) : (
               <PlaceholderImage />
             )}
-            {/* Text overlay */}
-            {customText && (
+            {/* Text overlay — only when personalization is on for this product */}
+            {showPersonalization && customText && (
               <div className="absolute top-[30%] left-1/2 -translate-x-1/2 text-xl font-bold text-primary/60 pointer-events-none">
                 {customText}
               </div>
@@ -188,7 +191,8 @@ function ProductContent() {
               </div>
             )}
 
-            {/* Custom Text */}
+            {/* Custom Text — gated by personalization add-on presence */}
+            {showPersonalization && (
             <div className="mb-6">
               <label className="text-xs font-medium text-primary block mb-1">
                 Name / Number (optional)
@@ -201,6 +205,7 @@ function ProductContent() {
                 className="w-full max-w-xs px-4 py-2 rounded-xl border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
               />
             </div>
+            )}
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
@@ -218,7 +223,7 @@ function ProductContent() {
                     productType: product.productType,
                     quantity: 1,
                     selected_view: "front",
-                    design_text: customText || undefined,
+                    design_text: showPersonalization ? (customText || undefined) : undefined,
                     addons: [],
                   });
                 }}

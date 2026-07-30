@@ -422,7 +422,7 @@ function CustomizerContent() {
                   onClick={() => setLibraryOpen(!libraryOpen)}
                   className="w-full px-4 py-2.5 border-2 border-dashed border-primary/20 rounded-xl text-sm text-primary/50 hover:border-primary/40 hover:text-primary transition-colors"
                 >
-                  {libraryOpen ? "Close Library" : "Browse Design Library"}
+                  {libraryOpen ? "Close Library" : "Choose Design"}
                 </button>
 
                 {libraryOpen && (
