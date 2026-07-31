@@ -131,6 +131,14 @@ export interface ManagedProduct {
   /** Optional per-product visual attributes — background tint, design patch shape,
    *  border style, and arbitrary custom key-value pairs. Shown on the product page. */
   attributes?: ProductAttributes;
+  /** Per-color mockup tint (color name → hex). Applied as a blend overlay on the
+   *  single base mockup so every product can preview color variants without needing
+   *  a photo per color. Upgrade path: mockupImagesByColor replaces the tint with a
+   *  real per-color photo when available. */
+  colorTints?: Record<string, string>;
+  /** Optional per-color mockup photos. When a color has a real photo it takes
+   *  precedence over the colorTints overlay. */
+  mockupImagesByColor?: Record<string, { front?: string; back?: string; sleeve?: string; sideL?: string; sideR?: string }>;
 }
 
 export interface ManagedCategory {
@@ -204,6 +212,8 @@ export interface CartItem {
   productType: ProductType;
   quantity: number;
   selected_view: "front" | "back" | "sleeve" | "sideL" | "sideR";
+  /** Selected garment color (for color-variant mockups and order fulfillment) */
+  selected_color?: string;
   design_url?: string;
   design_text?: string;
   /** Customizer design position/scale/rotation — preserved for order fulfillment */

@@ -32,6 +32,9 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                   {item.variant_name && (
                     <p className="text-xs text-primary/40">{item.variant_name}</p>
                   )}
+                  {item.selected_color && (
+                    <p className="text-xs text-primary/40 capitalize">Color: {item.selected_color}</p>
+                  )}
                   <p className="text-xs text-primary/50">Qty: {item.quantity}</p>
                   {item.addons.map((a) => (
                     <span key={a.type} className="inline-block text-xs bg-plum/10 text-plum rounded-full px-2 py-0.5 mt-1 mr-1">

@@ -16,6 +16,9 @@ export interface DesignState {
 
 interface CustomizerProps {
   baseImage: string;
+  /** Optional garment color tint applied as a blend overlay on the base mockup
+   *  (color-variant preview without needing a photo per color). */
+  tintColor?: string;
   viewName: string;
   views: { key: string; label: string; baseImage: string; printZone: PrintZone }[];
   activeView: string;
@@ -54,6 +57,7 @@ export function defaultDesignPosition(zone: PrintZone): Pick<DesignState, "xPerc
 
 export default function Customizer({
   baseImage,
+  tintColor,
   viewName,
   views,
   activeView,
@@ -297,6 +301,16 @@ export default function Customizer({
           className="w-full h-auto pointer-events-none"
           draggable={false}
         />
+
+        {/* Garment color tint overlay — multiply blend tints the mockup. Works
+            best on light/transparent-base mockups (tints the garment, background
+            stays neutral). Ignored when a real per-color photo is the base image. */}
+        {tintColor && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ backgroundColor: tintColor, mixBlendMode: "multiply" }}
+          />
+        )}
 
         {/* Print Zone Guide — spotlight dims everything outside the printable area */}
         {printZone && (

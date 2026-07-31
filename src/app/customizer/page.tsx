@@ -140,6 +140,7 @@ function CustomizerContent() {
 
   const [selectedProduct, setSelectedProduct] = useState<ManagedProduct | null>(null);
   const [variantIndex, setVariantIndex] = useState(0);
+  const [selectedColor, setSelectedColor] = useState<string>();
   const [activeView, setActiveView] = useState("front");
   const [designUrl, setDesignUrl] = useState<string>();
   const [designText, setDesignText] = useState<string>();
@@ -226,6 +227,8 @@ function CustomizerContent() {
     setSelectedProduct(product);
     setVariantIndex(0);
     setPerViewDesign({});
+    // Default to the product's first color so the mockup tints immediately.
+    setSelectedColor(product?.colors?.[0]);
     // Single-design products hide the text tool — clear any text from a prior
     // product so it can't leak into the cart while the input is hidden.
     if (product?.singleDesign) setDesignText(undefined);
@@ -262,6 +265,7 @@ function CustomizerContent() {
       productType: selectedProduct?.productType ?? "other",
       quantity: 1,
       selected_view: activeView as "front" | "back" | "sleeve" | "sideL" | "sideR",
+      selected_color: selectedColor,
       design_url: designUrl,
       design_text: designText,
       design_x: designState.xPercent,
@@ -283,6 +287,13 @@ function CustomizerContent() {
 
   const productViews = getProductViews(selectedProduct);
   const currentView = productViews.find((v) => v.key === activeView) ?? productViews[0];
+  // Color-variant mockup: prefer a real per-color photo if one exists, otherwise
+  // tint the default base image with the selected color's overlay.
+  const colorMockup = selectedColor
+    ? selectedProduct?.mockupImagesByColor?.[selectedColor]?.[activeView as "front" | "back" | "sleeve" | "sideL" | "sideR"]
+    : undefined;
+  const effectiveBaseImage = colorMockup ?? currentView.baseImage;
+  const tintColor = !colorMockup && selectedColor ? selectedProduct?.colorTints?.[selectedColor] : undefined;
   const basePrice = getProductPrice(selectedProduct, variantIndex);
   const addonsCost = Array.from(selectedAddons).reduce((sum, id) => {
     const addon = effectiveAddons.find((a) => a.id === id);
@@ -325,7 +336,8 @@ function CustomizerContent() {
           {/* Customizer Canvas */}
           <div className="lg:col-span-2">
             <Customizer
-              baseImage={currentView.baseImage}
+              baseImage={effectiveBaseImage}
+              tintColor={tintColor}
               viewName={currentView.label}
               views={productViews}
               activeView={activeView}
@@ -385,6 +397,38 @@ function CustomizerContent() {
                           {v.name || `Option ${i + 1}`}
                         </button>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Color Picker — tints the mockup to the chosen garment color */}
+                  {selectedProduct && (selectedProduct.colors ?? []).length > 0 && (
+                    <div className="mt-3">
+                      <span className="text-xs font-medium text-primary block mb-1">Color</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(selectedProduct.colors ?? []).map((color) => {
+                          const tint = selectedProduct.colorTints?.[color];
+                          const isActive = selectedColor === color;
+                          return (
+                            <button
+                              key={color}
+                              onClick={() => setSelectedColor(color)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium capitalize transition-all ${
+                                isActive
+                                  ? "bg-primary text-white"
+                                  : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                              }`}
+                            >
+                              {tint && (
+                                <span
+                                  className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0"
+                                  style={{ backgroundColor: tint }}
+                                />
+                              )}
+                              {color}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 

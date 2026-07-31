@@ -125,6 +125,15 @@ export default function ProductManager({ categories }: Props) {
   const addCustomAddon = () => setAddons([...workingAddons, { id: crypto.randomUUID(), name: "", price: 0 }]);
   const removeAddon = (id: string) => setAddons(workingAddons.filter((a) => a.id !== id));
 
+  // ── Color tint helpers (for mockup color preview) ────────────────────────
+  const setColorTint = (color: string, hex: string) =>
+    updateField("colorTints", { ...(form.colorTints ?? {}), [color]: hex });
+  const clearColorTint = (color: string) => {
+    const tints = { ...(form.colorTints ?? {}) };
+    delete tints[color];
+    updateField("colorTints", Object.keys(tints).length > 0 ? tints : undefined);
+  };
+
   const loadProducts = useCallback(async () => {
     try {
       const snap = await getDocs(collection(db, "products"));
@@ -1121,6 +1130,60 @@ export default function ProductManager({ categories }: Props) {
               </div>
             )}
           </div>
+
+          {/* Color Tints — pick the tint that best matches each garment color */}
+          {form.colors.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <AdminTooltip content="Pick the tint that best matches each garment color. This tints the single base mockup in the customizer so customers see the product in their chosen color. Use a light/white base mockup for the most accurate result." dismissKey="color-tints">
+                  <label className="text-xs font-medium text-primary">Color Tints (mockup preview)</label>
+                </AdminTooltip>
+              </div>
+              <div className="space-y-2">
+                {form.colors.map((color) => {
+                  const tint = form.colorTints?.[color] ?? "";
+                  return (
+                    <div key={color} className="flex items-center gap-3 bg-warm-sand/30 rounded-lg px-3 py-2">
+                      <span className="w-20 capitalize text-xs font-medium shrink-0">{color}</span>
+                      <input
+                        type="color"
+                        value={tint || "#cccccc"}
+                        onChange={(e) => setColorTint(color, e.target.value)}
+                        className="w-9 h-9 rounded-lg border-2 border-primary/20 cursor-pointer hover:border-gold transition-colors shrink-0"
+                        title={`Tint for ${color}`}
+                      />
+                      <input
+                        type="text"
+                        value={tint}
+                        onChange={(e) => setColorTint(color, e.target.value)}
+                        placeholder="#000000"
+                        className="w-24 px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs font-mono"
+                      />
+                      {/* Live tint preview on the front mockup */}
+                      <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-warm-sand shrink-0 border border-primary/10 ml-auto">
+                        {form.mockupImages?.front ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={form.mockupImages.front} alt={color} className="w-full h-full object-cover" />
+                            {tint && (
+                              <div className="absolute inset-0" style={{ backgroundColor: tint, mixBlendMode: "multiply" }} />
+                            )}
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[9px] text-primary/30 text-center px-1">
+                            set front mockup
+                          </div>
+                        )}
+                      </div>
+                      {tint && (
+                        <button onClick={() => clearColorTint(color)} className="text-red-400 hover:text-red-600 text-xs shrink-0" title="Clear tint">✕</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Tags */}
           <div>
