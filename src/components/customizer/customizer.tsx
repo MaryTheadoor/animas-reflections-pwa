@@ -298,18 +298,21 @@ export default function Customizer({
           draggable={false}
         />
 
-        {/* Print Zone Guide (always visible) */}
+        {/* Print Zone Guide — spotlight dims everything outside the printable area */}
         {printZone && (
           <div
-            className="absolute border-2 border-dashed border-gold/30 rounded-lg pointer-events-none"
+            className="absolute border-2 border-dashed border-gold/60 rounded-lg pointer-events-none"
             style={{
               left: `${printZone.x_percent}%`,
               top: `${printZone.y_percent}%`,
               width: `${printZone.width_percent}%`,
               height: `${printZone.height_percent}%`,
+              // Spotlight: huge outer shadow dims everything outside the zone so the
+              // printable area stands out clearly against the rest of the garment.
+              boxShadow: "0 0 0 9999px rgba(0,0,0,0.18)",
             }}
           >
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-gold/50 whitespace-nowrap">
+            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-gold whitespace-nowrap bg-cream/90 px-1.5 py-0.5 rounded-full">
               Print Area
             </span>
           </div>
@@ -328,7 +331,7 @@ export default function Customizer({
             onPointerUp={handlePointerUp}
           >
             {/* Design content */}
-            <div className="relative w-full h-full overflow-hidden rounded-sm">
+            <div className="relative w-full h-full overflow-hidden rounded-sm ring-1 ring-white/60 ring-offset-1">
               {designUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
