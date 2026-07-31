@@ -113,6 +113,7 @@ export default function CheckoutPage() {
         name: `${item.name} — ${item.variant_name}`,
         price: item.base_price,
         quantity: item.quantity,
+        designUrl: item.design_url,
         note: [
           item.design_url ? `Design: ${item.design_url}` : "",
           item.design_text ? `Text: ${item.design_text}` : "",

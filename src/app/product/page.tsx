@@ -285,12 +285,14 @@ function ProductContent() {
               >
                 Add to Cart — ${price.toFixed(2)}
               </button>
-              <Link
-                href={`/customizer?product=${encodeURIComponent(product.id)}`}
-                className="flex-1 px-6 py-3 rounded-2xl bg-primary/10 text-primary font-semibold hover:bg-primary/20 transition-colors text-center btn-tactile"
-              >
-                Customize This
-              </Link>
+              {product.customizable !== false && (
+                <Link
+                  href={`/customizer?product=${encodeURIComponent(product.id)}`}
+                  className="flex-1 px-6 py-3 rounded-2xl bg-primary/10 text-primary font-semibold hover:bg-primary/20 transition-colors text-center btn-tactile"
+                >
+                  Customize This
+                </Link>
+              )}
             </div>
           </div>
         </div>

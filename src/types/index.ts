@@ -125,6 +125,9 @@ export interface ManagedProduct {
   /** When true, the customizer restricts the customer to a single design
    *  (one image; the text tool is hidden). Only one design prints per item. */
   singleDesign?: boolean;
+  /** Whether this product can be customized (shows the "Customize This" button on
+   *  the product page). Defaults to true for backward compatibility. */
+  customizable?: boolean;
   /** Optional per-product visual attributes — background tint, design patch shape,
    *  border style, and arbitrary custom key-value pairs. Shown on the product page. */
   attributes?: ProductAttributes;

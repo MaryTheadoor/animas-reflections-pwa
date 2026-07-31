@@ -838,10 +838,11 @@ function DashboardContent() {
 }
 
 function OrdersSection() {
-  const [orders, setOrders] = useState<{ id: string; squareOrderId?: string; state: string; total: number; createdAt: string; customerEmail?: string; customerName?: string; trackingUrl?: string; trackingNumber?: string }[]>([]);
+  const [orders, setOrders] = useState<{ id: string; squareOrderId?: string; state: string; total: number; createdAt: string; customerEmail?: string; customerName?: string; trackingUrl?: string; trackingNumber?: string; items?: { name: string; quantity: number; designUrl?: string }[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [designOpenId, setDesignOpenId] = useState<string | null>(null);
   const [trackingUrl, setTrackingUrl] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [savingTracking, setSavingTracking] = useState(false);
@@ -849,8 +850,21 @@ function OrdersSection() {
   const PER_PAGE = 15;
 
   const loadOrders = useCallback(() => {
-    httpsCallable(functions, "fetchRecentOrders")({})
-      .then((r) => setOrders((r.data as { orders: typeof orders }).orders ?? []))
+    Promise.all([
+      httpsCallable(functions, "fetchRecentOrders")({}),
+      getDocs(collection(db, "orders")),
+    ])
+      .then(([r, fsSnap]) => {
+        const squareOrders = (r.data as { orders: typeof orders }).orders ?? [];
+        // Build a lookup of Firestore mirror orders by Square order ID to merge
+        // rich data (design files, customer info, tracking) into the view.
+        const fsMap = new Map<string, typeof orders[0]>();
+        fsSnap.forEach((d) => {
+          const data = d.data() as { squareOrderId?: string; items?: { name: string; quantity: number; designUrl?: string }[] };
+          if (data.squareOrderId) fsMap.set(data.squareOrderId, data as typeof orders[0]);
+        });
+        setOrders(squareOrders.map((o) => ({ ...o, ...(fsMap.get(o.id as string) ?? {}) })));
+      })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -896,30 +910,66 @@ function OrdersSection() {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead><tr className="text-left text-primary/50 border-b border-warm-sand">
-          <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Customer</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Date</th><th className="pb-2 font-medium">Tracking</th>
+          <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Customer</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Designs</th><th className="pb-2 font-medium">Date</th><th className="pb-2 font-medium">Tracking</th>
         </tr></thead>
         <tbody>
-          {pagedOrders.map((o) => (
-            <tr key={o.id} className="border-b border-warm-sand/30">
-              <td className="py-2 font-mono text-xs text-primary/60">{o.id?.slice(0, 12)}</td>
-              <td className="py-2 text-xs text-primary/60">{o.customerEmail || o.customerName || "-"}</td>
-              <td className="py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${o.state === "COMPLETED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{o.state}</span></td>
-              <td className="py-2 text-right font-mono">${o.total.toFixed(2)}</td>
-              <td className="py-2 text-primary/50">{new Date(o.createdAt as string).toLocaleDateString()}</td>
-              <td className="py-2">
-                {o.trackingUrl ? (
-                  <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold text-xs hover:underline">Track</a>
-                ) : (
-                  <button
-                    onClick={() => { setExpandedId(o.id); setTrackingUrl(""); setTrackingNumber(""); }}
-                    className="text-xs text-primary/30 hover:text-gold"
-                  >
-                    + Add
-                  </button>
+          {pagedOrders.map((o) => {
+            const designCount = (o.items ?? []).filter((i) => i.designUrl).length;
+            const isOpen = designOpenId === o.id;
+            return (
+              <>
+                <tr key={o.id} className="border-b border-warm-sand/30">
+                  <td className="py-2 font-mono text-xs text-primary/60">{o.id?.slice(0, 12)}</td>
+                  <td className="py-2 text-xs text-primary/60">{o.customerEmail || o.customerName || "-"}</td>
+                  <td className="py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${o.state === "COMPLETED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{o.state}</span></td>
+                  <td className="py-2 text-right font-mono">${o.total.toFixed(2)}</td>
+                  <td className="py-2 text-xs">
+                    {designCount > 0 ? (
+                      <button
+                        onClick={() => setDesignOpenId(isOpen ? null : o.id)}
+                        className="text-gold hover:underline font-medium"
+                      >
+                        {isOpen ? "▾" : "▸"} {designCount} file{designCount > 1 ? "s" : ""}
+                      </button>
+                    ) : (
+                      <span className="text-primary/30">—</span>
+                    )}
+                  </td>
+                  <td className="py-2 text-primary/50">{new Date(o.createdAt as string).toLocaleDateString()}</td>
+                  <td className="py-2">
+                    {o.trackingUrl ? (
+                      <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold text-xs hover:underline">Track</a>
+                    ) : (
+                      <button
+                        onClick={() => { setExpandedId(o.id); setTrackingUrl(""); setTrackingNumber(""); }}
+                        className="text-xs text-primary/30 hover:text-gold"
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </td>
+                </tr>
+                {isOpen && designCount > 0 && (
+                  <tr className="bg-warm-sand/10">
+                    <td colSpan={7} className="py-3 px-4">
+                      <p className="text-xs font-medium text-primary/50 mb-2">Design files for printing:</p>
+                      <div className="space-y-1">
+                        {(o.items ?? []).filter((i) => i.designUrl).map((item, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <span className="text-primary/40">{item.name} × {item.quantity}</span>
+                            <a href={item.designUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-gold hover:underline truncate max-w-xs">
+                              {item.designUrl?.split("/").pop()?.split("?")[0] ?? "View design"} ↗
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
                 )}
-              </td>
-            </tr>
-          ))}
+              </>
+            );
+          })}
         </tbody>
       </table>
       {expandedId && (

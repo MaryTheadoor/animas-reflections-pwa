@@ -217,6 +217,9 @@ interface OrderLineItem {
   quantity?: number;
   modifiers?: { squareModifierId?: string; catalogObjectId?: string }[];
   note?: string;
+  /** Customer-uploaded design image URL (Firebase Storage). Needed by the admin
+   *  for printing — must be persisted in the Firestore order. */
+  designUrl?: string;
 }
 
 interface CreateOrderRequest {
@@ -381,9 +384,12 @@ export const createSquareOrderAndPay = onCall(
           : "";
 
         const orderItems = data.lineItems.map((li) => ({
-          name: li.note?.split(" | ")[0]?.replace("Customer: ", "") || "Item",
+          name: li.name || li.note?.split(" | ")[0]?.replace("Customer: ", "") || "Item",
           quantity: parseInt(String(li.quantity ?? 1), 10),
-          price: 0, // Price comes from Square
+          price: li.price ?? 0,
+          // Persist customer design file so the admin can download/print it
+          designUrl: li.designUrl,
+          note: li.note,
         }));
 
         const firestoreOrder = {

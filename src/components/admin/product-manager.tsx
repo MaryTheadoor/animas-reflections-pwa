@@ -810,6 +810,15 @@ export default function ProductManager({ categories }: Props) {
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
+                checked={form.customizable !== false}
+                onChange={(e) => updateField("customizable", e.target.checked ? undefined : false)}
+                className="accent-gold"
+              />
+              Customizable
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
                 checked={form.active}
                 onChange={(e) => updateField("active", e.target.checked)}
                 className="accent-gold"
