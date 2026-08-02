@@ -40,6 +40,23 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.variants.length} variants
           </span>
         )}
+        {/* Stock indicator — must live inside the relative image container so
+            the absolute positioning overlays the image, not the page. */}
+        {(() => {
+          const totalStock = product.variants?.reduce((sum, v) => sum + (v.inventory ?? 0), 0) ?? 0;
+          const hasInventory = product.variants?.some((v) => v.inventory !== undefined);
+          if (!hasInventory) return null;
+          if (totalStock === 0) return (
+            <span className="absolute top-3 right-3 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Out of stock</span>
+          );
+          if (totalStock <= 3) return (
+            <span className="absolute top-3 right-3 bg-gold text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Only {totalStock} left</span>
+          );
+          if (totalStock <= 10) return (
+            <span className="absolute top-3 right-3 bg-teal/80 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">{totalStock} in stock</span>
+          );
+          return null;
+        })()}
       </div>
 
       <h3 className="font-bold text-primary text-sm leading-snug line-clamp-2 mb-1 group-hover:text-gold transition-colors">
@@ -64,22 +81,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           View Product
         </span>
       </div>
-      {/* Stock indicator */}
-      {(() => {
-        const totalStock = product.variants?.reduce((sum, v) => sum + (v.inventory ?? 0), 0) ?? 0;
-        const hasInventory = product.variants?.some((v) => v.inventory !== undefined);
-        if (!hasInventory) return null;
-        if (totalStock === 0) return (
-          <span className="absolute top-3 right-3 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Out of stock</span>
-        );
-        if (totalStock <= 3) return (
-          <span className="absolute top-3 right-3 bg-gold text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Only {totalStock} left</span>
-        );
-        if (totalStock <= 10) return (
-          <span className="absolute top-3 right-3 bg-teal/80 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">{totalStock} in stock</span>
-        );
-        return null;
-      })()}
     </Link>
   );
 }

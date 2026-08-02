@@ -5,6 +5,7 @@ import { useCatalog } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
+import { PRODUCT_TYPE_LABELS } from "@/types";
 
 type SortMode = "default" | "price-asc" | "price-desc" | "name-asc";
 type BrowseMode = "design" | "type";
@@ -19,13 +20,18 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
 export default function ShopPage() {
   const { products, categories, loading, error, refresh } = useCatalog();
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [activeType, setActiveType] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("default");
   const [browseMode, setBrowseMode] = useState<BrowseMode>("design");
 
   const filteredProducts = useMemo(() => {
     let result = products;
-    if (activeCategory !== "All") {
+    if (browseMode === "type" && activeType !== "All") {
+      // By Product Type: filter on productType (apparel, sticker, sign, ...)
+      result = result.filter((p) => p.productType === activeType);
+    } else if (browseMode === "design" && activeCategory !== "All") {
+      // By Design / Brand: filter on the design category
       const catId = categories.find((c) => c.id === activeCategory)?.id;
       if (catId) {
         result = result.filter((p) => p.categoryId === catId);
@@ -62,12 +68,16 @@ export default function ShopPage() {
       result = [...result].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     }
     return result;
-  }, [products, activeCategory, search, sortMode, categories]);
+  }, [products, browseMode, activeCategory, activeType, search, sortMode, categories]);
 
   const activeLabel =
-    activeCategory === "All"
-      ? "All Products"
-      : categories.find((c) => c.id === activeCategory)?.name ?? activeCategory;
+    browseMode === "type"
+      ? activeType === "All"
+        ? "All Types"
+        : PRODUCT_TYPE_LABELS[activeType as keyof typeof PRODUCT_TYPE_LABELS] ?? activeType
+      : activeCategory === "All"
+        ? "All Products"
+        : categories.find((c) => c.id === activeCategory)?.name ?? activeCategory;
 
   return (
     <PageLayout>
@@ -106,7 +116,7 @@ export default function ShopPage() {
         <div className="flex justify-center mb-6">
           <div className="inline-flex bg-warm-sand/50 rounded-full p-1 gap-1">
             <button
-              onClick={() => { setBrowseMode("design"); setActiveCategory("All"); }}
+              onClick={() => { setBrowseMode("design"); setActiveCategory("All"); setActiveType("All"); }}
               className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
                 browseMode === "design" ? "bg-primary text-white" : "text-primary/60 hover:text-primary"
               }`}
@@ -114,7 +124,7 @@ export default function ShopPage() {
               By Design / Brand
             </button>
             <button
-              onClick={() => { setBrowseMode("type"); setActiveCategory("All"); }}
+              onClick={() => { setBrowseMode("type"); setActiveCategory("All"); setActiveType("All"); }}
               className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
                 browseMode === "type" ? "bg-primary text-white" : "text-primary/60 hover:text-primary"
               }`}
@@ -126,46 +136,75 @@ export default function ShopPage() {
 
         <div className="space-y-3 mb-8">
           <div className="flex flex-wrap gap-1.5 items-center">
-            <select
-              value={activeCategory}
-              onChange={(e) => setActiveCategory(e.target.value)}
-              className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
-            >
-              <option value="All">All Products ({products.length})</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            {/* Mobile select — shows design categories or product types per mode */}
+            {browseMode === "design" ? (
+              <select
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+                className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+              >
+                <option value="All">All Products ({products.length})</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={activeType}
+                onChange={(e) => setActiveType(e.target.value)}
+                className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+              >
+                <option value="All">All Types ({products.length})</option>
+                {Object.entries(PRODUCT_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            )}
             <div className="hidden sm:flex flex-wrap gap-1.5 items-center w-full">
               <button
-                onClick={() => setActiveCategory("All")}
+                onClick={() => browseMode === "design" ? setActiveCategory("All") : setActiveType("All")}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  activeCategory === "All" ? "bg-gold text-white" : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                  (browseMode === "design" ? activeCategory : activeType) === "All" ? "bg-gold text-white" : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                 }`}
               >
                 All
               </button>
-              {activeCategory !== "All" && (
+              {(browseMode === "design" ? activeCategory : activeType) !== "All" && (
                 <span className="text-xs text-primary/40 ml-2">
                   {activeLabel} ({filteredProducts.length})
                 </span>
               )}
             </div>
           </div>
+          {/* Desktop pills — design categories or product types per mode */}
           <div className="hidden sm:flex flex-wrap gap-1.5">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id === activeCategory ? "All" : cat.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  activeCategory === cat.id
-                    ? "bg-primary text-white"
-                    : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
+            {browseMode === "design"
+              ? categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id === activeCategory ? "All" : cat.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                      activeCategory === cat.id
+                        ? "bg-primary text-white"
+                        : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))
+              : Object.entries(PRODUCT_TYPE_LABELS).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => setActiveType(activeType === value ? "All" : value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                      activeType === value
+                        ? "bg-primary text-white"
+                        : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
           </div>
         </div>
 
@@ -188,7 +227,7 @@ export default function ShopPage() {
 
         {!loading && !error && filteredProducts.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-primary/50">{search || activeCategory !== "All" ? "No products match your filters." : "No products available yet."}</p>
+            <p className="text-primary/50">{search || (browseMode === "design" ? activeCategory : activeType) !== "All" ? "No products match your filters." : "No products available yet."}</p>
           </div>
         )}
 
@@ -196,7 +235,7 @@ export default function ShopPage() {
           <>
             <p className="text-xs text-primary/40 mb-4">
               Showing {filteredProducts.length} of {products.length} products
-              {activeCategory !== "All" ? ` in "${activeLabel}"` : ""}
+              {(browseMode === "design" ? activeCategory : activeType) !== "All" ? ` in "${activeLabel}"` : ""}
             </p>
             <div className="tile-grid-sites">
               {filteredProducts.map((product) => (
