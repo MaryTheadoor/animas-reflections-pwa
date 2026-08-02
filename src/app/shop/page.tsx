@@ -6,6 +6,7 @@ import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
 import { PRODUCT_TYPE_LABELS } from "@/types";
+import DensityPicker, { DENSITY_CLASSES, type Density } from "@/components/product/density-picker";
 
 type SortMode = "default" | "price-asc" | "price-desc" | "name-asc";
 type BrowseMode = "design" | "type";
@@ -24,6 +25,7 @@ export default function ShopPage() {
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("default");
   const [browseMode, setBrowseMode] = useState<BrowseMode>("design");
+  const [density, setDensity] = useState<Density>(3);
 
   const filteredProducts = useMemo(() => {
     let result = products;
@@ -111,6 +113,11 @@ export default function ShopPage() {
               <option key={opt.mode} value={opt.mode}>{opt.label}</option>
             ))}
           </select>
+
+          {/* Tile density control */}
+          <div className="ml-auto sm:ml-0">
+            <DensityPicker value={density} onChange={setDensity} />
+          </div>
         </div>
 
         <div className="flex justify-center mb-6">
@@ -237,7 +244,7 @@ export default function ShopPage() {
               Showing {filteredProducts.length} of {products.length} products
               {(browseMode === "design" ? activeCategory : activeType) !== "All" ? ` in "${activeLabel}"` : ""}
             </p>
-            <div className="tile-grid-sites">
+            <div className={`grid gap-4 sm:gap-6 grid-cols-1 ${DENSITY_CLASSES[density]}`}>
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

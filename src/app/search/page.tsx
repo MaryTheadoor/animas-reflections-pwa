@@ -6,9 +6,11 @@ import { useProductSearch, type SearchFilters, type SortMode } from "@/hooks/use
 import SearchBar from "@/components/search/search-bar";
 import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
+import DensityPicker, { DENSITY_CLASSES, type Density } from "@/components/product/density-picker";
 
 export default function SearchPage() {
   const { products, categories, loading: catalogLoading } = useCatalog();
+  const [density, setDensity] = useState<Density>(3);
   const [filters, setFilters] = useState<SearchFilters>({
     query: "",
     categoryId: null,
@@ -68,11 +70,14 @@ export default function SearchPage() {
 
         {!loading && results.length > 0 && (
           <>
-            <p className="text-xs text-primary/40 mb-4">
-              {results.length} result{results.length !== 1 ? "s" : ""}
-              {filters.query ? ` for "${filters.query}"` : ""}
-            </p>
-            <div className="tile-grid-sites">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs text-primary/40">
+                {results.length} result{results.length !== 1 ? "s" : ""}
+                {filters.query ? ` for "${filters.query}"` : ""}
+              </p>
+              <DensityPicker value={density} onChange={setDensity} />
+            </div>
+            <div className={`grid gap-4 sm:gap-6 grid-cols-1 ${DENSITY_CLASSES[density]}`}>
               {results.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
