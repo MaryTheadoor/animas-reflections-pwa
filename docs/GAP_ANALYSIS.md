@@ -1,54 +1,67 @@
 # Animas Reflections PWA — Gap Analysis
 
-**Date:** 2026-07-22 (Session 6 refresh) | **Supersedes:** 2026-07-09 version
-**Analysis against:** verified codebase state on `master` @ `70dd18a` (deployed) + `docs/BUSINESS_MODEL.md` + `docs/MASTER.md`
+**Date:** 2026-08-06 (full refresh) | **Supersedes:** 2026-07-22 version
+**Analysis against:** verified codebase state on `master` @ `d3751ea` (deployed) + `docs/MASTER.md`
 
-> This version was rewritten after a fresh code-level audit. Several items marked
-> "open" in the 2026-07-09 version were found to be **already implemented**; those
-> are corrected below. G-numbering preserved for continuity.
+> Refreshed ahead of a hardware reboot so all current gaps are captured in one place.
+> G-numbering preserved for continuity; new work tracked with descriptive labels.
 
 ---
 
-## 1. RESOLVED — Session 6 (2026-07-22)
+## 1. RESOLVED (as of 2026-08-06)
 
 | # | Item | Resolution |
 |---|------|-----------|
-| — | **Product save failed/hung** (user-reported) | **Root cause:** Firestore Web SDK rejects writes containing `undefined` field values. Fixed via shared `stripUndefined()` helper in `handleSave` + `handleDuplicate`. Also fixed empty `createdAt` on new products. **User-verified in live admin.** |
-| — | **Design upload failed** ("live design-catalog errors") | Same `undefined` root cause (`description`/`tags` blank). Fixed via `stripUndefined()`. **User-verified.** |
-| — | **Checkout double-charge risk** | `idempotencyKey` was regenerated per submit, defeating Square dedup. Now stable across retries (regenerated on total change, cleared on success). |
-| G6 | Firestore composite index `orders/[customerEmail, createdAt desc]` | ✅ **Deployed** to production this session. |
-| G11 | Per-variant inventory display | ✅ Confirmed **already implemented** in product list (inline `name:qty`). |
-| G12 | Order pagination in admin | ✅ Confirmed **already implemented** (15/page with « » controls). |
-| G16 | Offline indicator | ✅ Confirmed implemented (offline banner in header-bar). |
-| G17 | Checkout retry | ✅ Addressed — retry exists (re-click re-tokenizes) and is now **safe** via idempotency fix. |
-| — | Branching / recovery | ✅ `master` (stable) + `development` (working) model established on GitHub; documented in DEVELOPMENT.md. |
+| — | **Product save failed/hung** | Firestore rejects `undefined` values — fixed with shared `stripUndefined()` helper. User-verified. |
+| — | **Design upload failed** | Same `undefined` root cause — fixed. User-verified. |
+| — | **Checkout double-charge risk** | Idempotency key stabilized across retries (regenerated on total change). |
+| G3 | Production Square token | ✅ User confirmed production key active; functions use production env. |
+| G6 | Firestore composite index (orders/customerEmail+createdAt) | ✅ Deployed. |
+| G11 | Per-variant inventory display | ✅ Implemented. |
+| G12 | Order pagination in admin | ✅ Implemented (15/page). |
+| G14 | JSON-LD on routes | ✅ FAQPage + BreadcrumbList added (shop/product funnel). |
+| G16 | Offline indicator | ✅ Implemented. |
+| G17 | Checkout retry safety | ✅ Safe via idempotency fix. |
+| G18 | Admin Users tab detail | ✅ Order counts, names, dates; `createdAt` recorded on first sign-in. |
+| — | Branching / recovery | ✅ `master` (stable) + `development` (working) model. |
+| — | Modular per-product add-ons | ✅ Standard toggles + editable prices + custom add-ons (3-state `productAddons`). |
+| — | Single-design mode | ✅ Per-product `singleDesign` toggle (hides text tool). |
+| — | Rich text descriptions | ✅ contentEditable toolbar (B/I/lists) + sanitized render. |
+| — | Per-product shipping override | ✅ `shippingRate` on product; cart uses max(override, global tier). |
+| — | Modular product attributes | ✅ `attributes` (backgroundColor, patchShape, borderStyle, customFields) shown as specs. |
+| — | Customizable flag | ✅ `customizable` gates the "Customize This" button. |
+| — | Design files to order + admin | ✅ Checkout sends `designUrl`; backend mirrors it; admin shows design files per order. |
+| — | Color-variant mockups | ✅ `colorTints` overlay + `mockupImagesByColor` upgrade path; admin picker w/ live preview. |
+| — | Shop By Design/Type toggle | ✅ Fixed dead-state `browseMode`; type filter added. |
+| — | Product card stock badge | ✅ Fixed absolute-positioning bug. |
+| — | Tile density control | ✅ 2–5 per row on shop + search (shared `DensityPicker`). |
+| — | Storage cleanup on product delete | ✅ Delete now removes orphaned image files. |
 
 ---
 
-## 2. OPERATIONAL GAPS — need action, not code
+## 2. OPERATIONAL GAPS — action needed (not code)
 
-| # | Gap | Impact | Action |
-|---|-----|--------|--------|
-| G1 | **Catalog needs rebuild** — initial Square sync ran but import was "messy" (grouping/data quality) | Storefront data imperfect | Re-run **Admin → Settings → Sync from Square**; review grouping; manual cleanup in Admin as needed |
-| G2 | **End-to-end checkout untested** with a real card | Cannot confirm live payments | Run a small real purchase; verify Square order + Firestore mirror + confirmation page |
-| G3 | **Square token env unverified** — `functions/.env` has `SQUARE_ACCESS_TOKEN` but prod-vs-sandbox unconfirmed | Sync/checkout hit wrong Square env | Confirm `SQUARE_ENVIRONMENT=production` + production token in `functions/.env`, then redeploy functions |
-| G4 | **Products lack images after sync** | Product cards show placeholders | Upload via Admin → Images tab (or see G13 for automation) |
-| G5 | **No blank mockup images** for customizer | Customizer falls back to product photo | Upload blank garment shots via Admin → Image Manager |
+| # | Gap | Action |
+|---|-----|--------|
+| G2 | **End-to-end checkout untested** with a real card | Run a small real purchase; verify Square order + Firestore mirror + confirmation page. **Highest priority.** |
+| G1 | **Catalog is a manual rebuild** — Square sync de-prioritized; products being entered by hand in Admin | Continue building the catalog manually; use per-product add-ons/attributes/color-tints as you go. |
+| G4 | **Product images** — manual uploads per product via Admin → Images tab | Upload as you build each product (G13 automation deferred). |
+| G5 | **Blank mockup images** for customizer | Upload light/white or transparent-PNG mockups (best for color-tint overlay). |
 
 ---
 
 ## 3. CODE GAPS — open, prioritized
 
-### 3.1 High value
-| # | Gap | Notes | Effort |
-|---|-----|-------|--------|
-| G13 | **Square→Storage image sync** — sync copies Square URLs but doesn't transfer files into Firebase Storage | Would resolve G4 automatically; medium complexity | Medium |
+### Low priority (deferred by user)
+| # | Gap | Notes |
+|---|-----|-------|
+| G13 | **Square→Storage image sync** | Automates G4. Deferred while catalog is rebuilt manually. |
 
-### 3.2 Medium
-| # | Gap | Notes | Effort |
-|---|-----|-------|--------|
-| G14 | **JSON-LD on remaining routes** — currently layout + product page only | Add `BreadcrumbList`/page schema to other routes | Medium |
-| G18 | **Admin Users tab detail** — shows limited info | Add email/created/order-count columns | Small |
+### Nice-to-have polish
+| # | Gap | Notes |
+|---|-----|-------|
+| — | Print zone coordinate editor (visual) | Currently `printZones` set via data only — a visual admin editor would help. |
+| — | Rich-text toolbar: headings + links | Current toolbar supports bold/italic/lists only. |
 
 ---
 
@@ -56,9 +69,10 @@
 
 | # | Item | Effort |
 |---|------|--------|
+| G2 | Real end-to-end checkout test (see §2) | 30 min |
 | G15 | Lighthouse PWA audit (target 90+) | 1 session |
 | G19 | Cross-browser testing (Chrome/Firefox/Safari/mobile) | 1 session |
-| G20 | Domain DNS cutover (Square registrar → Firebase) | 15 min |
+| G20 | Domain DNS cutover (animasreflections.com → Firebase Hosting) | 15 min |
 | G21 | Analytics integration (Firebase Analytics / GA4) | 1 session |
 | G22 | iOS Safari PWA install test | 30 min |
 | G23 | Android Chrome PWA install test | 30 min |
@@ -81,30 +95,24 @@
 
 ## 6. SUMMARY
 
-| Status | Count | Items |
-|--------|-------|-------|
-| ✅ Resolved (incl. Session 6) | 9 | product-save, design-upload, idempotency, G6, G11, G12, G16, G17, branching |
-| 🔴 Operational (action needed) | 5 | G1–G5 |
-| 🟡 Code — open | 3 | G13, G14, G18 |
-| ⚪ Pre-launch | 6 | G15, G19–G23 |
-| ⏸️ Future | 7 | G24–G30 |
+| Status | Items |
+|--------|-------|
+| ✅ Resolved | 23 (all code-level gaps + robustness fixes + client-requested features) |
+| 🔴 Operational (action) | G1, G2, G4, G5 |
+| 🟡 Code — open | G13 (deferred), print-zone editor, rich-text links |
+| ⚪ Pre-launch | G15, G19–G23 |
+| ⏸️ Future | G24–G30 |
 
 ---
 
 ## 7. RECOMMENDED NEXT STEPS
 
-### Immediate (operational — biggest blockers to a working store)
-1. **G3** — verify production Square token in `functions/.env`, redeploy functions.
-2. **G1** — re-run "Sync from Square", review/clean the catalog grouping.
-3. **G2** — one real end-to-end checkout to confirm the payment pipeline (also validates the new idempotency behavior).
-
-### Then (code)
-4. **G13** — Square→Storage image sync (removes the manual image-upload burden).
-5. **G14** — JSON-LD on remaining routes.
-
-### Before launch
-6. Pre-launch checklist (G15, G19–G23), then **G20 DNS cutover**.
+1. **G2** — one real end-to-end checkout (validates idempotency + design-file capture + payment pipeline).
+2. **G15** — Lighthouse audit; fix findings.
+3. **G21** — analytics integration.
+4. **G20** — DNS cutover once the above pass.
+5. **G19/G22/G23** — cross-browser + PWA install verification.
 
 ---
 
-*Updated after Session 6 code-level audit. Refresh after each development session.*
+*Updated 2026-08-06. Refresh after each development session.*

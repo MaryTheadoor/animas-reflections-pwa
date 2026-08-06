@@ -299,6 +299,168 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 7 — 2026-07-25 | ~09:00 MST
+
+### Context Restored From
+- DEVLOG Session 6, refreshed GAP_ANALYSIS.md, MASTER_SPEC_OUTLINE §12
+
+### Actions Taken
+1. **G14 — JSON-LD structured data** — added FAQPage schema (built from the same FAQ items the page renders) and BreadcrumbList on the shop/product funnel; consolidated the hardcoded base URL into `SITE_URL`.
+2. **G18 — Admin Users tab enrichment** — per-user order count (fetches + tallies `orders/`), display name fallback, fixed the "Invalid Date" bug (Firestore Timestamp needs `.toDate()`), and `syncUserDoc` now records `createdAt` on first sign-in.
+3. Merged to `master` and deployed.
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `5394d59` | feat: add FAQPage + BreadcrumbList JSON-LD — faq rich results, breadcrumbs on shop/product funnel (G14) |
+| `a09d43e` | feat: enrich admin Users tab — per-user order count, display name, fix Timestamp 'Invalid Date' rendering; record createdAt on first sign-in (G18) |
+
+### Current State at Session End
+- Lint 0 | Tests 78/78 | Build 19 routes | Functions 23 deployed
+- `development` + `master` synced and deployed
+
+### Pending / Next Session
+- [ ] Modular add-ons per Cindy's feedback (done next session)
+
+---
+
+## Session 8 — 2026-07-27 | ~19:30 MST
+
+### Context Restored From
+- Client (Cindy) feedback: irrelevant add-ons showing; want single design per item; "love that clicking a design pops it onto the puzzle"
+
+### Actions Taken
+1. **Full data-structure / attribute→UI analysis** — mapped `ManagedProduct`, add-on flow, price model, design selection; presented proposed modular design and aligned with user decisions (keep globals as default; per-product single-design setting; editable standard add-on prices).
+2. **Modular per-product add-ons** — `productAddons` is now the single source of truth with 3-state meaning (`undefined`=site defaults, `[]`=none, `[...]`=exact). Admin form has standard add-on checkboxes + editable prices + custom add-ons + "Reset to site defaults".
+3. **Single-design option** — `singleDesign?: boolean`; when on, customizer hides the Name/Number text tool and shows a "one design" hint.
+4. **Hidden empty add-ons card** in customizer when a product has none.
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `632c49d` | feat: modular per-product add-ons + single-design option — prune irrelevant add-ons per product (editable standard prices), limit items to one design |
+| `39c9b61` | fix: hide add-ons card in customizer when no product selected |
+
+### Current State at Session End
+- Lint 0 | Tests 78/78 | Build 19 routes
+- Deployed to production after merge
+
+### Pending / Next Session
+- [ ] Second round of Cindy's feedback (Name/Number, colors, descriptions, shipping, attributes)
+
+---
+
+## Session 9 — 2026-07-30 | ~11:30 MST
+
+### Context Restored From
+- Second round of client feedback: Name/Number field showing when not selected; reduce default colors + prominent custom color w/ hex input; auto-resize description; read-more descriptions; per-product shipping; modular attributes (bg color, patch shape, border style, custom fields); rich text descriptions; site-wide text coherency.
+
+### Actions Taken
+1. **Gated Name/Number field** on the product page by `personalization` add-on presence (`showPersonalization`).
+2. **Colors** — reduced defaults 15→10; prominent custom-color section with color picker + hex input synced; unified add flow.
+3. **Description** — auto-resizing contentEditable with **rich text toolbar** (bold/italic/lists); product page read-more fold + sanitized HTML rendering (`src/lib/html-utils.ts` `sanitizeHTML`/`stripTags`).
+4. **Per-product flat-rate shipping override** — `shippingRate?: number` on product; cart uses max(per-product rates, global tier); captured on CartItem as `shipping_rate`.
+5. **Modular product attributes** — `attributes?: ProductAttributes` (backgroundColor, patchShape, borderStyle, customFields) shown as a specs row on the product page.
+6. **Text coherency** — fixed footer nav label (About Us → Our Story); removed dead `FEATURED_PRODUCTS`.
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `aecb567` | fix: gate Name/Number field by personalization addon; reduce default colors; add hex input to custom color picker; auto-resize description; rename 'Choose Design' |
+| `7886276` | feat: per-product flat shipping override; read-more expandable description on product page |
+| `5a7a165` | feat: rich text descriptions w/ formatting toolbar (bold/italic/lists); sanitized HTML render; fix footer nav label; remove dead FEATURED_PRODUCTS |
+| `c91ec02` | feat: modular per-product visual attributes — background color, patch shape, border style, custom fields; shown as specs on product page |
+
+### Current State at Session End
+- Lint 0 | Tests 78/78 | Build 19 routes
+- All deployed to production
+
+### Pending / Next Session
+- [ ] Product-handling robustness + customer/user CMS audit
+
+---
+
+## Session 10 — 2026-07-31 | ~14:00 MST
+
+### Context Restored From
+- Session 9 state; user priorities: robust on-site product handling + customer/user management CMS (Square sync de-prioritized; manual catalog rebuild)
+
+### Actions Taken
+1. **Robustness audit** — product delete now cleans up Firebase Storage files (orphaned images); added tracking **number** field to admin Orders (was URL-only).
+2. **Customizable flag** — `customizable?: boolean` gates the "Customize This" button on the product page.
+3. **Design files to order + admin** — fixed severe order-mirror bug in `createSquareOrderAndPay` (was storing only name/qty + hardcoded `price:0`, dropping design URLs). Checkout now sends `designUrl` per line item; backend persists it + price + note; admin Orders tab merges Firestore mirror data and shows design files (expandable rows) for printing.
+4. **Mock-up preview polish** — spotlight effect dims area outside the print zone; design overlay outline.
+5. **Color-variant mockups (hybrid)** — `colorTints` (color→hex overlay) tints the single base mockup; `mockupImagesByColor` takes precedence when a real per-color photo exists (upgrade path). Admin has a per-color tint picker with **live mockup preview**; customizer has a color selector that tints the mockup and captures `selected_color` into the cart/order.
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `24ff876` | fix: cleanup Storage files on product delete (prevent orphaned images); add tracking number field to admin Orders tab |
+| `07c08f0` | feat: customizable flag gates customizer button; design files saved to order + visible in admin; fix order mirror dropping price/design data |
+| `44165c6` | feat: mock-up preview polish — spotlight print zone + design overlay outline |
+| `482421a` | feat: color-variant mockups — admin tint picker w/ live preview, customizer color selector + multiply tint overlay, per-color photo upgrade path, color captured in cart/order |
+
+### Current State at Session End
+- Lint 0 | Tests 78/78 | Build 19 routes | Functions 23 deployed (redeployed for order-mirror fix)
+- All deployed to production
+
+### Pending / Next Session
+- [ ] Shop page toggle bug report (next session)
+
+---
+
+## Session 11 — 2026-08-02 | ~16:00 MST
+
+### Context Restored From
+- User report: shop "By Design / By Product Type" toggle not functioning
+
+### Actions Taken
+1. **Debugged shop toggle** — root cause: `browseMode` was dead state (set but never read by the filter). Fixed: "By Design / Brand" filters by `categoryId`; "By Product Type" filters by `productType` (new `activeType` state + type pills/select + reset on toggle + correct empty-state/result labels).
+2. **Product card stock badge fix** — "Out of stock"/"Only X left" badge had `absolute` positioning with no positioned ancestor; moved inside the `relative` image container.
+3. **Tile density control** — new "View" selector (2/3/4/5 tiles per row) on shop + search; extracted shared `DensityPicker` component + `DENSITY_CLASSES` for consistent grids.
+4. **Customer-facing product propagation audit** — verified ProductCard, product page, customizer, homepage featured, and search all render consistently with proper error/empty/image-fallback handling.
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `662fba9` | fix: shop By Design/Type toggle now filters correctly (was dead state); fix product card stock badge absolute positioning |
+| `d3751ea` | feat: tile density control on shop + search (2-5 per row); shared DensityPicker for consistent product grids |
+
+### Current State at Session End
+- Lint 0 | Tests 78/78 | Build 19 routes
+- All deployed to production
+
+### Pending / Next Session
+- [ ] Bring all documentation current (this session)
+
+---
+
+## Session 12 — 2026-08-06 | Documentation refresh
+
+### Context Restored From
+- User preparing for a hardware reboot/update — requested all docs current for easy startup
+
+### Actions Taken
+1. Added Sessions 7–12 to DEVLOG (this file) with full commit history.
+2. Refreshed `PROJECT_CONTEXT.md`, `MASTER.md`, `SCHEMA.md`, `GAP_ANALYSIS.md`, `README.md`, `DEVELOPMENT.md` against the actual current state (see their files).
+3. Confirmed `development` = `master` = `d3751ea`, all pushed to origin, deployed to Firebase.
+
+### Current State at Session End
+- Lint 0 | Tests 78/78 (8 suites) | Build 19 routes | Functions 23 deployed
+- `USE_SYNTHETIC = false` (production Firestore)
+- Working tree clean, on `development`, synced with `origin/development` and `master`
+- Deployed: https://animas-reflections-pwa.web.app
+
+### Pending / Next Session
+- [ ] G2: end-to-end checkout test with a real card (validates idempotency + design-file capture)
+- [ ] G15: Lighthouse PWA audit + fixes
+- [ ] G20: DNS cutover (animasreflections.com → Firebase Hosting)
+- [ ] G21: Analytics integration
+- [ ] Cross-browser + PWA install tests (G19/G22/G23)
+- [ ] Housekeeping: keep DEVLOG + GAP_ANALYSIS current after each session
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 

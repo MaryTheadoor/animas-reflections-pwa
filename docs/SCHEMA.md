@@ -14,7 +14,7 @@ The canonical product format. Source of truth for all product data.
 {
   id: string;                    // "prod_biscuit_hockey_1718400000000"
   name: string;                  // "BISCUIT HOCKEY"
-  description: string;           // Max 600 chars
+  description: string;           // Rich text HTML (bold/italic/lists via contentEditable toolbar)
   categoryId: string;            // "cat_biscuit_hockey"
   productType: string;           // "apparel" | "sticker" | "sign" | "jewelry" | "accessory" | "other"
   colors: string[];              // ["black", "white", "navy"]
@@ -33,9 +33,24 @@ The canonical product format. Source of truth for all product data.
     front?: string;              // Firebase Storage URL
     back?: string;
     sleeve?: string;
+    sideL?: string;
+    sideR?: string;
   };
   weightOz?: number;             // For calculated shipping
   baseProductId?: string;        // Parent product grouping
+  shippingRate?: number;         // Optional per-product flat shipping (overrides global tier)
+  designAssets?: DesignAsset[];  // Per-product pinned designs
+  productAddons?: ProductAddon[];// 3-state: undefined=site defaults, []=none, [...]=exact
+  singleDesign?: boolean;        // Limit customizer to one design (hides text tool)
+  customizable?: boolean;        // Show "Customize This" button (default true)
+  colorTints?: Record<string, string>;   // color name → hex tint overlay for mockup
+  mockupImagesByColor?: Record<string, { front?; back?; sleeve?; sideL?; sideR? }>; // real per-color photos (take precedence over tint)
+  attributes?: {                 // Optional visual specs shown on product page
+    backgroundColor?: string;    // hex
+    patchShape?: "circle" | "square" | "rounded" | "oval";
+    borderStyle?: "none" | "solid" | "dashed" | "dotted";
+    customFields?: { key: string; value: string }[];
+  };
 }
 ```
 

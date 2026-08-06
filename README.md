@@ -49,27 +49,27 @@ Functions get their own `.env` at `functions/.env` with Square credentials.
 
 ```
 src/
-  app/                 # Next.js App Router pages (18 routes)
-    admin/             # CMS dashboard (products, categories, settings, images, orders)
+  app/                 # Next.js App Router pages (19 routes)
+    admin/             # CMS dashboard (products, categories, designs, images, settings, orders, users, admins)
     checkout/          # Cart + Square payment form
-    customizer/        # Interactive design customizer
+    customizer/        # Interactive design customizer (colors, mockups, designs, add-ons)
     product/           # Product detail page (?id=)
-    shop/              # Product catalog with search/filter/sort
+    shop/              # Product catalog — By Design/Brand or By Type, search, sort, tile density
     ...
   components/
-    admin/             # product-manager, category-manager, image-manager
+    admin/             # product-manager, category-manager, image-manager, variant-matrix-editor
     cart/              # cart-drawer, cart-nav-button
     customizer/        # customizer canvas, file-upload
     layout/            # header-bar (nav dock), client-layout, json-ld
-    product/           # product-card, product-detail
+    product/           # product-card, density-picker
     ui/                # placeholder-image
   context/             # auth, cart, site-config, theme providers
   hooks/               # useCatalog, useSearch, useSiteConfig
-  lib/                 # firebase init, constants, content, synthetic-data
+  lib/                 # firebase, constants, content, html-utils, firestore-utils, synthetic-data
   types/               # All TypeScript interfaces
 functions/
   src/
-    index.ts           # 16 Cloud Functions (catalog, orders, sync, search, config)
+    index.ts           # 23 Cloud Functions (catalog, orders, sync, checkout, customer, config)
     sync.ts            # Square→Firestore sync with brand detection
     product-pipeline.ts # Alternative product grouping pipeline
 public/                # Static assets (logo, manifest, sw.js)
@@ -82,9 +82,11 @@ public/                # Static assets (logo, manifest, sw.js)
 - **Firestore is source of truth** for products. Square is used for payment processing.
 - **`syncProducts`** pulls from Square catalog, groups items by brand, writes `ManagedProduct` docs to Firestore.
 - **`createSquareProduct`** pushes admin-created products back to Square for valid payment IDs.
-- **Static export** (`output: "export"` in next.config.ts) — no SSR, deployed as 204 static files.
+- **Static export** (`output: "export"` in next.config.ts) — no SSR, deployed as 213 static files.
 - **All writes authenticated** — Firestore and Storage rules require `request.auth != null`.
 - **AI search removed** — Genkit was replaced with programmatic `fuzzyScore` matching (same algorithm in frontend `useSearch.ts` and backend `aiSearch` function).
+- **Firestore `undefined` safety** — all client writes pass through `stripUndefined()` (src/lib/firestore-utils.ts); the SDK rejects `undefined` values.
+- **Branching** — `master` = stable/deployed, `development` = working branch. See DEVELOPMENT.md.
 
 ---
 

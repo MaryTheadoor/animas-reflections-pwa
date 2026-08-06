@@ -32,7 +32,7 @@
 │  └──────────────────────┼──────────────────────────────┘     │
 │                         │                                      │
 │  ┌──────────────────────┼──────────────────────────────┐     │
-│  │     Cloud Functions (16 functions, Node 22, Gen 2)   │     │
+│  │     Cloud Functions (23 functions, Node 22, Gen 2)     │     │
 │  │                                                       │     │
 │  │  fetchSquareCatalog   ← pulls items from Square       │     │
 │  │  syncProducts         ← Square → Firestore sync      │     │
@@ -154,7 +154,7 @@ RootLayout (layout.tsx)
         └── /search → SearchPage (fuzzy text search)
 ```
 
-## Route Map (18 routes, all static)
+## Route Map (19 routes, all static)
 
 | Route | File | Auth |
 |-------|------|------|
@@ -166,6 +166,7 @@ RootLayout (layout.tsx)
 | `/order-confirmation` | `order-confirmation/page.tsx` | Public |
 | `/search` | `search/page.tsx` | Public |
 | `/about` | `about/page.tsx` | Public |
+| `/account` | `account/page.tsx` | Auth required |
 | `/contact` | `contact/page.tsx` | Public |
 | `/custom` | `custom/page.tsx` | Public |
 | `/faq` | `faq/page.tsx` | Public |

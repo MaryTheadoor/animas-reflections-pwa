@@ -172,40 +172,45 @@ animas-reflections-pwa/
 - ✅ Resize (corner grip + wheel + buttons + slider)
 - ✅ Rotation (±1°/15°/90°)
 - ✅ View tabs (front/back/sleeve/sideL/sideR)
-- ✅ Text tool (font picker 7 fonts, color picker)
-- ✅ Design library browser (designs/ collection)
-- ✅ File upload (auth-gated, 10MB limit)
+- ✅ Text tool (font picker 7 fonts, color picker) — hidden for single-design products
+- ✅ Design library browser (designs/ collection) + per-product pinned designs
+- ✅ File upload (auth-gated, 10MB limit) → uploads/{uid}/
 - ✅ Per-view design state preservation
 - ✅ Design position/scale/rotation saved to cart
 - ✅ CSS mix-blend-mode: multiply for ink-on-fabric
+- ✅ Color-variant mockups (colorTints overlay + mockupImagesByColor upgrade path)
+- ✅ Spotlight print-zone highlight
+- ✅ Modular add-ons (per-product standard + custom, editable prices)
+- ✅ Single-design mode (per-product toggle)
 - □ Pseudo-3D fabric distortion (de-scoped)
 
 ### Phase 4: Checkout — ✅ 95%
 - ✅ Cart context with reducer
-- ✅ Cart drawer with item display
+- ✅ Cart drawer with item display (+ color shown)
 - ✅ Checkout with Square SDK + customer form
-- ✅ Shipping auto-detection (sticker vs apparel)
+- ✅ Shipping auto-detection (sticker vs apparel) + per-product shipping override
+- ✅ Idempotency key stabilized (prevents double-charge on retry)
+- ✅ Design files persisted to Firestore order + visible in admin (printing)
 - ✅ Ad-hoc payments (no Square catalog ID needed)
 - ✅ Order confirmation page
 - □ End-to-end checkout test with live card
 
-### Phase 5: Admin CMS — ✅ 92%
-- ✅ Products tab (full CRUD, mockup uploads, variant matrix, bulk ops)
+### Phase 5: Admin CMS — ✅ 95%
+- ✅ Products tab (full CRUD, rich-text description, mockups, color tints, attributes, add-ons, variant matrix, bulk ops)
 - ✅ Categories tab (CRUD + reorder)
 - ✅ Images tab (upload queue, mockup assignment, 5 views)
 - ✅ Designs tab (individual DB objects, name/description/tags)
 - ✅ Settings tab (site config, sync controls)
-- ✅ Orders tab (tracking URL update)
-- ✅ Users tab
+- ✅ Orders tab (tracking URL + number, pagination, design files, Storage-cleanup on delete)
+- ✅ Users tab (order counts, names, dates)
 - ✅ Admins tab
-- □ Inventory per-variant display in list
-- □ Order pagination
+- ✅ Customizable flag + modular attributes editors
 
 ### Phase 6: PWA & Launch — ⚠️ 60%
 - ✅ Web app manifest with icons
 - ✅ Service worker (cache-first)
-- ✅ robots.txt + sitemap (18 routes)
-- ✅ JSON-LD (Organization, WebSite, Product)
+- ✅ robots.txt + sitemap (19 routes)
+- ✅ JSON-LD (Organization, WebSite, FAQPage, Breadcrumb, Product)
 - ✅ OpenGraph + Twitter Cards
 - ✅ Brand colors unified (teal #1E4D4F)
 - □ Lighthouse audit
@@ -220,8 +225,8 @@ animas-reflections-pwa/
 | Check | Result |
 |-------|--------|
 | `npm run lint` | 0 errors |
-| `npm test` | 48/48 pass (4 suites) |
-| `npm run build` | 18 routes, 21 static pages |
+| `npm test` | 78/78 pass (8 suites) |
+| `npm run build` | 19 routes, 21 static pages |
 | `cd functions && npm run build` | Compile clean |
 
 ---

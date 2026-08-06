@@ -52,6 +52,7 @@ Note: GitHub branch *protection rules* require a Pro plan on private repos — r
 - All client writes require Firebase Auth (`request.auth != null`)
 - Admin UI is protected by `RequireAdmin` component (checks `isAdmin` from `AuthContext`)
 - Cloud Functions use admin SDK (bypasses rules)
+- **Always write through `stripUndefined()`** (`src/lib/firestore-utils.ts`) — the Web SDK rejects any document containing `undefined` field values
 
 ### Square Integration
 - `square` package v42 — uses BigInt for `priceMoney.amount`
@@ -120,5 +121,9 @@ SQUARE_LOCATION_ID
 | "No products available" | Firestore empty — run sync from Admin |
 | Payment fails | Cart items need valid Square `variation_id` — push product to Square first |
 | Image upload fails | Must be signed in (auth required for write) |
+| Save error "Unsupported field value: undefined" | A write contained `undefined` — always pass through `stripUndefined()` from `src/lib/firestore-utils.ts` |
+| Functions deploy fails "User code failed to load. Timeout after 10000" | Transient CLI analysis timeout — just re-run `firebase deploy` |
+| Rich-text description loses cursor / jumps | The contentEditable must not be overwritten while focused — keep the `descFocused` guard in product-manager |
+| Stock/low-stock badge in wrong place | Absolute-positioned badges must live inside a `position:relative` container |
 | Functions timeout locally | Genkit init causes emulator hang — removed, use programmatic search |
 | Hydration mismatch | `useState(typeof window)` in static export — use `useEffect(() => setMounted(true))` pattern |
