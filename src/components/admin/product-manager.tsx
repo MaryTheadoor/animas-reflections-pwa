@@ -792,14 +792,16 @@ export default function ProductManager({ categories }: Props) {
             <label className="block text-xs font-medium text-primary mb-1">Description</label>
             {/* Formatting toolbar */}
             <div className="flex gap-1 mb-1">
-              <button type="button" onClick={() => { descRef.current?.focus(); document.execCommand("bold"); }}
+              {/* preventDefault on mousedown keeps focus + selection inside the
+                  contentEditable so execCommand formats the selected text. */}
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); document.execCommand("bold"); }}
                 className="px-2.5 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand font-bold transition-colors" title="Bold">B</button>
-              <button type="button" onClick={() => { descRef.current?.focus(); document.execCommand("italic"); }}
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); document.execCommand("italic"); }}
                 className="px-2.5 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand italic transition-colors" title="Italic">I</button>
               <span className="w-px bg-primary/10 mx-0.5 self-stretch" />
-              <button type="button" onClick={() => { descRef.current?.focus(); document.execCommand("insertUnorderedList"); }}
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); document.execCommand("insertUnorderedList"); }}
                 className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors" title="Bullet list">• List</button>
-              <button type="button" onClick={() => { descRef.current?.focus(); document.execCommand("insertOrderedList"); }}
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); document.execCommand("insertOrderedList"); }}
                 className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors" title="Numbered list">1. List</button>
             </div>
             <div

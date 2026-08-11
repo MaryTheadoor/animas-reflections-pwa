@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { ManagedProduct } from "@/types";
+import { stripTags } from "@/lib/html-utils";
 
 export type SortMode = "relevance" | "price-asc" | "price-desc" | "name-asc";
 
@@ -45,7 +46,7 @@ export function searchProducts(
 
     if (q) {
       score += fuzzyScore(product.name, q) * 3;
-      score += fuzzyScore(product.description, q);
+      score += fuzzyScore(stripTags(product.description), q);
       const tags = product.tags ?? [];
       for (const tag of tags) {
         score += fuzzyScore(tag, q) * 2;

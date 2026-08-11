@@ -13,8 +13,8 @@ export function sanitizeHTML(html: string): string {
     // Strip all event handlers from any remaining tag
     .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*')/gi, "")
     // Strip javascript: protocol from href/src attributes
-    .replace(/(\shref\s*=\s*")\s*javascript\s*:/gi, '$1#')
-    .replace(/(\ssrc\s*=\s*")\s*javascript\s*:/gi, '$1#');
+    .replace(/(\shref\s*=\s*["'])\s*javascript\s*:/gi, '$1#')
+    .replace(/(\ssrc\s*=\s*["'])\s*javascript\s*:/gi, '$1#');
 }
 
 /** Strip all HTML tags for plain-text contexts (cards, search, OG meta, etc.) */

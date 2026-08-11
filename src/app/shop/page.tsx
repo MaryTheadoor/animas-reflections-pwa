@@ -6,6 +6,7 @@ import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
 import { PRODUCT_TYPE_LABELS } from "@/types";
+import { stripTags } from "@/lib/html-utils";
 import DensityPicker, { DENSITY_CLASSES, type Density } from "@/components/product/density-picker";
 
 type SortMode = "default" | "price-asc" | "price-desc" | "name-asc";
@@ -42,7 +43,7 @@ export default function ShopPage() {
         result = result.filter(
           (p) =>
             p.name.toLowerCase().includes(q) ||
-            (p.description?.toLowerCase() ?? "").includes(q)
+            (p.description ? stripTags(p.description).toLowerCase() : "").includes(q)
         );
       }
     }
@@ -51,7 +52,7 @@ export default function ShopPage() {
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          (p.description?.toLowerCase() ?? "").includes(q)
+          (p.description ? stripTags(p.description).toLowerCase() : "").includes(q)
       );
     }
     if (sortMode === "price-asc") {

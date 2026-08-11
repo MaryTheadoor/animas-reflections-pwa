@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ManagedProduct } from "@/types";
 import { getProductImageUrl } from "@/hooks/useCatalog";
+import { stripTags } from "@/lib/html-utils";
 
 interface ProductCardProps {
   product: ManagedProduct;
@@ -65,7 +66,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       {product.description && (
         <p className="text-xs text-primary/40 line-clamp-2 mb-3 leading-relaxed">
-          {product.description.replace(/<[^>]*>/g, "").substring(0, 120)}
+          {stripTags(product.description).substring(0, 120)}
         </p>
       )}
 

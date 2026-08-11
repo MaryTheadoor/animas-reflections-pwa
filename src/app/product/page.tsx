@@ -158,10 +158,13 @@ function ProductContent() {
               const stripped = product.description.replace(/<[^>]*>/g, " ");
               const isLong = stripped.length > 200;
               const hasHTML = /<[a-z][\s\S]*?>/i.test(product.description);
+              // Rich formatting shows immediately for short descriptions; long
+              // ones keep the collapsed plain-text preview until expanded.
+              const showRich = hasHTML && (descExpanded || !isLong);
               return (
                 <div className="mb-4">
-                  <div className={`text-sm text-primary/60 leading-relaxed ${!descExpanded && isLong ? "line-clamp-3" : ""}`}>
-                    {descExpanded && hasHTML ? (
+                  <div className={`text-sm text-primary/60 leading-relaxed ${!showRich && isLong ? "line-clamp-3" : ""}`}>
+                    {showRich ? (
                       <div dangerouslySetInnerHTML={{ __html: sanitizeHTML(product.description) }} className="rich-desc" />
                     ) : (
                       <p>{stripped}</p>
