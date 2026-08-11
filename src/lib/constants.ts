@@ -40,3 +40,24 @@ export const PRODUCT_COLORS = [
   "Black", "White", "Navy", "Heather Grey", "Charcoal",
   "Royal Blue", "Red", "Forest Green", "Maroon", "Sand",
 ] as const;
+
+/** Default tint hexes for standard product colors. Prefilled in the admin
+ *  color editor when a standard color is toggled on, so the customizer mockup
+ *  preview reflects the color without manual work. Admin can override per product. */
+export const DEFAULT_COLOR_TINTS: Record<string, string> = {
+  black: "#2f2f2f",
+  white: "#f7f6f2",
+  gray: "#a8a8a8",
+  navy: "#1f2a44",
+  "royal blue": "#2b5fd9",
+  red: "#c23b2e",
+  "forest green": "#2f6b3f",
+  cream: "#f3e9d3",
+  charcoal: "#4a4a4a",
+  maroon: "#6d1f2c",
+  blue: "#3b6fc4",
+  green: "#4d8b52",
+  sage: "#a9b49a",
+  heather: "#b9b9b9",
+  ash: "#8e8e8e",
+};

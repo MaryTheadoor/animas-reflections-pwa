@@ -132,6 +132,7 @@ export default function CustomizerPage() {
 function CustomizerContent() {
   const searchParams = useSearchParams();
   const preselectedProductId = searchParams.get("product") || "";
+  const preselectedColor = searchParams.get("color") || "";
 
   const { addItem } = useCart();
   const siteConfig = useSiteConfig();
@@ -175,9 +176,12 @@ function CustomizerContent() {
         preselected.current = true;
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedProduct(found);
+        // Prefer the color picked on the product page; fall back to the first color.
+        const color = found.colors?.includes(preselectedColor) ? preselectedColor : found.colors?.[0];
+        setSelectedColor(color || undefined);
       }
     }
-  }, [catalogLoading, catalogProducts, preselectedProductId]);
+  }, [catalogLoading, catalogProducts, preselectedProductId, preselectedColor]);
 
   // Load design library from Firestore (individual docs in designs/ collection, fallback to old catalog format)
   useEffect(() => {
@@ -407,6 +411,9 @@ function CustomizerContent() {
                       <div className="flex flex-wrap gap-2">
                         {(selectedProduct.colors ?? []).map((color) => {
                           const tint = selectedProduct.colorTints?.[color];
+                          // Always show a swatch: the tint, the hex when the color
+                          // key is itself a hex, or a neutral gray placeholder.
+                          const swatch = tint || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
                           const isActive = selectedColor === color;
                           return (
                             <button
@@ -418,12 +425,10 @@ function CustomizerContent() {
                                   : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
                               }`}
                             >
-                              {tint && (
-                                <span
-                                  className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0"
-                                  style={{ backgroundColor: tint }}
-                                />
-                              )}
+                              <span
+                                className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0"
+                                style={{ backgroundColor: swatch }}
+                              />
                               {color}
                             </button>
                           );

@@ -71,6 +71,7 @@ function ProductContent() {
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [customText, setCustomText] = useState("");
   const [descExpanded, setDescExpanded] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string>();
 
   const variant = product?.variants[selectedVariant];
 
@@ -103,6 +104,11 @@ function ProductContent() {
 
   const price = variant?.price ?? 0;
   const imageUrl = getProductImageUrl(product);
+  // The displayed color falls back to the product's first color until the
+  // customer picks one; a stale pick from a previously viewed product is
+  // ignored (the product id check resets it automatically).
+  const effectiveColor =
+    product && selectedColor && product.colors.includes(selectedColor) ? selectedColor : product?.colors?.[0];
   // Gated by productAddons so the Name/Number field only shows when the
   // personalization add-on is enabled per product (undefined = site defaults).
   const showPersonalization = product.productAddons === undefined || product.productAddons.some((a) => a.id === "personalization");
@@ -247,6 +253,34 @@ function ProductContent() {
               </div>
             )}
 
+            {/* Color — shown when the product has garment colors configured */}
+            {product.colors.length > 0 && (
+              <div className="mb-6">
+                <span className="text-xs font-medium text-primary block mb-2">Color</span>
+                <div className="flex flex-wrap gap-2">
+                  {product.colors.map((color) => {
+                    const tint = product.colorTints?.[color];
+                    const swatch = tint || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
+                    const isActive = effectiveColor === color;
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium capitalize transition-all ${
+                          isActive
+                            ? "bg-primary text-white"
+                            : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                        }`}
+                      >
+                        <span className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0" style={{ backgroundColor: swatch }} />
+                        {color}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Custom Text — gated by personalization add-on presence */}
             {showPersonalization && (
             <div className="mb-6">
@@ -280,6 +314,7 @@ function ProductContent() {
                     quantity: 1,
                     selected_view: "front",
                     design_text: showPersonalization ? (customText || undefined) : undefined,
+                    selected_color: effectiveColor,
                     shipping_rate: product.shippingRate,
                     addons: [],
                   });
@@ -290,7 +325,7 @@ function ProductContent() {
               </button>
               {product.customizable !== false && (
                 <Link
-                  href={`/customizer?product=${encodeURIComponent(product.id)}`}
+                  href={`/customizer?product=${encodeURIComponent(product.id)}&color=${encodeURIComponent(effectiveColor ?? "")}`}
                   className="flex-1 px-6 py-3 rounded-2xl bg-primary/10 text-primary font-semibold hover:bg-primary/20 transition-colors text-center btn-tactile"
                 >
                   Customize This

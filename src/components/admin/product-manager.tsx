@@ -15,7 +15,7 @@ import VariantMatrixEditor from "./variant-matrix-editor";
 import { db, storage, functions } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
-import { ADDON_PRICE } from "@/lib/constants";
+import { ADDON_PRICE, DEFAULT_COLOR_TINTS } from "@/lib/constants";
 import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, AddonType, ProductAddon } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
 import AdminTooltip from "@/components/ui/admin-tooltip";
@@ -134,6 +134,26 @@ export default function ProductManager({ categories }: Props) {
     updateField("colorTints", Object.keys(tints).length > 0 ? tints : undefined);
   };
 
+  // A color key is usually a name (e.g. "neon green") which is not a valid CSS
+  // color. Render the configured tint — or the key itself when it is a valid
+  // hex — so swatches are always visible.
+  const colorSwatch = (color: string) =>
+    form.colorTints?.[color] || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
+
+  const setPerColorImage = (color: string, view: "front" | "back" | "sleeve" | "sideL" | "sideR", url: string) =>
+    updateField("mockupImagesByColor", {
+      ...(form.mockupImagesByColor ?? {}),
+      [color]: { ...(form.mockupImagesByColor?.[color] ?? {}), [view]: url },
+    });
+
+  const removePerColorImage = (color: string, view: "front" | "back" | "sleeve" | "sideL" | "sideR") => {
+    const perColor = { ...(form.mockupImagesByColor ?? {}) };
+    const views = { ...(perColor[color] ?? {}) };
+    delete views[view];
+    if (Object.keys(views).length > 0) perColor[color] = views; else delete perColor[color];
+    updateField("mockupImagesByColor", Object.keys(perColor).length > 0 ? perColor : undefined);
+  };
+
   const loadProducts = useCallback(async () => {
     try {
       const snap = await getDocs(collection(db, "products"));
@@ -215,10 +235,18 @@ export default function ProductManager({ categories }: Props) {
   };
 
   const addCustomColor = () => {
-    const value = newColor.trim().toLowerCase() || newHex.toLowerCase();
-    if (value && !form.colors.includes(value)) {
-      setForm((prev) => ({ ...prev, colors: [...prev.colors, value] }));
-    }
+    const name = newColor.trim().toLowerCase();
+    const hex = newHex.toLowerCase();
+    const value = name || hex;
+    if (!value || form.colors.includes(value)) return;
+    setForm((prev) => ({
+      ...prev,
+      colors: [...prev.colors, value],
+      // One-step setup: link the picked hex as this color's tint immediately so
+      // the customizer preview reflects the color without a separate trip to the
+      // Color Tints section.
+      colorTints: { ...(prev.colorTints ?? {}), [value]: hex },
+    }));
     setNewColor("");
     setNewHex("#1E4D4F");
   };
@@ -228,12 +256,19 @@ export default function ProductManager({ categories }: Props) {
   };
 
   const toggleColor = (color: string) => {
-    setForm((prev) => ({
-      ...prev,
-      colors: prev.colors.includes(color)
-        ? prev.colors.filter((c) => c !== color)
-        : [...prev.colors, color],
-    }));
+    setForm((prev) => {
+      const isOn = !prev.colors.includes(color);
+      const colors = isOn ? [...prev.colors, color] : prev.colors.filter((c) => c !== color);
+      // Toggling a standard color on pre-fills its default tint so the mockup
+      // preview works immediately; admin can still override below. Tints are
+      // kept on toggle-off so re-adding a color doesn't lose the setting.
+      const colorTints = { ...(prev.colorTints ?? {}) };
+      if (isOn && !colorTints[color]) {
+        const def = DEFAULT_COLOR_TINTS[color];
+        if (def) colorTints[color] = def;
+      }
+      return { ...prev, colors, colorTints };
+    });
   };
 
   const addVariant = () => {
@@ -1124,7 +1159,7 @@ export default function ProductManager({ categories }: Props) {
                 <span className="text-[10px] text-primary/30 w-full">Custom colors:</span>
                 {form.colors.filter((c) => !AVAILABLE_COLORS.includes(c)).map((c) => (
                   <span key={c} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full text-[10px]">
-                    <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: c }} />
+                    <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: colorSwatch(c) }} />
                     {c}
                     <button onClick={() => toggleColor(c)} className="text-red-400 hover:text-red-600 ml-0.5">&times;</button>
                   </span>
@@ -1144,42 +1179,88 @@ export default function ProductManager({ categories }: Props) {
               <div className="space-y-2">
                 {form.colors.map((color) => {
                   const tint = form.colorTints?.[color] ?? "";
+                  const perColor = form.mockupImagesByColor?.[color] ?? {};
                   return (
-                    <div key={color} className="flex items-center gap-3 bg-warm-sand/30 rounded-lg px-3 py-2">
-                      <span className="w-20 capitalize text-xs font-medium shrink-0">{color}</span>
-                      <input
-                        type="color"
-                        value={tint || "#cccccc"}
-                        onChange={(e) => setColorTint(color, e.target.value)}
-                        className="w-9 h-9 rounded-lg border-2 border-primary/20 cursor-pointer hover:border-gold transition-colors shrink-0"
-                        title={`Tint for ${color}`}
-                      />
-                      <input
-                        type="text"
-                        value={tint}
-                        onChange={(e) => setColorTint(color, e.target.value)}
-                        placeholder="#000000"
-                        className="w-24 px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs font-mono"
-                      />
-                      {/* Live tint preview on the front mockup */}
-                      <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-warm-sand shrink-0 border border-primary/10 ml-auto">
-                        {form.mockupImages?.front ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={form.mockupImages.front} alt={color} className="w-full h-full object-cover" />
-                            {tint && (
-                              <div className="absolute inset-0" style={{ backgroundColor: tint, mixBlendMode: "multiply" }} />
-                            )}
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[9px] text-primary/30 text-center px-1">
-                            set front mockup
-                          </div>
+                    <div key={color} className="bg-warm-sand/30 rounded-lg px-3 py-2 space-y-2">
+                      {/* Tint row */}
+                      <div className="flex items-center gap-3">
+                        <span className="w-20 capitalize text-xs font-medium shrink-0">{color}</span>
+                        <input
+                          type="color"
+                          value={tint || "#cccccc"}
+                          onChange={(e) => setColorTint(color, e.target.value)}
+                          className="w-9 h-9 rounded-lg border-2 border-primary/20 cursor-pointer hover:border-gold transition-colors shrink-0"
+                          title={`Tint for ${color}`}
+                        />
+                        <input
+                          type="text"
+                          value={tint}
+                          onChange={(e) => setColorTint(color, e.target.value)}
+                          placeholder="#000000"
+                          className="w-24 px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs font-mono"
+                        />
+                        {/* Live tint preview on the front mockup */}
+                        <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-warm-sand shrink-0 border border-primary/10 ml-auto">
+                          {form.mockupImages?.front ? (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={form.mockupImages.front} alt={color} className="w-full h-full object-cover" />
+                              {tint && (
+                                <div className="absolute inset-0" style={{ backgroundColor: tint, mixBlendMode: "multiply" }} />
+                              )}
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[9px] text-primary/30 text-center px-1">
+                              set front mockup
+                            </div>
+                          )}
+                        </div>
+                        {tint && (
+                          <button onClick={() => clearColorTint(color)} className="text-red-400 hover:text-red-600 text-xs shrink-0" title="Clear tint">✕</button>
                         )}
                       </div>
-                      {tint && (
-                        <button onClick={() => clearColorTint(color)} className="text-red-400 hover:text-red-600 text-xs shrink-0" title="Clear tint">✕</button>
-                      )}
+                      {/* Per-color photo row — real photos take precedence over the tint */}
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <span className="w-20 text-[10px] text-primary/40 shrink-0 pt-0.5">Photos</span>
+                        {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => {
+                          const photo = perColor[view];
+                          return (
+                            <div key={view} className="flex items-center gap-1">
+                              <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-white border border-primary/10 shrink-0">
+                                {photo ? (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img src={photo} alt={`${color} ${view}`} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[8px] text-primary/30 capitalize">
+                                    {view === "sideL" ? "Left" : view === "sideR" ? "Right" : view}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-0.5">
+                                <select
+                                  value={photo ?? ""}
+                                  onChange={(e) => (e.target.value ? setPerColorImage(color, view, e.target.value) : removePerColorImage(color, view))}
+                                  className="text-[9px] max-w-[96px] px-1 py-0.5 rounded border border-primary/15 bg-white text-primary/60"
+                                  title={`${view} photo for ${color}`}
+                                >
+                                  <option value="">gallery…</option>
+                                  {form.images.map((url, i) => (
+                                    <option key={url} value={url}>img {i + 1}</option>
+                                  ))}
+                                </select>
+                                {photo && (
+                                  <button onClick={() => removePerColorImage(color, view)} className="text-[9px] text-red-400 hover:text-red-600 text-left">
+                                    remove
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <p className="text-[9px] text-primary/30 w-full">
+                          A real photo replaces the tint in the customizer. Upload photos in the Image Manager, then pick a gallery image here.
+                        </p>
+                      </div>
                     </div>
                   );
                 })}

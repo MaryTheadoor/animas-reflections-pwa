@@ -152,6 +152,52 @@ export default function ImageManager() {
     loadProducts();
   };
 
+  type ColorView = "front" | "back" | "sleeve" | "sideL" | "sideR";
+
+  /** Assign a gallery image as the per-color mockup for a view */
+  const setColorMockup = async (color: string, view: ColorView, url: string) => {
+    if (!selectedProductId || !selectedProduct) return;
+    await setDoc(
+      doc(db, "products", selectedProductId),
+      {
+        mockupImagesByColor: {
+          ...(selectedProduct.mockupImagesByColor ?? {}),
+          [color]: { ...(selectedProduct.mockupImagesByColor?.[color] ?? {}), [view]: url },
+        },
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    loadProducts();
+  };
+
+  /** Upload a file straight into a per-color view slot */
+  const uploadColorMockup = async (color: string, view: ColorView, file: File) => {
+    if (!selectedProductId || !selectedProduct) return;
+    try {
+      const path = `products/${selectedProductId}/color-mockups/${color}/${view}-${crypto.randomUUID()}.png`;
+      const storageRef = ref(storage, path);
+      await uploadBytesResumable(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      await setColorMockup(color, view, url);
+    } catch (err) {
+      console.error("Color mockup upload failed", err);
+      alert("Upload failed: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const removeColorMockup = async (color: string, view: ColorView) => {
+    if (!selectedProductId || !selectedProduct) return;
+    const perColor = { ...(selectedProduct.mockupImagesByColor ?? {}) };
+    const views = { ...(perColor[color] ?? {}) };
+    delete views[view];
+    if (Object.keys(views).length > 0) perColor[color] = views; else delete perColor[color];
+    const payload: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+    if (Object.keys(perColor).length > 0) payload.mockupImagesByColor = perColor;
+    await setDoc(doc(db, "products", selectedProductId), payload, { merge: true });
+    loadProducts();
+  };
+
   const deleteImage = async (url: string) => {
     if (!selectedProductId || !confirm("Delete this image?")) return;
     try {
@@ -246,6 +292,84 @@ export default function ImageManager() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Color Mockups — real per-color photos (replace the tint overlay) */}
+          <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <h4 className="font-bold mb-1">Color Mockups (per-color photos)</h4>
+            <p className="text-xs text-primary/40 mb-3">
+              Optional real photos per garment color per view. When a color has a photo it
+              replaces the tint overlay in the customizer. Upload here, or pick a gallery image.
+            </p>
+            {selectedProduct.colors.length === 0 ? (
+              <p className="text-xs text-gold">
+                This product has no colors yet — add colors in the Product editor first.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {selectedProduct.colors.map((color) => {
+                  const perColor = selectedProduct.mockupImagesByColor?.[color] ?? {};
+                  return (
+                    <div key={color} className="border border-warm-sand rounded-xl p-3">
+                      <span className="capitalize text-xs font-medium mb-2 block">{color}</span>
+                      <div className="flex flex-wrap gap-3">
+                        {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => {
+                          const photo = perColor[view];
+                          return (
+                            <div key={view} className="w-24">
+                              <div className="relative aspect-square bg-warm-sand rounded-lg overflow-hidden mb-1">
+                                {photo ? (
+                                  <Image src={photo} alt={`${color} ${view}`} fill className="object-cover" />
+                                ) : (
+                                  <div className="flex items-center justify-center h-full text-[9px] text-primary/30 capitalize">
+                                    {view === "sideL" ? "Left" : view === "sideR" ? "Right" : view}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-center gap-1">
+                                <label className="text-[9px] px-2 py-0.5 bg-gold text-white rounded cursor-pointer hover:bg-gold-light">
+                                  Upload
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) uploadColorMockup(color, view, f);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                </label>
+                                {photo && (
+                                  <button
+                                    onClick={() => removeColorMockup(color, view)}
+                                    className="text-[9px] text-red-400 hover:text-red-600"
+                                    title={`Remove ${view} photo`}
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                              <select
+                                value={photo ?? ""}
+                                onChange={(e) => (e.target.value ? setColorMockup(color, view, e.target.value) : removeColorMockup(color, view))}
+                                className="mt-1 w-full text-[9px] px-1 py-0.5 rounded border border-primary/15 bg-white text-primary/60"
+                                title={`Assign gallery image as ${view} photo`}
+                              >
+                                <option value="">gallery…</option>
+                                {images.map((url, i) => (
+                                  <option key={url} value={url}>img {i + 1}</option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Existing Gallery */}
