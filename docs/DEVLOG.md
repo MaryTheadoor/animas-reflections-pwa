@@ -532,6 +532,49 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 14 — 2026-08-12 | Light-mode readability overhaul
+
+### Context Restored From
+- DEVLOG Sessions 1–13; user-reported concerns: light mode felt intense, gray text low-contrast, wanted black default text + cream background
+- Browser audit via Kimi WebBridge (screenshots of live homepage, shop, product pages in light mode)
+
+### Actions Taken
+1. **Browser-based theme audit (WebBridge)** — visually confirmed: gray body text (`text-primary/60`, `text-foreground/70`) failing readability, background cooler than brand cream, nav dock icons faint at `opacity: 0.6`, announcement banner intense (kept — matches logo moon).
+2. **Background warmed** — `--color-cream` `#F7F4EE` → `#FAF6F0` (brand cream) in globals.css theme + `body::before` texture layer.
+3. **Global contrast sweep** — `text-primary/80|70|60|50` → `text-foreground` (near-black `#111827`); `/40` → `text-foreground/80`; `/30` → `text-foreground/70`; `/20` → `text-foreground/50`; consolidated `text-foreground/90|80` → `text-foreground`. Accent colors (`text-gold`, `text-primary` teal, `text-plum`, `text-teal`, `text-red-400`) preserved.
+4. **Nav dock** — `.nav-dock-link` opacity `0.6` → `0.75`.
+5. **Prices** — removed `opacity-70` wrapper on variant price spans (product page + product-detail).
+6. **Verified + deployed** — lint 0 errors, tests 85/85 (9 suites), build 21 routes, hosting deployed. Visually verified live homepage + shop via WebBridge screenshots (dark/black text confirmed).
+
+### Decisions Made
+- Default light-mode text is now near-black (`--color-foreground` `#111827`); opacity-tinted `text-primary` text reserved for accents/icons/placeholders only.
+- Announcement banner stays `bg-gold` (#D97706) — same hue as logo moon, per user direction.
+- No dark-mode changes this session.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/app/globals.css | cream #FAF6F0, nav-dock-link opacity 0.75 |
+| 38 tsx files across src/ | text-primary opacity classes → text-foreground (near-black) |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `6e2dbc1` | feat: light-mode readability overhaul — black default text, cream background, higher nav contrast |
+
+### Current State at Session End
+- Lint 0 | Tests 85/85 (9 suites) | Build 21 routes | Functions unchanged (hosting-only deploy)
+- `development` = `master` = `6e2dbc1`, pushed to origin, deployed
+- Live: https://animas-reflections-pwa.web.app (visually verified via WebBridge)
+
+### Pending / Next Session
+- [ ] Dark-mode counterpart audit (same readability pass on dark palette)
+- [ ] Patch `scripts/backup-commit.ps1` (CRLF stderr handling)
+- [ ] Patch 5 data cleanup (duplicate empty products + "test 31") — awaiting client approval
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics, G19/G22/G23 cross-browser/PWA
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 
