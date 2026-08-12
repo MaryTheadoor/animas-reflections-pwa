@@ -155,6 +155,10 @@
 13. **Absolute-positioned badges:** Must live inside a `position:relative` container (product card stock badges were rendering off-location until fixed).
 14. **Functions deploy flaky timeout:** `firebase deploy` occasionally fails at "User code failed to load... Timeout after 10000" during function analysis. Just retry — it's transient, not a code error.
 15. **Browse mode was dead state:** Shop "By Design/Type" toggle set state that was never read. Any new filter state MUST be wired into the filter useMemo (deps included).
+16. **Mixed-case cwd breaks Windows builds:** `npm run build` from a lowercase-cased path (`C:\Users\AmosA\projects\...`) fails with `InvariantError: Expected workStore to be initialized` on `/_global-error`. Always work from `C:\Users\AmosA\Projects\animas-reflections-pwa` (capital P).
+17. **backup-commit.ps1 unreliable:** `$ErrorActionPreference="Stop"` + `2>&1` makes git's CRLF stderr warning fatal. Use plain `git add/commit/push` until patched. `backup-file.ps1` takes space-separated file args (commas silently skip files).
+18. **Color system:** `DEFAULT_COLOR_TINTS` in src/lib/constants.ts maps standard color names to hex. Colors with no tint and no per-color photo show a neutral `#cccccc` swatch (expected, not a bug). Tints only persist to Firestore on product save — pre-existing products lack stored tints until re-saved. `mockupImagesByColor` photos take precedence over tint overlays.
+19. **Rich text descriptions:** Short descriptions render sanitized HTML via src/lib/html-utils.ts (sanitizeHTML); cards/search excerpts use stripTags. Never render raw description HTML without sanitizing.
 
 ---
 
@@ -197,7 +201,7 @@ Location: `animas_reflections_scope_roadmap.md` in Downloads
 4. Run `npm run dev` to test locally
 5. Run `npm run build && firebase deploy` to deploy (retry once if the functions-analysis step times out)
 6. **Branching:** work on `development`; merge to `master` only when verified; see docs/DEVELOPMENT.md "Branching & Rollback"
-7. Every deploy MUST pass: lint (0 errors), build (19 routes), tests (78/78), visual check
+7. Every deploy MUST pass: lint (0 errors), build (19 routes), tests (85/85), visual check
 8. Do NOT modify nav-dock position — it's inside a fixed wrapper
 9. Do NOT add bottom navigation bars — only top dock
 10. Use backup framework: `backup:file` before edits, `backup:commit` after

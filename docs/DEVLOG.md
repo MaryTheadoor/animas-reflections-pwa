@@ -461,6 +461,77 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 13 — 2026-08-11 | Rich text fix + color system overhaul
+
+### Context Restored From
+- Client (Cindy) feedback: (1) rich text formatting on product descriptions "may not be working"; (2) setting up multiple custom colors per product + affiliated per-color images felt broken or unintuitive
+- DEVLOG Sessions 1-12, PROJECT_CONTEXT.md, GAP_ANALYSIS.md
+
+### Actions Taken
+1. **Rich text debug + fix** — product page rendered `shortDescription` as plain text (formatting lost); raw HTML tags leaked into product cards and search excerpts; admin description toolbar clicks stole the editor's text selection. Fixed all three; hardened `src/lib/html-utils.ts` (sanitizeHTML/stripTags) and added `html-utils.test.ts` (43 lines of cases). Also excluded `_backups/` from `tsconfig.json` type-check (snapshot files were breaking `tsc`).
+2. **Color system investigation** — root cause of the client complaint was UX, not data loss: creating a custom color required manually entering a hex tint, and per-color photos were only reachable via an obscure upgrade path. Only 2 of 41 products had colors configured.
+3. **Color overhaul (patches 1-4)** —
+   - Admin product manager: one-step custom color creation with sensible tint defaults; per-color photo assignment directly in the color editor
+   - Image Manager: dedicated per-color "Color Mockups" section
+   - Customizer: neutral `#cccccc` swatch fallback for colors with no tint configured (was misleading/blank)
+   - Product page: color selector; chosen color flows to customizer via `&color=` param
+   - `src/lib/constants.ts`: new `DEFAULT_COLOR_TINTS` map (standard color name -> hex)
+4. **Verified + deployed** — lint 0 errors, tests 85/85 (9 suites), build 19 routes, hosting deployed to production. All routes HTTP 200 smoke-tested.
+
+### Decisions Made
+- Tints persist to Firestore only on product save — pre-existing products show tint defaults/neutral fallback in UI until re-saved (no migration script; acceptable since only 2 products use colors)
+- `mockupImagesByColor` (real per-color photo) continues to take precedence over `colorTints` overlay
+- Patch 5 (Firestore data cleanup: duplicate empty product docs + "test 31" product) deferred — needs client approval before deleting data
+
+### Environment Gotchas Discovered (important for next instance)
+- **Mixed-case cwd breaks the build on Windows:** `npm run build` from `C:\Users\AmosA\projects\...` (lowercase p) fails with `InvariantError: Expected workStore to be initialized` on `/_global-error` (module duplication from mixed-cased paths). ALWAYS work from `C:\Users\AmosA\Projects\animas-reflections-pwa` (capital P).
+- **`scripts/backup-commit.ps1` is unreliable:** `$ErrorActionPreference="Stop"` + `2>&1` turns git's harmless CRLF stderr warning into a fatal error. Used plain `git add/commit/push` this session. Script needs patching (pending).
+- `backup-file.ps1` takes space-separated file args; comma-separated lists silently skip all files.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/app/product/page.tsx | rich-text short description; color selector + `&color=` customizer link |
+| src/app/shop/page.tsx | strip HTML from card excerpts |
+| src/components/product/product-card.tsx | strip HTML excerpts |
+| src/hooks/useSearch.ts | strip HTML in search results |
+| src/lib/html-utils.ts | sanitizeHTML/stripTags hardening |
+| src/lib/__tests__/html-utils.test.ts | NEW — 43 lines of rich-text cases |
+| tsconfig.json | exclude `_backups/` from type-check |
+| src/components/admin/product-manager.tsx | editor selection fix; one-step custom colors + per-color photos |
+| src/components/admin/image-manager.tsx | NEW per-color Color Mockups section |
+| src/app/customizer/page.tsx | neutral swatch fallback; reads `&color=` param |
+| src/lib/constants.ts | NEW `DEFAULT_COLOR_TINTS` |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `ec02a81` | fix: product description rich text — render formatting on short descriptions, preserve editor selection in admin toolbar, strip HTML for cards/search, exclude _backups from type-check |
+| `a706cba` | feat: color system overhaul — one-step custom color tints, per-color mockup photos in admin + image manager, neutral swatches, product page color selector |
+
+### Snapshots Taken
+| Timestamp | Label |
+|-----------|-------|
+| `20260811-164106` | PRE-EDIT (batch start) |
+| `20260811-164111` | PRE-EDIT rich-text files (product/shop pages, product-manager, product-card, html-utils, useSearch) |
+| `20260811-164401` | PRE-EDIT tsconfig.json |
+| `20260811-183345` | PRE-EDIT color-system files (constants, product-manager, image-manager, customizer, product page) |
+
+### Current State at Session End
+- Lint 0 | Tests 85/85 (9 suites) | Build 19 routes | Functions unchanged (hosting-only deploy)
+- `USE_SYNTHETIC = false` (production Firestore)
+- Working tree clean; `development` = `master` = `a706cba`, synced with origin
+- Deployed: https://animas-reflections-pwa.web.app
+- Color UI verified via lint/tests/build/HTTP only — NOT yet browser-tested visually (see pending)
+
+### Pending / Next Session
+- [ ] Visual browser verification of color features (product swatches, customizer tint, admin color editor) — WebBridge + vision now available for this
+- [ ] Patch `scripts/backup-commit.ps1` (CRLF stderr handling)
+- [ ] Patch 5 data cleanup (duplicate empty products + "test 31") — awaiting client approval
+- [ ] Carry-over from Session 12: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics, G19/G22/G23 cross-browser/PWA
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 
