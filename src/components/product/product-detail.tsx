@@ -21,7 +21,7 @@ export default function ProductDetail({ product, onClose }: ProductDetailProps) 
       <div className="relative bg-white rounded-2xl shadow-float max-w-lg w-full max-h-[92vh] overflow-hidden flex flex-col">
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center text-primary/50 hover:text-primary transition-colors shadow-sm"
+          className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center text-foreground hover:text-primary transition-colors shadow-sm"
           aria-label="Close"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -38,7 +38,7 @@ export default function ProductDetail({ product, onClose }: ProductDetailProps) 
         <div className="overflow-y-auto p-4 sm:p-6 flex-1">
           <h2 className="text-lg sm:text-xl font-bold font-display mb-1">{product.name}</h2>
           {product.description && (
-            <p className="text-sm text-primary/60 mb-4 leading-relaxed line-clamp-4">
+            <p className="text-sm text-foreground mb-4 leading-relaxed line-clamp-4">
               {product.description.replace(/<[^>]*>/g, " ").substring(0, 300)}
             </p>
           )}
@@ -54,12 +54,12 @@ export default function ProductDetail({ product, onClose }: ProductDetailProps) 
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                       selectedVariant.id === v.id
                         ? "bg-primary text-white btn-tactile btn-primary-tactile"
-                        : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                        : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                     }`}
                   >
                     {v.name || "Standard"}
                     {v.price > 0 && (
-                      <span className="ml-1 opacity-70">${v.price.toFixed(2)}</span>
+                      <span className="ml-1">${v.price.toFixed(2)}</span>
                     )}
                     {v.inventory !== undefined && v.inventory <= 3 && (
                       <span className={"ml-1 text-xs " + (v.inventory === 0 ? "text-red-400" : "text-gold")}>

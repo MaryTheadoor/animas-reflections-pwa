@@ -39,7 +39,7 @@ export default function SearchPage() {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="text-center mb-8 pt-8 sm:pt-12">
           <h1 className="text-4xl font-bold font-display mb-3">Search Products</h1>
-          <p className="text-primary/60 max-w-xl mx-auto">
+          <p className="text-foreground max-w-xl mx-auto">
             Find exactly what you&apos;re looking for. Filter by category, color, or sort by price.
           </p>
         </div>
@@ -63,15 +63,15 @@ export default function SearchPage() {
 
         {!loading && hasSearched && results.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-primary/50 text-lg mb-2">No products found</p>
-            <p className="text-primary/30 text-sm">Try different keywords or browse the catalog.</p>
+            <p className="text-foreground text-lg mb-2">No products found</p>
+            <p className="text-foreground/80 text-sm">Try different keywords or browse the catalog.</p>
           </div>
         )}
 
         {!loading && results.length > 0 && (
           <>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-primary/40">
+              <p className="text-xs text-foreground/80">
                 {results.length} result{results.length !== 1 ? "s" : ""}
                 {filters.query ? ` for "${filters.query}"` : ""}
               </p>

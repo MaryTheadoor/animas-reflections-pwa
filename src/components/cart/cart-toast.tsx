@@ -20,7 +20,7 @@ export default function CartToast() {
             {lastAdded.name}
           </p>
           {lastAdded.variant_name && (
-            <p className="text-xs text-primary/40 truncate">{lastAdded.variant_name}</p>
+            <p className="text-xs text-foreground/80 truncate">{lastAdded.variant_name}</p>
           )}
           <div className="flex items-center gap-2 mt-1">
             <span className="text-gold font-semibold text-sm">
@@ -35,7 +35,7 @@ export default function CartToast() {
         </div>
         <button
           onClick={dismissToast}
-          className="text-primary/30 hover:text-primary/60 transition-colors shrink-0"
+          className="text-foreground/70 hover:text-foreground transition-colors shrink-0"
           aria-label="Dismiss"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -43,7 +43,7 @@ export default function CartToast() {
           </svg>
         </button>
       </div>
-      <p className="text-xs text-primary/40 text-right mt-1 mr-1">
+      <p className="text-xs text-foreground/80 text-right mt-1 mr-1">
         {itemCount} item{itemCount !== 1 ? "s" : ""} in cart
       </p>
     </div>

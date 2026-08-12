@@ -186,7 +186,7 @@ export default function CheckoutPage() {
     return (
       <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
         <h1 className="text-4xl font-bold font-display mb-4">Your cart is empty</h1>
-        <p className="text-primary/60 mb-6">Add some products to get started.</p>
+        <p className="text-foreground mb-6">Add some products to get started.</p>
         <Link href="/shop" className="px-8 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile">Browse Products</Link>
       </div>
     );
@@ -200,7 +200,7 @@ export default function CheckoutPage() {
           <div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:130ms]" />
           <div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:260ms]" />
         </div>
-        <p className="mt-4 text-primary/60">Redirecting to your order confirmation...</p>
+        <p className="mt-4 text-foreground">Redirecting to your order confirmation...</p>
       </div>
     );
   }
@@ -247,9 +247,9 @@ export default function CheckoutPage() {
             ))}
           </div>
           <div className="mt-4 pt-4 border-t border-warm-sand space-y-1 text-sm">
-            <div className="flex justify-between text-primary/60"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-            {addonsTotal > 0 && <div className="flex justify-between text-primary/60"><span>Add-ons</span><span>${addonsTotal.toFixed(2)}</span></div>}
-            <div className="flex justify-between text-primary/60"><span>Shipping</span><span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span></div>
+            <div className="flex justify-between text-foreground"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+            {addonsTotal > 0 && <div className="flex justify-between text-foreground"><span>Add-ons</span><span>${addonsTotal.toFixed(2)}</span></div>}
+            <div className="flex justify-between text-foreground"><span>Shipping</span><span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span></div>
             <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand"><span>Total</span><span className="text-gold">${total.toFixed(2)}</span></div>
           </div>
         </div>
@@ -258,7 +258,7 @@ export default function CheckoutPage() {
         <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6 mb-6">
           <h2 className="font-bold mb-4">Payment</h2>
           <div id="card-container" ref={cardRef} className="min-h-[100px] rounded-xl border border-primary/20 p-4 bg-warm-sand/30" />
-          {!cardReady && !error && <p className="text-sm text-primary/50 mt-2">Loading payment form...</p>}
+          {!cardReady && !error && <p className="text-sm text-foreground mt-2">Loading payment form...</p>}
         </div>
 
         {error && <div className="bg-red-50 text-red-600 rounded-xl p-4 mb-6 text-sm">{error}</div>}
@@ -270,8 +270,8 @@ export default function CheckoutPage() {
         >
           {processing ? "Processing..." : `Pay $${total.toFixed(2)}`}
         </button>
-        {!customerValid && <p className="text-xs text-primary/40 text-center mt-2">Fill in all required fields (*) to continue</p>}
-        <p className="text-xs text-primary/40 text-center mt-4">Secured by Square. We accept Visa, Mastercard, Amex, Discover, JCB, Apple Pay, Google Pay, and Cash App.</p>
+        {!customerValid && <p className="text-xs text-foreground/80 text-center mt-2">Fill in all required fields (*) to continue</p>}
+        <p className="text-xs text-foreground/80 text-center mt-4">Secured by Square. We accept Visa, Mastercard, Amex, Discover, JCB, Apple Pay, Google Pay, and Cash App.</p>
       </main>
     </div>
   );

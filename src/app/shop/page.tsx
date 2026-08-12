@@ -88,14 +88,14 @@ export default function ShopPage() {
         <BreadcrumbJsonLd items={[{ name: "Home", path: "/" }, { name: "Shop", path: "/shop" }]} />
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold font-display mb-3">Shop All Products</h1>
-          <p className="text-primary/60 max-w-xl mx-auto">
+          <p className="text-foreground max-w-xl mx-auto">
             Browse {products.length} products. Click any item to view details and choose options.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-6 items-start sm:items-center">
           <div className="relative flex-1 max-w-md">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -126,7 +126,7 @@ export default function ShopPage() {
             <button
               onClick={() => { setBrowseMode("design"); setActiveCategory("All"); setActiveType("All"); }}
               className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
-                browseMode === "design" ? "bg-primary text-white" : "text-primary/60 hover:text-primary"
+                browseMode === "design" ? "bg-primary text-white" : "text-foreground hover:text-primary"
               }`}
             >
               By Design / Brand
@@ -134,7 +134,7 @@ export default function ShopPage() {
             <button
               onClick={() => { setBrowseMode("type"); setActiveCategory("All"); setActiveType("All"); }}
               className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
-                browseMode === "type" ? "bg-primary text-white" : "text-primary/60 hover:text-primary"
+                browseMode === "type" ? "bg-primary text-white" : "text-foreground hover:text-primary"
               }`}
             >
               By Product Type
@@ -172,13 +172,13 @@ export default function ShopPage() {
               <button
                 onClick={() => browseMode === "design" ? setActiveCategory("All") : setActiveType("All")}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  (browseMode === "design" ? activeCategory : activeType) === "All" ? "bg-gold text-white" : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                  (browseMode === "design" ? activeCategory : activeType) === "All" ? "bg-gold text-white" : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                 }`}
               >
                 All
               </button>
               {(browseMode === "design" ? activeCategory : activeType) !== "All" && (
-                <span className="text-xs text-primary/40 ml-2">
+                <span className="text-xs text-foreground/80 ml-2">
                   {activeLabel} ({filteredProducts.length})
                 </span>
               )}
@@ -194,7 +194,7 @@ export default function ShopPage() {
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                       activeCategory === cat.id
                         ? "bg-primary text-white"
-                        : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                        : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                     }`}
                   >
                     {cat.name}
@@ -207,7 +207,7 @@ export default function ShopPage() {
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                       activeType === value
                         ? "bg-primary text-white"
-                        : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                        : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                     }`}
                   >
                     {label}
@@ -235,13 +235,13 @@ export default function ShopPage() {
 
         {!loading && !error && filteredProducts.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-primary/50">{search || (browseMode === "design" ? activeCategory : activeType) !== "All" ? "No products match your filters." : "No products available yet."}</p>
+            <p className="text-foreground">{search || (browseMode === "design" ? activeCategory : activeType) !== "All" ? "No products match your filters." : "No products available yet."}</p>
           </div>
         )}
 
         {!loading && !error && filteredProducts.length > 0 && (
           <>
-            <p className="text-xs text-primary/40 mb-4">
+            <p className="text-xs text-foreground/80 mb-4">
               Showing {filteredProducts.length} of {products.length} products
               {(browseMode === "design" ? activeCategory : activeType) !== "All" ? ` in "${activeLabel}"` : ""}
             </p>

@@ -16,7 +16,7 @@ export default function FeaturedProducts() {
     return (
       <section className="section-tile">
         <h2 className="text-3xl font-bold font-display text-center mb-2">Featured Products</h2>
-        <p className="text-primary/60 text-center mb-12 max-w-md mx-auto">
+        <p className="text-foreground text-center mb-12 max-w-md mx-auto">
           Discover our diverse collection now and find your perfect style
         </p>
         {loading ? (
@@ -28,7 +28,7 @@ export default function FeaturedProducts() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-12 text-primary/50">Products coming soon.</div>
+          <div className="text-center py-12 text-foreground">Products coming soon.</div>
         )}
       </section>
     );
@@ -38,7 +38,7 @@ export default function FeaturedProducts() {
     <>
       <section className="section-tile">
         <h2 className="text-3xl font-bold font-display text-center mb-2">Featured Products</h2>
-        <p className="text-primary/60 text-center mb-12 max-w-md mx-auto">
+        <p className="text-foreground text-center mb-12 max-w-md mx-auto">
           Discover our diverse collection now and find your perfect style
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

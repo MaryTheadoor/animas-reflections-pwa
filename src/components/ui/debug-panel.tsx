@@ -93,7 +93,7 @@ export default function DebugPanel() {
       <div className="pointer-events-auto w-96 max-h-screen overflow-y-auto bg-white shadow-elevated border border-warm-sand rounded-2xl m-4 p-4 text-xs font-mono">
         <div className="flex items-center justify-between mb-3">
           <span className="font-bold text-primary text-sm">Debug Panel</span>
-          <button onClick={() => setOpen(false)} className="text-primary/40 hover:text-primary">&times;</button>
+          <button onClick={() => setOpen(false)} className="text-foreground/80 hover:text-primary">&times;</button>
         </div>
         {[
           ["Build", info.buildTimestamp],
@@ -106,7 +106,7 @@ export default function DebugPanel() {
           ["Square Location", info.squareLocationId],
         ].map(([label, value]) => (
           <div key={label as string} className="flex justify-between py-1 border-b border-warm-sand/30">
-            <span className="text-primary/50">{label}</span>
+            <span className="text-foreground">{label}</span>
             <span className={`text-right max-w-[60%] truncate ${
               String(value).startsWith("error") ? "text-red-500" : "text-primary"
             }`}>{String(value)}</span>

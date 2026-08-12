@@ -130,7 +130,7 @@ export default function CategoryManager() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-bold font-display text-lg">{categories.length} Categories</h3>
-          <p className="text-xs text-primary/40">Drag-and-drop ordering coming soon</p>
+          <p className="text-xs text-foreground/80">Drag-and-drop ordering coming soon</p>
         </div>
       </div>
 
@@ -153,7 +153,7 @@ export default function CategoryManager() {
       </div>
 
       {categories.length === 0 ? (
-        <p className="text-sm text-primary/40 text-center py-8">
+        <p className="text-sm text-foreground/80 text-center py-8">
           No categories yet. Create one to start organizing products.
         </p>
       ) : (
@@ -167,14 +167,14 @@ export default function CategoryManager() {
                 <button
                   onClick={() => moveUp(i)}
                   disabled={i === 0}
-                  className="text-primary/20 hover:text-primary disabled:opacity-20 text-xs leading-none"
+                  className="text-foreground/50 hover:text-primary disabled:opacity-20 text-xs leading-none"
                 >
                   ▲
                 </button>
                 <button
                   onClick={() => moveDown(i)}
                   disabled={i >= categories.length - 1}
-                  className="text-primary/20 hover:text-primary disabled:opacity-20 text-xs leading-none"
+                  className="text-foreground/50 hover:text-primary disabled:opacity-20 text-xs leading-none"
                 >
                   ▼
                 </button>
@@ -197,7 +197,7 @@ export default function CategoryManager() {
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="px-3 py-1 text-xs text-primary/40 hover:text-primary"
+                    className="px-3 py-1 text-xs text-foreground/80 hover:text-primary"
                   >
                     Cancel
                   </button>
@@ -205,10 +205,10 @@ export default function CategoryManager() {
               ) : (
                 <>
                   <span className="flex-1 font-medium text-sm">{cat.name}</span>
-                  <span className="text-xs text-primary/30">{cat.slug}</span>
+                  <span className="text-xs text-foreground/70">{cat.slug}</span>
                   <button
                     onClick={() => startEdit(cat)}
-                    className="px-2 py-1 text-xs text-primary/40 hover:text-primary transition-colors"
+                    className="px-2 py-1 text-xs text-foreground/80 hover:text-primary transition-colors"
                   >
                     Edit
                   </button>

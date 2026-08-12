@@ -3,7 +3,7 @@
 /* ─── Animas Reflections Brand Theme ────────────────────────────── */
 
 @theme {
-  --color-cream: #F7F4EE;
+  --color-cream: #FAF6F0;
   --color-warm-sand: #F0EBE3;
   --color-primary: #1E4D4F;
   --color-primary-light: #2A6B6E;
@@ -53,7 +53,7 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-color: #F7F4EE;
+  background-color: #FAF6F0;
   background-image:
     radial-gradient(circle at 20% 50%, rgba(210, 200, 180, 0.08) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(200, 190, 170, 0.06) 0%, transparent 50%),
@@ -168,7 +168,7 @@ html.dark .nav-dock-theme {
   align-items: center;
   text-decoration: none;
   color: var(--color-foreground);
-  opacity: 0.6;
+  opacity: 0.75;
   padding: 3px 5px;
   border-radius: 12px;
   font-size: 0.55rem;

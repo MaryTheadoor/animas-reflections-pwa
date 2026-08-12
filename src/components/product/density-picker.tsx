@@ -20,7 +20,7 @@ interface DensityPickerProps {
 export default function DensityPicker({ value, onChange }: DensityPickerProps) {
   return (
     <div className="flex items-center gap-1">
-      <span className="text-xs text-primary/40 mr-1 hidden sm:inline">View</span>
+      <span className="text-xs text-foreground/80 mr-1 hidden sm:inline">View</span>
       <div className="inline-flex bg-warm-sand/50 rounded-full p-0.5 gap-0.5">
         {([2, 3, 4, 5] as Density[]).map((n) => (
           <button
@@ -29,7 +29,7 @@ export default function DensityPicker({ value, onChange }: DensityPickerProps) {
             title={`Show ${n} per row`}
             aria-label={`Show ${n} tiles per row`}
             className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-              value === n ? "bg-primary text-white" : "text-primary/50 hover:text-primary"
+              value === n ? "bg-primary text-white" : "text-foreground hover:text-primary"
             }`}
           >
             {n}

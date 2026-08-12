@@ -14,14 +14,14 @@ export default function BandMerchTeaser() {
         <h2 className="text-3xl sm:text-4xl font-bold font-display mb-3">
           {BAND_MERCH.heading}
         </h2>
-        <p className="text-primary/60 max-w-xl mx-auto mb-6 leading-relaxed">
+        <p className="text-foreground max-w-xl mx-auto mb-6 leading-relaxed">
           {BAND_MERCH.intro}
         </p>
         <div className="flex flex-wrap justify-center gap-3 mb-8">
           {BAND_MERCH.highlights.map((item) => (
             <span
               key={item}
-              className="px-4 py-2 bg-warm-sand/50 rounded-full text-sm text-primary/70 font-medium"
+              className="px-4 py-2 bg-warm-sand/50 rounded-full text-sm text-foreground font-medium"
             >
               {item}
             </span>

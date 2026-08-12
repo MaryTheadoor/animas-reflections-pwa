@@ -14,14 +14,14 @@ export default function FaqTeaser() {
         <h2 className="text-3xl font-bold font-display text-center mb-2">
           Frequently Asked Questions
         </h2>
-        <p className="text-primary/50 text-center text-sm mb-8">
+        <p className="text-foreground text-center text-sm mb-8">
           Quick answers to common questions
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           {QUESTIONS.map((item) => (
             <div key={item.q} className="bg-warm-sand/30 rounded-2xl p-4">
               <p className="font-semibold text-sm text-primary mb-1">{item.q}</p>
-              <p className="text-xs text-primary/60 leading-relaxed">{item.a}</p>
+              <p className="text-xs text-foreground leading-relaxed">{item.a}</p>
             </div>
           ))}
         </div>

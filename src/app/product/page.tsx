@@ -135,10 +135,10 @@ function ProductContent() {
         />
 
         {/* Breadcrumb */}
-        <div className="text-xs text-primary/40 mb-4">
+        <div className="text-xs text-foreground/80 mb-4">
           <Link href="/shop" className="hover:text-gold">Shop</Link>
           <span className="mx-1">/</span>
-          <span className="text-primary/60">{product.name}</span>
+          <span className="text-foreground">{product.name}</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
@@ -151,7 +151,7 @@ function ProductContent() {
             )}
             {/* Text overlay — only when personalization is on for this product */}
             {showPersonalization && customText && (
-              <div className="absolute top-[30%] left-1/2 -translate-x-1/2 text-xl font-bold text-primary/60 pointer-events-none">
+              <div className="absolute top-[30%] left-1/2 -translate-x-1/2 text-xl font-bold text-foreground pointer-events-none">
                 {customText}
               </div>
             )}
@@ -169,7 +169,7 @@ function ProductContent() {
               const showRich = hasHTML && (descExpanded || !isLong);
               return (
                 <div className="mb-4">
-                  <div className={`text-sm text-primary/60 leading-relaxed ${!showRich && isLong ? "line-clamp-3" : ""}`}>
+                  <div className={`text-sm text-foreground leading-relaxed ${!showRich && isLong ? "line-clamp-3" : ""}`}>
                     {showRich ? (
                       <div dangerouslySetInnerHTML={{ __html: sanitizeHTML(product.description) }} className="rich-desc" />
                     ) : (
@@ -196,8 +196,8 @@ function ProductContent() {
               if (!visible) return null;
               return (
                 <div className="border-t border-warm-sand pt-3 mt-3 mb-4">
-                  <span className="text-[10px] font-medium text-primary/40 uppercase tracking-wider block mb-1.5">Specifications</span>
-                  <div className="flex flex-wrap gap-2 text-xs text-primary/60">
+                  <span className="text-[10px] font-medium text-foreground/80 uppercase tracking-wider block mb-1.5">Specifications</span>
+                  <div className="flex flex-wrap gap-2 text-xs text-foreground">
                     {attrs.backgroundColor && (
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-warm-sand/30 rounded-full">
                         <span className="w-3 h-3 rounded-full border border-primary/20 inline-block shrink-0" style={{ backgroundColor: attrs.backgroundColor }} />
@@ -224,7 +224,7 @@ function ProductContent() {
             <p className="text-3xl font-bold text-gold mb-6">
               ${price.toFixed(2)}
               {product.variants.length > 1 && (
-                <span className="text-sm font-normal text-primary/50 ml-2">
+                <span className="text-sm font-normal text-foreground ml-2">
                   Starting at ${Math.min(...product.variants.map((v) => v.price)).toFixed(2)}
                 </span>
               )}
@@ -242,11 +242,11 @@ function ProductContent() {
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                         i === selectedVariant
                           ? "bg-primary text-white btn-tactile btn-primary-tactile"
-                          : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                          : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                       }`}
                     >
                       {v.name || `Option ${i + 1}`}
-                      {v.price > 0 && <span className="ml-1 opacity-70">${v.price.toFixed(2)}</span>}
+                      {v.price > 0 && <span className="ml-1">${v.price.toFixed(2)}</span>}
                     </button>
                   ))}
                 </div>
@@ -269,7 +269,7 @@ function ProductContent() {
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium capitalize transition-all ${
                           isActive
                             ? "bg-primary text-white"
-                            : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                            : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                         }`}
                       >
                         <span className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0" style={{ backgroundColor: swatch }} />

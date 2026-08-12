@@ -23,7 +23,7 @@ export default function FundraisingPage() {
           <p className="text-gold font-semibold text-lg mb-6">
             {FUNDRAISING.subheading}
           </p>
-          <p className="text-primary/70 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-foreground max-w-2xl mx-auto leading-relaxed">
             {FUNDRAISING.intro}
           </p>
         </div>
@@ -37,7 +37,7 @@ export default function FundraisingPage() {
             {FUNDRAISING.howItWorks.map((step) => (
               <div key={step.title} className="bg-warm-sand/30 rounded-2xl p-5">
                 <h3 className="font-bold text-primary mb-2">{step.title}</h3>
-                <p className="text-sm text-primary/60 leading-relaxed">{step.body}</p>
+                <p className="text-sm text-foreground leading-relaxed">{step.body}</p>
               </div>
             ))}
           </div>
@@ -49,7 +49,7 @@ export default function FundraisingPage() {
             <h2 className="text-xl font-bold font-display text-center mb-4">
               Who It&apos;s Perfect For
             </h2>
-            <p className="text-sm text-primary/60 mb-4 text-center">
+            <p className="text-sm text-foreground mb-4 text-center">
               Whether you&apos;re raising money for uniforms, trips, equipment, programs, or events — we can help.
             </p>
             <div className="space-y-2">
@@ -58,7 +58,7 @@ export default function FundraisingPage() {
                   <svg className="w-4 h-4 text-gold shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                   </svg>
-                  <span className="text-sm text-primary/70">{item}</span>
+                  <span className="text-sm text-foreground">{item}</span>
                 </div>
               ))}
             </div>
@@ -68,7 +68,7 @@ export default function FundraisingPage() {
             <h2 className="text-xl font-bold font-display text-center mb-4">
               Products That Sell
             </h2>
-            <p className="text-sm text-primary/60 mb-4 text-center">
+            <p className="text-sm text-foreground mb-4 text-center">
               Your catalog can include high-quality custom items such as:
             </p>
             <div className="space-y-2">
@@ -77,7 +77,7 @@ export default function FundraisingPage() {
                   <svg className="w-4 h-4 text-gold shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
                   </svg>
-                  <span className="text-sm text-primary/70">{item}</span>
+                  <span className="text-sm text-foreground">{item}</span>
                 </div>
               ))}
             </div>
@@ -89,7 +89,7 @@ export default function FundraisingPage() {
           <h2 className="text-xl font-bold font-display text-center mb-6">
             Why Fundraise with Animas Reflections?
           </h2>
-          <p className="text-primary/60 text-center mb-6 text-sm">
+          <p className="text-foreground text-center mb-6 text-sm">
             This is fundraising made simple, transparent, and effective!
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -98,7 +98,7 @@ export default function FundraisingPage() {
                 <svg className="w-5 h-5 text-gold shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
-                <span className="text-sm text-primary/70">{item}</span>
+                <span className="text-sm text-foreground">{item}</span>
               </div>
             ))}
           </div>
@@ -124,7 +124,7 @@ export default function FundraisingPage() {
             <h2 className="text-2xl font-bold font-display mb-4">
               {FUNDRAISING.cta.text}
             </h2>
-            <p className="text-primary/60 mb-8 max-w-md mx-auto">
+            <p className="text-foreground mb-8 max-w-md mx-auto">
               Ready to start fundraising? Email us and we will get your fundraiser set up right away.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -141,7 +141,7 @@ export default function FundraisingPage() {
                 Call {FUNDRAISING.cta.phone}
               </a>
             </div>
-            <p className="text-xs text-primary/30 mt-6">
+            <p className="text-xs text-foreground/70 mt-6">
               {FUNDRAISING.cta.email}
             </p>
           </div>

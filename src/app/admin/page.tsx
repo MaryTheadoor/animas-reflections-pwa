@@ -424,7 +424,7 @@ function DashboardContent() {
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 tab === t.key
                   ? "bg-primary text-white"
-                  : "text-primary/50 hover:text-primary hover:bg-warm-sand/50"
+                  : "text-foreground hover:text-primary hover:bg-warm-sand/50"
               }`}
             >
               {t.label}
@@ -454,7 +454,7 @@ function DashboardContent() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-bold font-display">Catalog Sync</h2>
-              <p className="text-sm text-primary/60 mt-1">
+              <p className="text-sm text-foreground mt-1">
                 Pull products from Square and build composite product catalog
               </p>
             </div>
@@ -492,22 +492,22 @@ function DashboardContent() {
             <div className="grid grid-cols-3 gap-4 text-center mb-4">
               <div className="bg-warm-sand/50 rounded-xl p-3">
                 <p className="text-2xl font-bold text-primary">{syncResult.products}</p>
-                <p className="text-xs text-primary/50">Products</p>
+                <p className="text-xs text-foreground">Products</p>
               </div>
               <div className="bg-warm-sand/50 rounded-xl p-3">
                 <p className="text-2xl font-bold text-primary">{syncResult.categories}</p>
-                <p className="text-xs text-primary/50">Categories</p>
+                <p className="text-xs text-foreground">Categories</p>
               </div>
               <div className="bg-warm-sand/50 rounded-xl p-3">
                 <p className="text-2xl font-bold text-primary">{syncResult.items}</p>
-                <p className="text-xs text-primary/50">Square Items</p>
+                <p className="text-xs text-foreground">Square Items</p>
               </div>
             </div>
           )}
           {syncError && (
             <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{syncError}</div>
           )}
-          <p className="text-xs text-primary/30">
+          <p className="text-xs text-foreground/70">
             Sync runs automatically daily at 4 AM Mountain Time. Click &quot;Sync Now&quot; to run manually.
           </p>
         </section>
@@ -536,7 +536,7 @@ function DashboardContent() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="w-5 h-5 rounded border border-primary/20" style={{ backgroundColor: config[key] }} />
                     <span className="text-xs font-medium text-primary">{label}</span>
-                    <span className="text-[10px] text-primary/30">{hint}</span>
+                    <span className="text-[10px] text-foreground/70">{hint}</span>
                   </div>
                   <div className="flex gap-1">
                     <input type="color" value={config[key]} onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
@@ -565,7 +565,7 @@ function DashboardContent() {
                   <option value="'Arial Black', Impact, sans-serif">Impact / Arial Black</option>
                   <option value="'Courier New', monospace">Courier New (Monospace)</option>
                 </select>
-                <p className="text-[10px] text-primary/30 mt-1">Used for h1-h4 headings and display text</p>
+                <p className="text-[10px] text-foreground/70 mt-1">Used for h1-h4 headings and display text</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-primary block mb-1">Body Font</label>
@@ -576,7 +576,7 @@ function DashboardContent() {
                   <option value="Arial, Helvetica, sans-serif">Arial / Helvetica</option>
                   <option value="'Segoe UI', Roboto, sans-serif">Segoe UI / Roboto</option>
                 </select>
-                <p className="text-[10px] text-primary/30 mt-1">Used for paragraphs, inputs, and general text</p>
+                <p className="text-[10px] text-foreground/70 mt-1">Used for paragraphs, inputs, and general text</p>
               </div>
             </div>
           </div>
@@ -589,7 +589,7 @@ function DashboardContent() {
             <input type="text" value={config.announcement_text}
               onChange={(e) => setConfig({ ...config, announcement_text: e.target.value })}
               className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold outline-none text-sm mb-2" />
-            <label className="flex items-center gap-2 text-sm text-primary/60 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
               <input type="checkbox" checked={config.announcement_active}
                 onChange={(e) => setConfig({ ...config, announcement_active: e.target.checked })} className="accent-gold" />
               Show announcement banner
@@ -678,7 +678,7 @@ function DashboardContent() {
         {tab === "admins" && (
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h2 className="text-xl font-bold font-display mb-4">Admin Users</h2>
-            <p className="text-sm text-primary/60 mb-4">
+            <p className="text-sm text-foreground mb-4">
               Users listed here have full access to the admin dashboard. They must sign in first via the login page.
             </p>
           <div className="flex gap-2 mb-4">
@@ -712,9 +712,9 @@ function DashboardContent() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-primary/40">No admin emails configured. Add at least one to enable admin access.</p>
+            <p className="text-sm text-foreground/80">No admin emails configured. Add at least one to enable admin access.</p>
           )}
-          <p className="text-xs text-primary/30 mt-3">
+          <p className="text-xs text-foreground/70 mt-3">
             The hardcoded fallback admin is <code className="bg-warm-sand px-1 rounded">mary.theadoor.doctor@gmail.com</code>.
           </p>
         </section>
@@ -725,7 +725,7 @@ function DashboardContent() {
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h2 className="text-xl font-bold font-display mb-4">Design Catalog</h2>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-primary/60">
+              <p className="text-sm text-foreground">
                 {designs.length} designs. Upload brand logos, team designs, and artwork. Each design has its own database record.
               </p>
               <button
@@ -759,7 +759,7 @@ function DashboardContent() {
             </div>
             <div className="flex items-center gap-3 mb-6">
               <label className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${
-                selectedFile ? "border-gold bg-gold/5 text-gold" : "border-primary/20 text-primary/50 hover:border-primary/40"
+                selectedFile ? "border-gold bg-gold/5 text-gold" : "border-primary/20 text-foreground hover:border-primary/40"
               }`}>
                 {selectedFile ? `File: ${selectedFile.name}` : "Choose Image File"}
                 <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
@@ -791,12 +791,12 @@ function DashboardContent() {
                     <PlaceholderImage className="hidden h-full" />
                   </div>
                   <p className="text-xs font-medium truncate">{d.name}</p>
-                  <p className="text-xs text-primary/40 truncate">{d.category}</p>
-                  {d.description && <p className="text-[10px] text-primary/30 truncate mt-0.5">{d.description}</p>}
+                  <p className="text-xs text-foreground/80 truncate">{d.category}</p>
+                  {d.description && <p className="text-[10px] text-foreground/70 truncate mt-0.5">{d.description}</p>}
                   {d.tags && d.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1 justify-center">
                       {d.tags.slice(0, 3).map((t) => (
-                        <span key={t} className="text-[9px] bg-primary/10 text-primary/60 px-1.5 py-0.5 rounded-full">{t}</span>
+                        <span key={t} className="text-[9px] bg-primary/10 text-foreground px-1.5 py-0.5 rounded-full">{t}</span>
                       ))}
                     </div>
                   )}
@@ -806,7 +806,7 @@ function DashboardContent() {
               ))}
             </div>
           )}
-          {designs.length === 0 && <p className="text-sm text-primary/40 text-center py-8">No designs uploaded yet.</p>}
+          {designs.length === 0 && <p className="text-sm text-foreground/80 text-center py-8">No designs uploaded yet.</p>}
         </section>
         )}
 
@@ -889,13 +889,13 @@ function OrdersSection() {
   const totalPages = Math.ceil(orders.length / PER_PAGE);
   const pagedOrders = orders.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
-  if (loading) return <p className="text-sm text-primary/50">Loading orders...</p>;
+  if (loading) return <p className="text-sm text-foreground">Loading orders...</p>;
   if (error) return <p className="text-sm text-red-500">{error}</p>;
-  if (!orders?.length) return <p className="text-sm text-primary/40">No orders yet.</p>;
+  if (!orders?.length) return <p className="text-sm text-foreground/80">No orders yet.</p>;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs text-primary/40">
+      <div className="flex items-center justify-between text-xs text-foreground/80">
         <span>{orders.length} orders</span>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">
@@ -909,7 +909,7 @@ function OrdersSection() {
       </div>
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead><tr className="text-left text-primary/50 border-b border-warm-sand">
+        <thead><tr className="text-left text-foreground border-b border-warm-sand">
           <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Customer</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Designs</th><th className="pb-2 font-medium">Date</th><th className="pb-2 font-medium">Tracking</th>
         </tr></thead>
         <tbody>
@@ -919,8 +919,8 @@ function OrdersSection() {
             return (
               <>
                 <tr key={o.id} className="border-b border-warm-sand/30">
-                  <td className="py-2 font-mono text-xs text-primary/60">{o.id?.slice(0, 12)}</td>
-                  <td className="py-2 text-xs text-primary/60">{o.customerEmail || o.customerName || "-"}</td>
+                  <td className="py-2 font-mono text-xs text-foreground">{o.id?.slice(0, 12)}</td>
+                  <td className="py-2 text-xs text-foreground">{o.customerEmail || o.customerName || "-"}</td>
                   <td className="py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${o.state === "COMPLETED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{o.state}</span></td>
                   <td className="py-2 text-right font-mono">${o.total.toFixed(2)}</td>
                   <td className="py-2 text-xs">
@@ -932,17 +932,17 @@ function OrdersSection() {
                         {isOpen ? "▾" : "▸"} {designCount} file{designCount > 1 ? "s" : ""}
                       </button>
                     ) : (
-                      <span className="text-primary/30">—</span>
+                      <span className="text-foreground/70">—</span>
                     )}
                   </td>
-                  <td className="py-2 text-primary/50">{new Date(o.createdAt as string).toLocaleDateString()}</td>
+                  <td className="py-2 text-foreground">{new Date(o.createdAt as string).toLocaleDateString()}</td>
                   <td className="py-2">
                     {o.trackingUrl ? (
                       <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold text-xs hover:underline">Track</a>
                     ) : (
                       <button
                         onClick={() => { setExpandedId(o.id); setTrackingUrl(""); setTrackingNumber(""); }}
-                        className="text-xs text-primary/30 hover:text-gold"
+                        className="text-xs text-foreground/70 hover:text-gold"
                       >
                         + Add
                       </button>
@@ -952,11 +952,11 @@ function OrdersSection() {
                 {isOpen && designCount > 0 && (
                   <tr className="bg-warm-sand/10">
                     <td colSpan={7} className="py-3 px-4">
-                      <p className="text-xs font-medium text-primary/50 mb-2">Design files for printing:</p>
+                      <p className="text-xs font-medium text-foreground mb-2">Design files for printing:</p>
                       <div className="space-y-1">
                         {(o.items ?? []).filter((i) => i.designUrl).map((item, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs">
-                            <span className="text-primary/40">{item.name} × {item.quantity}</span>
+                            <span className="text-foreground/80">{item.name} × {item.quantity}</span>
                             <a href={item.designUrl} target="_blank" rel="noopener noreferrer"
                               className="text-gold hover:underline truncate max-w-xs">
                               {item.designUrl?.split("/").pop()?.split("?")[0] ?? "View design"} ↗
@@ -996,7 +996,7 @@ function OrdersSection() {
             >
               {savingTracking ? "Saving..." : "Save"}
             </button>
-            <button onClick={() => setExpandedId(null)} className="px-3 py-2 text-sm text-primary/40 hover:text-primary">Cancel</button>
+            <button onClick={() => setExpandedId(null)} className="px-3 py-2 text-sm text-foreground/80 hover:text-primary">Cancel</button>
           </div>
         </div>
       )}
@@ -1063,12 +1063,12 @@ function UsersSection() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-sm text-primary/50">Loading users...</p>;
+  if (loading) return <p className="text-sm text-foreground">Loading users...</p>;
   if (error) {
     return (
       <div>
         <p className="text-sm text-red-500 mb-2">Could not load users: {error}</p>
-        <p className="text-xs text-primary/40">
+        <p className="text-xs text-foreground/80">
           Manage authentication in{" "}
           <a
             href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users"
@@ -1086,7 +1086,7 @@ function UsersSection() {
   if (!users?.length) {
     return (
       <div>
-        <p className="text-sm text-primary/40">
+        <p className="text-sm text-foreground/80">
           No registered users found. Manage authentication in{" "}
           <a
             href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users"
@@ -1104,15 +1104,15 @@ function UsersSection() {
 
   return (
     <div>
-      <p className="text-xs text-primary/40 mb-3">{users.length} users registered.</p>
+      <p className="text-xs text-foreground/80 mb-3">{users.length} users registered.</p>
       <div className="space-y-2">
         {users.map((u) => (
           <div key={u.uid} className="flex items-center justify-between gap-4 text-sm p-3 bg-warm-sand/30 rounded-lg">
             <div className="min-w-0">
               <p className="font-medium truncate">{u.displayName || u.email}</p>
-              {u.displayName && <p className="text-xs text-primary/40 truncate">{u.email}</p>}
+              {u.displayName && <p className="text-xs text-foreground/80 truncate">{u.email}</p>}
             </div>
-            <div className="flex items-center gap-4 shrink-0 text-xs text-primary/40">
+            <div className="flex items-center gap-4 shrink-0 text-xs text-foreground/80">
               <span className="px-2 py-0.5 bg-gold/10 text-gold rounded-full font-medium">
                 {u.orderCount} {u.orderCount === 1 ? "order" : "orders"}
               </span>

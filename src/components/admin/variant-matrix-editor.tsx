@@ -76,7 +76,7 @@ export default function VariantMatrixEditor({ variants, onChange }: VariantMatri
         </div>
       </div>
 
-      <p className="text-xs text-primary/40">
+      <p className="text-xs text-foreground/80">
         Click cells to toggle variants. {variants.length} variant(s) selected.
       </p>
 
@@ -84,9 +84,9 @@ export default function VariantMatrixEditor({ variants, onChange }: VariantMatri
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr>
-              <th className="p-1.5 text-left text-primary/40 font-medium sticky left-0 bg-white z-10">Size / Color</th>
+              <th className="p-1.5 text-left text-foreground/80 font-medium sticky left-0 bg-white z-10">Size / Color</th>
               {colors.map((color) => (
-                <th key={color} className="p-1.5 text-center text-primary/50 font-medium whitespace-nowrap">
+                <th key={color} className="p-1.5 text-center text-foreground font-medium whitespace-nowrap">
                   {color}
                 </th>
               ))}
@@ -95,7 +95,7 @@ export default function VariantMatrixEditor({ variants, onChange }: VariantMatri
           <tbody>
             {sizes.map((size) => (
               <tr key={size}>
-                <td className="p-1.5 font-medium text-primary/60 sticky left-0 bg-white whitespace-nowrap">
+                <td className="p-1.5 font-medium text-foreground sticky left-0 bg-white whitespace-nowrap">
                   {size}
                 </td>
                 {colors.map((color) => {
@@ -108,7 +108,7 @@ export default function VariantMatrixEditor({ variants, onChange }: VariantMatri
                         className={"w-8 h-8 rounded-md transition-all text-[10px] font-medium " + (
                           exists
                             ? "bg-gold text-white shadow-sm scale-105"
-                            : "bg-warm-sand/30 text-primary/20 hover:bg-warm-sand/50 hover:text-primary/40"
+                            : "bg-warm-sand/30 text-foreground/50 hover:bg-warm-sand/50 hover:text-foreground/80"
                         )}
                         title={exists ? "Remove " + size + " / " + color : "Add " + size + " / " + color}
                       >
@@ -125,7 +125,7 @@ export default function VariantMatrixEditor({ variants, onChange }: VariantMatri
 
       {variants.filter((v) => !v.name.includes(" / ")).length > 0 && (
         <div className="mt-3">
-          <p className="text-xs text-primary/40 mb-1">Custom variants (not in matrix):</p>
+          <p className="text-xs text-foreground/80 mb-1">Custom variants (not in matrix):</p>
           <div className="space-y-1">
             {variants
               .filter((v) => !v.name.includes(" / "))

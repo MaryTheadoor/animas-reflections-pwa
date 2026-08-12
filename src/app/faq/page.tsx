@@ -10,7 +10,7 @@ export default function FaqPage() {
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="text-center pt-8 sm:pt-12 mb-12">
           <h1 className="text-4xl font-bold font-display mb-3">{FAQ.heading}</h1>
-          <p className="text-primary/60 max-w-xl mx-auto">{FAQ.subheading}</p>
+          <p className="text-foreground max-w-xl mx-auto">{FAQ.subheading}</p>
         </div>
 
         <div className="space-y-4">
@@ -33,14 +33,14 @@ export default function FaqPage() {
                 </svg>
               </summary>
               <div className="px-5 sm:px-6 pb-5 sm:pb-6 -mt-2">
-                <p className="text-primary/60 leading-relaxed">{item.a}</p>
+                <p className="text-foreground leading-relaxed">{item.a}</p>
               </div>
             </details>
           ))}
         </div>
 
         <div className="text-center mt-12">
-          <p className="text-primary/40 text-sm mb-4">
+          <p className="text-foreground/80 text-sm mb-4">
             Don&apos;t see your question? We&apos;re happy to help.
           </p>
           <Link

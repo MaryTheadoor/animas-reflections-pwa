@@ -65,7 +65,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </h3>
 
       {product.description && (
-        <p className="text-xs text-primary/40 line-clamp-2 mb-3 leading-relaxed">
+        <p className="text-xs text-foreground/80 line-clamp-2 mb-3 leading-relaxed">
           {stripTags(product.description).substring(0, 120)}
         </p>
       )}

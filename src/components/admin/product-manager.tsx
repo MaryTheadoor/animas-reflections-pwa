@@ -560,7 +560,7 @@ export default function ProductManager({ categories }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-bold font-display text-lg">{products.length} Products</h3>
-          <p className="text-xs text-primary/40">
+          <p className="text-xs text-foreground/80">
             {products.filter((p) => p.squareItemIds?.length).length} synced from Square
           </p>
         </div>
@@ -650,7 +650,7 @@ export default function ProductManager({ categories }: Props) {
       {selectedIds.size > 0 && !editing && (
         <div className="flex items-center gap-3 bg-gold/10 border border-gold/20 rounded-xl px-4 py-3">
           <span className="text-sm font-medium text-gold">{selectedIds.size} selected</span>
-          <button onClick={selectAll} className="text-xs text-primary/60 hover:text-primary">
+          <button onClick={selectAll} className="text-xs text-foreground hover:text-primary">
             {selectedIds.size === products.length ? "Deselect All" : "Select All"}
           </button>
           <div className="flex-1" />
@@ -695,12 +695,12 @@ export default function ProductManager({ categories }: Props) {
                   {p.name}
                   {!p.active && <span className="text-red-400 ml-1 text-xs">(hidden)</span>}
                 </p>
-                <p className="text-xs text-primary/40">
+                <p className="text-xs text-foreground/80">
                   {p.variants?.length ?? 0} variants · {categories.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
                   {" · "}
                   {(p.variants ?? []).reduce((sum, v) => sum + (v.inventory ?? 0), 0)} in stock
                   {p.variants?.some((v) => v.inventory !== undefined) && (
-                    <span className="text-primary/30">
+                    <span className="text-foreground/70">
                       {" · "}
                       {p.variants.filter((v) => v.inventory !== undefined).map((v) =>
                         `${v.name}:${v.inventory}`
@@ -713,7 +713,7 @@ export default function ProductManager({ categories }: Props) {
                 {p.squareItemIds?.length ? (
                   <span className="px-2 py-0.5 text-[10px] bg-blue-50 text-blue-600 rounded-full font-medium">Square</span>
                 ) : (
-                  <span className="px-2 py-0.5 text-[10px] bg-warm-sand text-primary/40 rounded-full">Manual</span>
+                  <span className="px-2 py-0.5 text-[10px] bg-warm-sand text-foreground/80 rounded-full">Manual</span>
                 )}
                 <button
                   onClick={() => handleDuplicate(p)}
@@ -749,7 +749,7 @@ export default function ProductManager({ categories }: Props) {
       )}
 
       {!editing && products.length === 0 && (
-        <p className="text-sm text-primary/40 text-center py-8">
+        <p className="text-sm text-foreground/80 text-center py-8">
           No products yet. Click &quot;+ New Product&quot; to create one.
         </p>
       )}
@@ -761,7 +761,7 @@ export default function ProductManager({ categories }: Props) {
             <h3 className="font-bold font-display">
               {editing?.id ? "Edit Product" : "New Product"}
             </h3>
-            <button onClick={resetForm} className="text-sm text-primary/40 hover:text-primary">
+            <button onClick={resetForm} className="text-sm text-foreground/80 hover:text-primary">
               Cancel
             </button>
           </div>
@@ -813,7 +813,7 @@ export default function ProductManager({ categories }: Props) {
                     Add
                   </button>
                   <button onClick={() => { setAddingCategory(false); setNewCategoryName(""); }}
-                    className="px-2 py-1 text-xs text-primary/40 hover:text-primary"
+                    className="px-2 py-1 text-xs text-foreground/80 hover:text-primary"
                   >
                     Cancel
                   </button>
@@ -897,7 +897,7 @@ export default function ProductManager({ categories }: Props) {
           {/* Per-product shipping override (optional — falls back to global tier) */}
           <div className="flex items-center gap-3">
             <label className="text-xs font-medium text-primary">Shipping rate</label>
-            <span className="text-primary/40">$</span>
+            <span className="text-foreground/80">$</span>
             <input
               type="number"
               step="0.01"
@@ -907,7 +907,7 @@ export default function ProductManager({ categories }: Props) {
               placeholder="Site default"
               className="w-24 px-3 py-1.5 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
             />
-            <span className="text-[10px] text-primary/30">leave empty for site default</span>
+            <span className="text-[10px] text-foreground/70">leave empty for site default</span>
           </div>
 
           {/* Mockup Images */}
@@ -916,7 +916,7 @@ export default function ProductManager({ categories }: Props) {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => (
                 <div key={view}>
-                  <label className="block text-[10px] font-medium text-primary/50 mb-1 capitalize">
+                  <label className="block text-[10px] font-medium text-foreground mb-1 capitalize">
                     {view === "sideL" ? "Left Side" : view === "sideR" ? "Right Side" : view}
                   </label>
                   <input
@@ -929,7 +929,7 @@ export default function ProductManager({ categories }: Props) {
                     placeholder="https://..."
                     className="w-full px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs"
                   />
-                  <label className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] text-primary/40 hover:text-gold cursor-pointer border border-dashed border-primary/20 rounded-lg">
+                  <label className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] text-foreground/80 hover:text-gold cursor-pointer border border-dashed border-primary/20 rounded-lg">
                     📷 Upload
                     <input
                       type="file"
@@ -1036,7 +1036,7 @@ export default function ProductManager({ categories }: Props) {
                       </button>
                       {/* Custom fields toggle per variant */}
                       {(v.customFields?.length ?? 0) > 0 ? (
-                        <div className="flex items-center gap-1 text-[10px] text-primary/40">
+                        <div className="flex items-center gap-1 text-[10px] text-foreground/80">
                           {v.customFields!.map((f) => (
                             <span key={f.key} className="bg-primary/5 px-1.5 py-0.5 rounded">{f.key}: {f.value}</span>
                           ))}
@@ -1050,7 +1050,7 @@ export default function ProductManager({ categories }: Props) {
                       ) : (
                         <button
                           onClick={() => updateVariant(v.id, "customFields", [{ key: "", value: "" }])}
-                          className="text-[10px] text-primary/30 hover:text-gold"
+                          className="text-[10px] text-foreground/70 hover:text-gold"
                           title="Add custom attributes like grommets, material, etc."
                         >
                           +Attrs
@@ -1059,7 +1059,7 @@ export default function ProductManager({ categories }: Props) {
                     </div>
                   ))}
                   {form.variants.length === 0 && (
-                    <p className="text-xs text-primary/30">No variants. Add at least one.</p>
+                    <p className="text-xs text-foreground/70">No variants. Add at least one.</p>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -1110,7 +1110,7 @@ export default function ProductManager({ categories }: Props) {
                   className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
                     form.colors.includes(color)
                       ? "bg-primary text-white"
-                      : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                      : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                   }`}
                 >
                   {color}
@@ -1156,7 +1156,7 @@ export default function ProductManager({ categories }: Props) {
             </div>
             {form.colors.filter((c) => !AVAILABLE_COLORS.includes(c)).length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
-                <span className="text-[10px] text-primary/30 w-full">Custom colors:</span>
+                <span className="text-[10px] text-foreground/70 w-full">Custom colors:</span>
                 {form.colors.filter((c) => !AVAILABLE_COLORS.includes(c)).map((c) => (
                   <span key={c} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full text-[10px]">
                     <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: colorSwatch(c) }} />
@@ -1210,7 +1210,7 @@ export default function ProductManager({ categories }: Props) {
                               )}
                             </>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[9px] text-primary/30 text-center px-1">
+                            <div className="w-full h-full flex items-center justify-center text-[9px] text-foreground/70 text-center px-1">
                               set front mockup
                             </div>
                           )}
@@ -1221,7 +1221,7 @@ export default function ProductManager({ categories }: Props) {
                       </div>
                       {/* Per-color photo row — real photos take precedence over the tint */}
                       <div className="flex items-start gap-2 flex-wrap">
-                        <span className="w-20 text-[10px] text-primary/40 shrink-0 pt-0.5">Photos</span>
+                        <span className="w-20 text-[10px] text-foreground/80 shrink-0 pt-0.5">Photos</span>
                         {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => {
                           const photo = perColor[view];
                           return (
@@ -1231,7 +1231,7 @@ export default function ProductManager({ categories }: Props) {
                                   /* eslint-disable-next-line @next/next/no-img-element */
                                   <img src={photo} alt={`${color} ${view}`} className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-[8px] text-primary/30 capitalize">
+                                  <div className="w-full h-full flex items-center justify-center text-[8px] text-foreground/70 capitalize">
                                     {view === "sideL" ? "Left" : view === "sideR" ? "Right" : view}
                                   </div>
                                 )}
@@ -1240,7 +1240,7 @@ export default function ProductManager({ categories }: Props) {
                                 <select
                                   value={photo ?? ""}
                                   onChange={(e) => (e.target.value ? setPerColorImage(color, view, e.target.value) : removePerColorImage(color, view))}
-                                  className="text-[9px] max-w-[96px] px-1 py-0.5 rounded border border-primary/15 bg-white text-primary/60"
+                                  className="text-[9px] max-w-[96px] px-1 py-0.5 rounded border border-primary/15 bg-white text-foreground"
                                   title={`${view} photo for ${color}`}
                                 >
                                   <option value="">gallery…</option>
@@ -1257,7 +1257,7 @@ export default function ProductManager({ categories }: Props) {
                             </div>
                           );
                         })}
-                        <p className="text-[9px] text-primary/30 w-full">
+                        <p className="text-[9px] text-foreground/70 w-full">
                           A real photo replaces the tint in the customizer. Upload photos in the Image Manager, then pick a gallery image here.
                         </p>
                       </div>
@@ -1307,7 +1307,7 @@ export default function ProductManager({ categories }: Props) {
                 </label>
               </AdminTooltip>
               {form.productAddons === undefined && (
-                <span className="text-[10px] text-primary/40 italic">using site defaults</span>
+                <span className="text-[10px] text-foreground/80 italic">using site defaults</span>
               )}
             </div>
 
@@ -1326,7 +1326,7 @@ export default function ProductManager({ categories }: Props) {
                     <span className="flex-1">{std.name}</span>
                     {active && (
                       <>
-                        <span className="text-primary/40">$</span>
+                        <span className="text-foreground/80">$</span>
                         <input
                           type="number" step="0.01" min="0" value={active.price}
                           onChange={(e) => updateAddon(std.id, "price", parseFloat(e.target.value) || 0)}
@@ -1346,7 +1346,7 @@ export default function ProductManager({ categories }: Props) {
                   <input type="text" value={a.name} placeholder="Add-on name"
                     onChange={(e) => updateAddon(a.id, "name", e.target.value)}
                     className="flex-1 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm focus:border-gold outline-none" />
-                  <span className="text-primary/40">$</span>
+                  <span className="text-foreground/80">$</span>
                   <input type="number" step="0.01" min="0" value={a.price}
                     onChange={(e) => updateAddon(a.id, "price", parseFloat(e.target.value) || 0)}
                     className="w-20 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm text-right focus:border-gold outline-none" />
@@ -1355,14 +1355,14 @@ export default function ProductManager({ categories }: Props) {
               ))}
               <button
                 onClick={addCustomAddon}
-                className="w-full py-2 border-2 border-dashed border-primary/20 rounded-xl text-xs text-primary/40 hover:border-primary/40 transition-colors"
+                className="w-full py-2 border-2 border-dashed border-primary/20 rounded-xl text-xs text-foreground/80 hover:border-primary/40 transition-colors"
               >
                 + Add Custom Add-on
               </button>
             </div>
 
             {form.productAddons !== undefined && (
-              <button onClick={() => updateField("productAddons", undefined)} className="mt-2 text-xs text-primary/40 hover:text-gold transition-colors">
+              <button onClick={() => updateField("productAddons", undefined)} className="mt-2 text-xs text-foreground/80 hover:text-gold transition-colors">
                 Reset to site defaults
               </button>
             )}
@@ -1378,7 +1378,7 @@ export default function ProductManager({ categories }: Props) {
               </AdminTooltip>
             </div>
             {allDesigns.length === 0 ? (
-              <p className="text-xs text-primary/30">No designs available. Add designs in the Designs tab first.</p>
+              <p className="text-xs text-foreground/70">No designs available. Add designs in the Designs tab first.</p>
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1">
                 {allDesigns.slice(0, 50).map((d) => {
@@ -1398,7 +1398,7 @@ export default function ProductManager({ categories }: Props) {
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                         selected
                           ? "bg-gold/10 border-gold/30 text-gold"
-                          : "bg-warm-sand/30 border-transparent text-primary/50 hover:border-primary/20"
+                          : "bg-warm-sand/30 border-transparent text-foreground hover:border-primary/20"
                       }`}
                     >
                       <Image
@@ -1440,7 +1440,7 @@ export default function ProductManager({ categories }: Props) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[10px] font-medium text-primary/50 mb-1">Background Color</label>
+                <label className="block text-[10px] font-medium text-foreground mb-1">Background Color</label>
                 <div className="flex gap-1 items-center">
                   <input
                     type="color"
@@ -1458,7 +1458,7 @@ export default function ProductManager({ categories }: Props) {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-primary/50 mb-1">Patch Shape</label>
+                <label className="block text-[10px] font-medium text-foreground mb-1">Patch Shape</label>
                 <select
                   value={form.attributes?.patchShape ?? ""}
                   onChange={(e) => updateField("attributes", { ...form.attributes, patchShape: e.target.value || undefined })}
@@ -1472,7 +1472,7 @@ export default function ProductManager({ categories }: Props) {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-primary/50 mb-1">Border Style</label>
+                <label className="block text-[10px] font-medium text-foreground mb-1">Border Style</label>
                 <select
                   value={form.attributes?.borderStyle ?? ""}
                   onChange={(e) => updateField("attributes", { ...form.attributes, borderStyle: e.target.value || undefined })}
@@ -1488,7 +1488,7 @@ export default function ProductManager({ categories }: Props) {
             </div>
             {/* Custom key-value pairs */}
             <div className="mt-3">
-              <label className="block text-[10px] font-medium text-primary/50 mb-1">Custom Fields</label>
+              <label className="block text-[10px] font-medium text-foreground mb-1">Custom Fields</label>
               <div className="space-y-1">
                 {(form.attributes?.customFields ?? []).map((f, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -1543,7 +1543,7 @@ export default function ProductManager({ categories }: Props) {
                 </div>
               ))}
             </div>
-            <label className="inline-flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-primary/20 rounded-xl cursor-pointer hover:border-primary/40 transition-colors text-sm text-primary/50">
+            <label className="inline-flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-primary/20 rounded-xl cursor-pointer hover:border-primary/40 transition-colors text-sm text-foreground">
               {uploading ? `Uploading ${Math.round(uploadProgress)}%...` : "Choose Image"}
               <input
                 type="file"
@@ -1573,7 +1573,7 @@ export default function ProductManager({ categories }: Props) {
               </button>
               <button
                 onClick={resetForm}
-                className="px-4 py-2.5 text-sm text-primary/50 hover:text-primary transition-colors"
+                className="px-4 py-2.5 text-sm text-foreground hover:text-primary transition-colors"
               >
                 Cancel
               </button>

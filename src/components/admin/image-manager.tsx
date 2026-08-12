@@ -245,7 +245,7 @@ export default function ImageManager() {
           {/* Mockup Assignment */}
           <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h4 className="font-bold mb-3">Mockup Images (Customizer Base)</h4>
-            <p className="text-xs text-primary/40 mb-3">
+            <p className="text-xs text-foreground/80 mb-3">
               Upload blank garment/product photos for the customizer. One per view.
             </p>
             <div className="flex gap-2 mb-3 flex-wrap">
@@ -254,7 +254,7 @@ export default function ImageManager() {
                   key={v}
                   onClick={() => setMockupView(v)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium capitalize transition-colors ${
-                    mockupView === v ? "bg-primary text-white" : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                    mockupView === v ? "bg-primary text-white" : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                   }`}
                 >
                   {v === "sideL" ? "Left Side" : v === "sideR" ? "Right Side" : v}
@@ -271,12 +271,12 @@ export default function ImageManager() {
                     className="object-contain p-2"
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-xs text-primary/30">
+                  <div className="flex items-center justify-center h-full text-xs text-foreground/70">
                     No {mockupView} mockup
                   </div>
                 )}
               </div>
-              <div className="space-y-2 text-xs text-primary/50">
+              <div className="space-y-2 text-xs text-foreground">
                 <p><strong>Front:</strong> {mockups.front ? "✓ Set" : "✗ Not set"}</p>
                 <p><strong>Back:</strong> {mockups.back ? "✓ Set" : "✗ Not set"}</p>
                 <p><strong>Sleeve:</strong> {mockups.sleeve ? "✓ Set" : "✗ Not set"}</p>
@@ -297,7 +297,7 @@ export default function ImageManager() {
           {/* Color Mockups — real per-color photos (replace the tint overlay) */}
           <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h4 className="font-bold mb-1">Color Mockups (per-color photos)</h4>
-            <p className="text-xs text-primary/40 mb-3">
+            <p className="text-xs text-foreground/80 mb-3">
               Optional real photos per garment color per view. When a color has a photo it
               replaces the tint overlay in the customizer. Upload here, or pick a gallery image.
             </p>
@@ -321,7 +321,7 @@ export default function ImageManager() {
                                 {photo ? (
                                   <Image src={photo} alt={`${color} ${view}`} fill className="object-cover" />
                                 ) : (
-                                  <div className="flex items-center justify-center h-full text-[9px] text-primary/30 capitalize">
+                                  <div className="flex items-center justify-center h-full text-[9px] text-foreground/70 capitalize">
                                     {view === "sideL" ? "Left" : view === "sideR" ? "Right" : view}
                                   </div>
                                 )}
@@ -353,7 +353,7 @@ export default function ImageManager() {
                               <select
                                 value={photo ?? ""}
                                 onChange={(e) => (e.target.value ? setColorMockup(color, view, e.target.value) : removeColorMockup(color, view))}
-                                className="mt-1 w-full text-[9px] px-1 py-0.5 rounded border border-primary/15 bg-white text-primary/60"
+                                className="mt-1 w-full text-[9px] px-1 py-0.5 rounded border border-primary/15 bg-white text-foreground"
                                 title={`Assign gallery image as ${view} photo`}
                               >
                                 <option value="">gallery…</option>
@@ -376,7 +376,7 @@ export default function ImageManager() {
           <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h4 className="font-bold mb-3">Gallery Images ({images.length})</h4>
             {images.length === 0 ? (
-              <p className="text-sm text-primary/40">No images uploaded yet.</p>
+              <p className="text-sm text-foreground/80">No images uploaded yet.</p>
             ) : (
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                 {images.map((url) => (
@@ -422,13 +422,13 @@ export default function ImageManager() {
               }`}
               onClick={() => fileInputRef.current?.click()}
             >
-              <svg className="w-8 h-8 mx-auto mb-2 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-8 h-8 mx-auto mb-2 text-foreground/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <p className="text-sm text-primary/50">
+              <p className="text-sm text-foreground">
                 Drag & drop images here, or click to browse
               </p>
-              <p className="text-xs text-primary/30 mt-1">PNG, JPG, WebP supported</p>
+              <p className="text-xs text-foreground/70 mt-1">PNG, JPG, WebP supported</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -448,7 +448,7 @@ export default function ImageManager() {
                       {f.url ? (
                         <Image src={f.url} alt="" width={40} height={40} className="object-cover" />
                       ) : (
-                        <div className="flex items-center justify-center h-full text-[10px] text-primary/30">
+                        <div className="flex items-center justify-center h-full text-[10px] text-foreground/70">
                           {f.file.name.split(".").pop()?.toUpperCase()}
                         </div>
                       )}

@@ -48,7 +48,7 @@ export default function AdminTooltip({ content, dismissKey, children, side = "to
         ?
       </button>
       {visible && (
-        <div className={`absolute z-50 ${positionClasses} w-64 p-3 bg-white border border-warm-sand rounded-xl shadow-lg text-xs text-primary/70 leading-relaxed`}>
+        <div className={`absolute z-50 ${positionClasses} w-64 p-3 bg-white border border-warm-sand rounded-xl shadow-lg text-xs text-foreground leading-relaxed`}>
           <p>{content}</p>
           {dismissKey && (
             <button
@@ -88,7 +88,7 @@ export function DismissedTooltipsCount() {
   if (count === 0) return null;
   return (
     <div className="text-center mb-6">
-      <button onClick={resetAll} className="text-xs text-primary/30 hover:text-primary/60 underline">
+      <button onClick={resetAll} className="text-xs text-foreground/70 hover:text-foreground underline">
         Reset {count} dismissed tooltips
       </button>
     </div>

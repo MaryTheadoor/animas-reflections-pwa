@@ -20,7 +20,7 @@ export default function FundraisingTeaser() {
         <h2 className="text-3xl sm:text-4xl font-bold font-display mb-3">
           Fundraising Made Easy
         </h2>
-        <p className="text-primary/60 max-w-xl mx-auto mb-6 leading-relaxed">
+        <p className="text-foreground max-w-xl mx-auto mb-6 leading-relaxed">
           Raise money for your team, school, or cause with custom merchandise.
           We build your catalog, handle orders, print and ship — you earn 50% of
           the profit. No inventory, no minimums, no stress.
@@ -29,7 +29,7 @@ export default function FundraisingTeaser() {
           {HIGHLIGHTS.map((item) => (
             <span
               key={item}
-              className="px-4 py-2 bg-warm-sand/50 rounded-full text-sm text-primary/70 font-medium"
+              className="px-4 py-2 bg-warm-sand/50 rounded-full text-sm text-foreground font-medium"
             >
               {item}
             </span>

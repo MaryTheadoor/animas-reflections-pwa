@@ -23,14 +23,14 @@ function ConfirmationContent() {
         <h1 className="text-3xl sm:text-4xl font-bold font-display mb-4">
           Order Confirmed!
         </h1>
-        <p className="text-primary/60 mb-8 max-w-md mx-auto leading-relaxed">
+        <p className="text-foreground mb-8 max-w-md mx-auto leading-relaxed">
           Thank you for your order! We&apos;ve received it and will begin processing
           right away. You&apos;ll receive a confirmation email with your order details.
         </p>
 
         {orderId && (
           <div className="bg-warm-sand rounded-2xl p-6 mb-8 inline-block">
-            <p className="text-xs text-primary/40 mb-1">Order Reference</p>
+            <p className="text-xs text-foreground/80 mb-1">Order Reference</p>
             <p className="text-lg font-mono font-bold text-primary">{orderId}</p>
             {paymentStatus && (
               <p className="text-xs text-green-600 mt-2">
@@ -55,7 +55,7 @@ function ConfirmationContent() {
           </Link>
         </div>
 
-        <div className="mt-12 text-sm text-primary/40">
+        <div className="mt-12 text-sm text-foreground/80">
           <p>
             Questions about your order?{" "}
             <Link href="/contact" className="text-gold hover:underline">

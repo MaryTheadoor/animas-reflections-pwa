@@ -159,7 +159,7 @@ export default function AccountPage() {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
         <h1 className="text-2xl font-bold font-display mb-4">My Account</h1>
-        <p className="text-primary/60 mb-6">Sign in to view your orders and manage your account.</p>
+        <p className="text-foreground mb-6">Sign in to view your orders and manage your account.</p>
         <Link
           href="/admin/login"
           className="inline-block px-6 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors"
@@ -181,7 +181,7 @@ export default function AccountPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold font-display">My Account</h1>
-        <button onClick={logout} className="text-sm text-primary/40 hover:text-red-500 transition-colors">
+        <button onClick={logout} className="text-sm text-foreground/80 hover:text-red-500 transition-colors">
           Sign Out
         </button>
       </div>
@@ -195,7 +195,7 @@ export default function AccountPage() {
             className={"flex-1 py-2 rounded-lg text-sm font-medium transition-colors " + (
               tab === t.key
                 ? "bg-white text-primary shadow-sm"
-                : "text-primary/40 hover:text-primary/60"
+                : "text-foreground/80 hover:text-foreground"
             )}
           >
             {t.label}
@@ -207,7 +207,7 @@ export default function AccountPage() {
       {tab === "orders" && (
         <div className="space-y-4">
           {orders.length === 0 ? (
-            <p className="text-sm text-primary/40 text-center py-8">No orders yet.</p>
+            <p className="text-sm text-foreground text-center py-8">No orders yet.</p>
           ) : (
             orders.map((order) => (
               <div key={order.id} className="bg-white border border-warm-sand rounded-2xl overflow-hidden">
@@ -217,7 +217,7 @@ export default function AccountPage() {
                 >
                   <div>
                     <p className="font-medium text-sm">Order #{(order.squareOrderId || order.id).slice(-8)}</p>
-                    <p className="text-xs text-primary/40">
+                    <p className="text-xs text-foreground/80">
                       {new Date(order.createdAt).toLocaleDateString()} · {order.items?.length ?? 0} item(s)
                     </p>
                   </div>
@@ -233,11 +233,11 @@ export default function AccountPage() {
                   <div className="px-5 pb-4 border-t border-warm-sand/50 pt-3 space-y-3">
                     {/* Items */}
                     <div>
-                      <p className="text-xs font-medium text-primary/50 mb-1">Items</p>
+                      <p className="text-xs font-medium text-foreground mb-1">Items</p>
                       {order.items?.map((item, i) => (
                         <div key={i} className="flex justify-between text-sm py-1">
                           <span>{item.name} × {item.quantity}</span>
-                          <span className="text-primary/60">${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+                          <span className="text-foreground">${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -245,8 +245,8 @@ export default function AccountPage() {
                     {/* Shipping */}
                     {order.shipping && (
                       <div>
-                        <p className="text-xs font-medium text-primary/50 mb-1">Shipping Address</p>
-                        <p className="text-sm text-primary/70">
+                        <p className="text-xs font-medium text-foreground mb-1">Shipping Address</p>
+                        <p className="text-sm text-foreground">
                           {order.shipping.name}<br />
                           {order.shipping.line1}<br />
                           {order.shipping.city}, {order.shipping.state} {order.shipping.zip}
@@ -257,11 +257,11 @@ export default function AccountPage() {
                     {/* Totals */}
                     <div className="border-t border-warm-sand/50 pt-2 space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-primary/50">Subtotal</span>
+                        <span className="text-foreground">Subtotal</span>
                         <span>${order.totals?.subtotal?.toFixed(2) ?? "0.00"}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-primary/50">Shipping</span>
+                        <span className="text-foreground">Shipping</span>
                         <span>${order.totals?.shipping?.toFixed(2) ?? "0.00"}</span>
                       </div>
                       <div className="flex justify-between text-sm font-semibold">
@@ -308,7 +308,7 @@ export default function AccountPage() {
           {!editingAddress && addrForm.label === "" ? (
             <>
               {addresses.length === 0 ? (
-                <p className="text-sm text-primary/40 text-center py-8">No saved addresses.</p>
+                <p className="text-sm text-foreground text-center py-8">No saved addresses.</p>
               ) : (
                 addresses.map((addr) => (
                   <div key={addr.id} className="bg-white border border-warm-sand rounded-2xl p-4 flex items-start justify-between">
@@ -319,7 +319,7 @@ export default function AccountPage() {
                           <span className="text-[10px] bg-gold/10 text-gold px-1.5 py-0.5 rounded-full">Default</span>
                         )}
                       </div>
-                      <p className="text-sm text-primary/60">
+                      <p className="text-sm text-foreground">
                         {addr.line1}{addr.line2 ? ", " + addr.line2 : ""}<br />
                         {addr.city}, {addr.state} {addr.zip}
                       </p>
@@ -327,7 +327,7 @@ export default function AccountPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => startEditAddress(addr)}
-                        className="text-xs text-primary/40 hover:text-primary transition-colors"
+                        className="text-xs text-foreground/80 hover:text-primary transition-colors"
                       >
                         Edit
                       </button>
@@ -343,7 +343,7 @@ export default function AccountPage() {
               )}
               <button
                 onClick={() => startEditAddress()}
-                className="w-full py-3 border-2 border-dashed border-primary/20 rounded-xl text-sm text-primary/40 hover:border-primary/40 hover:text-primary/60 transition-colors"
+                className="w-full py-3 border-2 border-dashed border-primary/20 rounded-xl text-sm text-foreground/80 hover:border-primary/40 hover:text-foreground transition-colors"
               >
                 + Add New Address
               </button>
@@ -428,7 +428,7 @@ export default function AccountPage() {
                 </button>
                 <button
                   onClick={() => { setEditingAddress(null); resetAddrForm(); }}
-                  className="px-4 py-2 text-sm text-primary/40 hover:text-primary transition-colors"
+                  className="px-4 py-2 text-sm text-foreground/80 hover:text-primary transition-colors"
                 >
                   Cancel
                 </button>
@@ -477,9 +477,9 @@ export default function AccountPage() {
               type="email"
               value={user.email || ""}
               disabled
-              className="w-full px-3 py-2 rounded-xl border border-warm-sand bg-warm-sand/30 text-primary/40 outline-none text-sm cursor-not-allowed"
+              className="w-full px-3 py-2 rounded-xl border border-warm-sand bg-warm-sand/30 text-foreground/80 outline-none text-sm cursor-not-allowed"
             />
-            <p className="text-[10px] text-primary/30 mt-1">Email is managed through your login provider.</p>
+            <p className="text-[10px] text-foreground/70 mt-1">Email is managed through your login provider.</p>
           </div>
           <button
             onClick={handleSaveProfile}

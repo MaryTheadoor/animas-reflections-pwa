@@ -86,7 +86,7 @@ export default function AdminLoginPage() {
             className="mx-auto mb-4 rounded-xl"
           />
           <h1 className="text-xl font-bold font-display">Admin Login</h1>
-          <p className="text-sm text-primary/50 mt-1">{SITE.name} CMS</p>
+          <p className="text-sm text-foreground mt-1">{SITE.name} CMS</p>
         </div>
 
         {!ADMIN_EMAIL && (
@@ -142,7 +142,7 @@ export default function AdminLoginPage() {
               <div className="w-full border-t border-warm-sand" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-2 text-primary/40">or</span>
+              <span className="bg-white px-2 text-foreground/80">or</span>
             </div>
           </div>
 
@@ -162,7 +162,7 @@ export default function AdminLoginPage() {
         </form>
 
         <div className="mt-4 text-center">
-          <Link href="/" className="text-sm text-primary/50 hover:text-primary transition-colors">
+          <Link href="/" className="text-sm text-foreground hover:text-primary transition-colors">
             Back to site
           </Link>
         </div>

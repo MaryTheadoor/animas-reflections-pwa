@@ -11,7 +11,7 @@ export default function TermsPage() {
           {TERMS_OF_SALE.sections.map((section) => (
             <div key={section.title}>
               <h2 className="font-bold font-display text-lg mb-2">{section.title}</h2>
-              <p className="text-primary/70 leading-relaxed">{section.body}</p>
+              <p className="text-foreground leading-relaxed">{section.body}</p>
             </div>
           ))}
         </div>

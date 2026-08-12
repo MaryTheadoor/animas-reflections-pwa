@@ -73,10 +73,10 @@ export default function FileUpload({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-xs text-primary/50">{Math.round(progress)}%</span>
+            <span className="text-xs text-foreground">{Math.round(progress)}%</span>
           </div>
         ) : (
-          <span className="text-sm text-primary/50">Click or drag to upload</span>
+          <span className="text-sm text-foreground">Click or drag to upload</span>
         )}
         <input
           type="file"

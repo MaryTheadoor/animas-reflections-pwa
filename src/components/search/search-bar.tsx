@@ -56,7 +56,7 @@ export default function SearchBar({
       <div className="flex gap-3">
         <div className="relative flex-1">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary/30"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground/70"
             fill="none" viewBox="0 0 24 24" stroke="currentColor"
             aria-hidden="true"
           >
@@ -84,7 +84,7 @@ export default function SearchBar({
           type="button"
           onClick={() => setShowFilters(!showFilters)}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            showFilters ? "bg-primary text-white" : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+            showFilters ? "bg-primary text-white" : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
           }`}
         >
           {showFilters ? "Hide Filters" : "Filters"}
@@ -114,7 +114,7 @@ export default function SearchBar({
                 type="button"
                 onClick={() => setCategoryId(null)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  !categoryId ? "bg-gold text-white" : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                  !categoryId ? "bg-gold text-white" : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                 }`}
               >
                 All
@@ -127,7 +127,7 @@ export default function SearchBar({
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                     categoryId === cat.id
                       ? "bg-primary text-white"
-                      : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                      : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                   }`}
                 >
                   {cat.name}
@@ -150,7 +150,7 @@ export default function SearchBar({
                   className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
                     selectedColors.includes(color)
                       ? "bg-primary text-white"
-                      : "bg-warm-sand/50 text-primary/60 hover:bg-warm-sand"
+                      : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                   }`}
                 >
                   {color}

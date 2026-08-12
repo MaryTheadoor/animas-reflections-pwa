@@ -50,7 +50,7 @@ export default function Home() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight font-display mb-6 animate-fade-in-up animate-delay-100 text-foreground">
               {siteConfig.hero_heading || HERO.heading}
             </h1>
-            <p className="text-lg text-foreground/70 mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
+            <p className="text-lg text-foreground mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
               {siteConfig.hero_subheading || "Design your own t-shirt, hoodie, bag, purse, ornament, coaster, dog scarf, long sleeve tee, print on wood, metal, jewelry and more!"}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animate-delay-300">
@@ -96,8 +96,8 @@ export default function Home() {
             <div>
               <h2 className="text-3xl font-bold font-display mb-2">{OUR_STORY.heading}</h2>
               <p className="text-gold font-semibold mb-4">{OUR_STORY.subheading}</p>
-              <p className="text-primary/70 leading-relaxed">{siteConfig.about_body || OUR_STORY.body}</p>
-              <div className="mt-4 text-sm text-primary/50">
+              <p className="text-foreground leading-relaxed">{siteConfig.about_body || OUR_STORY.body}</p>
+              <div className="mt-4 text-sm text-foreground">
                 <p>{SITE.phone}</p>
                 <p>{SITE.email}</p>
               </div>
@@ -114,13 +114,13 @@ export default function Home() {
         <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
           <div>
             <h4 className="font-bold font-display mb-3">{SITE.name}</h4>
-            <p className="text-sm text-primary/60 leading-relaxed">{SITE.description}</p>
+            <p className="text-sm text-foreground leading-relaxed">{SITE.description}</p>
           </div>
           <div>
             <h4 className="font-bold mb-3">Links</h4>
             <div className="flex flex-col gap-2 text-sm">
               {NAVIGATION.footer.map((link) => (
-                <Link key={link.href} href={link.href} className="text-primary/60 hover:text-gold transition-colors">
+                <Link key={link.href} href={link.href} className="text-foreground hover:text-gold transition-colors">
                   {link.label}
                 </Link>
               ))}
@@ -128,8 +128,8 @@ export default function Home() {
           </div>
           <div>
             <h4 className="font-bold mb-3">Policies</h4>
-            <p className="text-sm text-primary/60 leading-relaxed">{RETURN_POLICY}</p>
-            <p className="text-xs text-primary/40 mt-3">
+            <p className="text-sm text-foreground leading-relaxed">{RETURN_POLICY}</p>
+            <p className="text-xs text-foreground/80 mt-3">
               We accept: {PAYMENT_METHODS.join(", ")}
             </p>
             <div className="flex gap-3 mt-3">
@@ -137,7 +137,7 @@ export default function Home() {
                 href={SITE.socials.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary/40 hover:text-gold transition-colors"
+                className="text-foreground/80 hover:text-gold transition-colors"
                 aria-label="Instagram"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -147,7 +147,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-warm-sand text-center text-sm text-primary/40">
+        <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-warm-sand text-center text-sm text-foreground/80">
           <p>
             &copy; {new Date().getFullYear()} {SITE.name} &mdash; {SITE.location}. All rights reserved.
           </p>

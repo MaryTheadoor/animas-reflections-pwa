@@ -279,7 +279,7 @@ export default function Customizer({
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               activeView === v.key
                 ? "bg-primary text-white"
-                : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
             }`}
           >
             {v.label}
@@ -386,7 +386,7 @@ export default function Customizer({
       {/* Design Controls */}
       <div className="max-w-lg mx-auto space-y-4">
         {!hasDesign && (
-          <p className="text-sm text-primary/40 text-center">
+          <p className="text-sm text-foreground/80 text-center">
             Upload an image or add text to start customizing. Then drag, resize, and rotate your design.
           </p>
         )}
@@ -423,7 +423,7 @@ export default function Customizer({
           >
             +
           </button>
-          <span className="text-xs text-primary/40 w-10 text-right tabular-nums">
+          <span className="text-xs text-foreground/80 w-10 text-right tabular-nums">
             {Math.round(designState.scale * 100)}%
           </span>
         </div>
@@ -473,7 +473,7 @@ export default function Customizer({
           >
             90° ↻
           </button>
-          <span className="text-xs text-primary/40 ml-auto tabular-nums">
+          <span className="text-xs text-foreground/80 ml-auto tabular-nums">
             {designState.rotation}°
           </span>
         </div>
@@ -501,7 +501,7 @@ export default function Customizer({
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-primary/40 w-8">Font</span>
+            <span className="text-xs text-foreground/80 w-8">Font</span>
             <select
               value={textFont}
               onChange={(e) => onTextFontChange(e.target.value)}
@@ -516,7 +516,7 @@ export default function Customizer({
               <option value="'Comic Sans MS', cursive">Comic Sans</option>
             </select>
           </div>
-          <p className="text-[10px] text-primary/30 mt-1">
+          <p className="text-[10px] text-foreground/70 mt-1">
             Drag the design on the garment to reposition. Scroll or use size controls to resize.
           </p>
         </div>

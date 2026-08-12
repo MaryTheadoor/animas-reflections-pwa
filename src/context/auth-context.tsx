@@ -140,9 +140,9 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
       <div className="flex items-center justify-center min-h-screen bg-cream">
         <div className="text-center p-8">
           <h1 className="text-2xl font-bold font-display mb-4">Access Denied</h1>
-          <p className="text-primary/60 mb-2">You must be logged in as an administrator.</p>
+          <p className="text-foreground mb-2">You must be logged in as an administrator.</p>
           {user && (
-            <p className="text-xs text-primary/30 mb-4">
+            <p className="text-xs text-foreground/70 mb-4">
               Signed in as: {user.email}. 
               If this should be an admin account, add it in the Admin Users tab.
             </p>

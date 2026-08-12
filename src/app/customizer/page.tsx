@@ -395,7 +395,7 @@ function CustomizerContent() {
                           className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                             i === variantIndex
                               ? "bg-primary text-white"
-                              : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                              : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                           }`}
                         >
                           {v.name || `Option ${i + 1}`}
@@ -422,7 +422,7 @@ function CustomizerContent() {
                               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium capitalize transition-all ${
                                 isActive
                                   ? "bg-primary text-white"
-                                  : "bg-warm-sand text-primary/60 hover:bg-warm-sand/80"
+                                  : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                               }`}
                             >
                               <span
@@ -456,7 +456,7 @@ function CustomizerContent() {
             <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
               <h2 className="font-bold font-display text-lg mb-4">Design</h2>
               {selectedProduct?.singleDesign && (
-                <p className="text-xs text-primary/50 mb-3 -mt-2">
+                <p className="text-xs text-foreground mb-3 -mt-2">
                   This item takes a single design — pick one image.
                 </p>
               )}
@@ -470,7 +470,7 @@ function CustomizerContent() {
               <div className="mt-3">
                 <button
                   onClick={() => setLibraryOpen(!libraryOpen)}
-                  className="w-full px-4 py-2.5 border-2 border-dashed border-primary/20 rounded-xl text-sm text-primary/50 hover:border-primary/40 hover:text-primary transition-colors"
+                  className="w-full px-4 py-2.5 border-2 border-dashed border-primary/20 rounded-xl text-sm text-foreground hover:border-primary/40 hover:text-primary transition-colors"
                 >
                   {libraryOpen ? "Close Library" : "Choose Design"}
                 </button>
@@ -480,7 +480,7 @@ function CustomizerContent() {
                     {/* Per-product designs */}
                     {productDesigns.length > 0 && (
                       <div>
-                        <p className="text-[10px] font-semibold text-primary/40 uppercase tracking-wider mb-1 px-1">Product Designs</p>
+                        <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider mb-1 px-1">Product Designs</p>
                         <div className="space-y-1">
                           {productDesigns.map((asset) => (
                             <button
@@ -511,7 +511,7 @@ function CustomizerContent() {
                       const filteredLibrary = designLibrary.filter((d) => !pinnedIds.has(d.id));
                       if (filteredLibrary.length === 0 && productDesigns.length === 0) {
                         return (
-                          <p className="text-xs text-primary/30 text-center py-4">
+                          <p className="text-xs text-foreground/70 text-center py-4">
                             No designs available. Upload designs in the Admin Dashboard.
                           </p>
                         );
@@ -520,7 +520,7 @@ function CustomizerContent() {
                       return (
                         <div>
                           {productDesigns.length > 0 && (
-                            <p className="text-[10px] font-semibold text-primary/40 uppercase tracking-wider mb-1 px-1 mt-2">All Designs</p>
+                            <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider mb-1 px-1 mt-2">All Designs</p>
                           )}
                           <div className="space-y-1">
                             {filteredLibrary.map((asset) => (
@@ -542,7 +542,7 @@ function CustomizerContent() {
                                 />
                                 <div className="min-w-0">
                                   <p className="text-xs font-medium truncate">{asset.name}</p>
-                                  <p className="text-[10px] text-primary/40 truncate">
+                                  <p className="text-[10px] text-foreground/80 truncate">
                                     {asset.category}
                                   </p>
                                 </div>
@@ -599,12 +599,12 @@ function CustomizerContent() {
               <h2 className="font-bold font-display text-lg mb-4">Summary</h2>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-primary/60">Base price</span>
+                  <span className="text-foreground">Base price</span>
                   <span>${basePrice.toFixed(2)}</span>
                 </div>
                 {addonsCost > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-primary/60">Add-ons</span>
+                    <span className="text-foreground">Add-ons</span>
                     <span>+${addonsCost.toFixed(2)}</span>
                   </div>
                 )}
@@ -626,7 +626,7 @@ function CustomizerContent() {
                 </p>
               )}
               {selectedProduct && !designUrl && !designText && (
-                <p className="text-xs text-primary/30 text-center mt-2">
+                <p className="text-xs text-foreground/70 text-center mt-2">
                   Upload a design or add text to continue
                 </p>
               )}
