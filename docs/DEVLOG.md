@@ -575,6 +575,69 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 15 — 2026-08-12 | A11y + legal compliance pass (crash recovery)
+
+### Context Restored From
+- Previous session (`kimi-code` session e9c852bb) crashed mid-turn on provider errors (k3 403 usage limit, then DeepSeek 400s) — recovered its wire log to reconstruct in-flight work
+- DEVLOG Sessions 1–14, PROJECT_CONTEXT.md, uncommitted working tree (4 files), `_webbridge/contrast.py` audit script
+
+### Actions Taken
+1. **Crash recovery** — read session wire log; the session was mid-implementation of a WCAG 2.2 AA + legal-compliance audit. Reconstructed its findings and finished the work.
+2. **A11y mechanical fixes** (started pre-crash, completed this session):
+   - Removed `maximumScale: 1` from viewport (pinch-zoom, WCAG 1.4.4)
+   - Global `:focus-visible` outline + `prefers-reduced-motion` support in globals.css
+   - Skip-to-content link + `#main-content` target in page-layout
+   - Body class `text-primary` → `text-foreground`
+   - Cart drawer: `role="dialog"`/`aria-modal`/label, Escape close, Tab focus trap, focus restore on close
+   - Customizer: design overlay is now focusable — arrow keys reposition (Shift = 5% steps), clamped to print zone
+3. **Contrast fixes (user-approved)**:
+   - New `--color-gold-deep` (#B45309) theme token
+   - Announcement banner → `bg-gold-deep` + `announcement-banner` class; dark-mode rule keeps `#D97706` behind remapped dark text (both modes ≥4.5:1)
+   - Gold subheadings on cream → `text-gold-deep` (about, home, fundraising, biscuit-hockey, im-ok-r-u, terms)
+4. **Privacy Policy** — new `/privacy` route (11 sections: collection, use, Square processing, cookies/localStorage/SW caching, Firebase, retention, rights, children, contact) + `PRIVACY_POLICY` content block; footer link; Terms §10 now points to the page; contact page privacy note links it.
+5. **Verification** — lint 0 errors, tests 85/85 (9 suites), build 22 routes, WebBridge live checks: banner both modes, subheading color, footer link, privacy page render.
+
+### Decisions Made
+- Banner: darker gold (#B45309) in light mode; original gold retained in dark mode because `text-white` remaps to slate-800 there
+- Subheadings: `text-gold-deep` (amber family), `text-gold` reserved for icons/accents
+- Privacy policy: full draft page authored from stack facts (Firebase + Square, no analytics), client review recommended before launch
+- Borderline items left as-is (pre-existing, not flagged in audit): product-card gold price on white (3.19:1), stock badge, fundraising teaser pill, offline banner in dark mode
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/app/globals.css | `--color-gold-deep` token, `:focus-visible`, skip-link, reduced-motion, dark-mode `.announcement-banner` rule |
+| src/app/layout.tsx | viewport zoom fix, body `text-foreground` |
+| src/components/layout/page-layout.tsx | skip link + `#main-content` |
+| src/components/cart/cart-drawer.tsx | dialog semantics, ESC, focus trap + restore |
+| src/components/customizer/customizer.tsx | keyboard arrow-key reposition + hints |
+| src/components/layout/header-bar.tsx | banner `bg-gold-deep` + `announcement-banner` |
+| 6 page files (about/home/fundraising/biscuit-hockey/im-ok-r-u/terms) | subheadings → `text-gold-deep` |
+| src/lib/content.ts | PRIVACY_POLICY block, Terms §10 URL, contact note, footer link |
+| src/app/contact/page.tsx | privacy note links to /privacy |
+| src/app/privacy/page.tsx | NEW — privacy policy page |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `a5ec1c6` | feat: WCAG a11y + compliance pass — zoom fix, focus-visible outline, skip link, cart drawer dialog + focus trap, customizer arrow-key reposition, gold-deep contrast token, privacy policy page |
+
+### Current State at Session End
+- Lint 0 | Tests 85/85 (9 suites) | Build 22 routes
+- Committed to `development` and pushed to origin; NOT yet deployed (hosting-only deploy pending client review of the privacy policy draft)
+- USE_SYNTHETIC = false; dev server running on :3000
+- `_webbridge/contrast.py` left untracked (audit scratch tooling)
+
+### Pending / Next Session
+- [ ] Commit + push + deploy this session's work (hosting-only)
+- [ ] Client review of Privacy Policy draft
+- [ ] Dark-mode counterpart audit (still open from Session 14)
+- [ ] Optional contrast follow-ups: product price, stock badge, teaser pill, offline banner
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics, G19/G22/G23 cross-browser/PWA
+- [ ] Patch `scripts/backup-commit.ps1` (CRLF stderr handling)
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 

@@ -41,7 +41,7 @@
 
 ---
 
-## 4. ALL ROUTES (19 total)
+## 4. ALL ROUTES (20 total)
 
 | Route | File | Purpose |
 |---|---|---|
@@ -61,6 +61,7 @@
 | `/faq` | src/app/faq/page.tsx | FAQ (with FAQPage JSON-LD) |
 | `/fundraising` | src/app/fundraising/page.tsx | Fundraising program |
 | `/terms` | src/app/terms/page.tsx | Terms of Sale |
+| `/privacy` | src/app/privacy/page.tsx | Privacy Policy |
 | `/biscuit-hockey` | src/app/biscuit-hockey/page.tsx | Sub-brand page |
 | `/im-ok-r-u` | src/app/im-ok-r-u/page.tsx | Sub-brand page |
 | `/_not-found` | | 404 |
@@ -159,6 +160,8 @@
 17. **backup-commit.ps1 unreliable:** `$ErrorActionPreference="Stop"` + `2>&1` makes git's CRLF stderr warning fatal. Use plain `git add/commit/push` until patched. `backup-file.ps1` takes space-separated file args (commas silently skip files).
 18. **Color system:** `DEFAULT_COLOR_TINTS` in src/lib/constants.ts maps standard color names to hex. Colors with no tint and no per-color photo show a neutral `#cccccc` swatch (expected, not a bug). Tints only persist to Firestore on product save — pre-existing products lack stored tints until re-saved. `mockupImagesByColor` photos take precedence over tint overlays.
 19. **Rich text descriptions:** Short descriptions render sanitized HTML via src/lib/html-utils.ts (sanitizeHTML); cards/search excerpts use stripTags. Never render raw description HTML without sanitizing.
+20. **Dark-mode `--color-white` remap:** `html.dark body` remaps `--color-white` to slate-800, so `text-white` renders dark in dark mode. The announcement banner compensates via `.announcement-banner` + `html.dark .announcement-banner { background-color: #D97706 }` — do not swap that class or the dark-mode text fails contrast.
+21. **A11y conventions:** `--color-gold-deep` (#B45309) is the AA-passing gold for text on cream — use it for headings/subheadings; keep `text-gold` for icons/accents. Customizer design overlay is focusable (arrow keys reposition, Shift = 5% steps). Cart drawer owns dialog semantics, Escape, and a Tab focus trap — preserve all three.
 
 ---
 
@@ -201,7 +204,7 @@ Location: `animas_reflections_scope_roadmap.md` in Downloads
 4. Run `npm run dev` to test locally
 5. Run `npm run build && firebase deploy` to deploy (retry once if the functions-analysis step times out)
 6. **Branching:** work on `development`; merge to `master` only when verified; see docs/DEVELOPMENT.md "Branching & Rollback"
-7. Every deploy MUST pass: lint (0 errors), build (19 routes), tests (85/85), visual check
+7. Every deploy MUST pass: lint (0 errors), build (22 routes), tests (85/85), visual check
 8. Do NOT modify nav-dock position — it's inside a fixed wrapper
 9. Do NOT add bottom navigation bars — only top dock
 10. Use backup framework: `backup:file` before edits, `backup:commit` after
