@@ -34,6 +34,7 @@ export const NAVIGATION = {
     { label: "Our Story", href: "/about" },
     { label: "Contact", href: "/contact" },
     { label: "Terms of Sale", href: "/terms" },
+    { label: "Privacy Policy", href: "/privacy" },
   ],
 } as const;
 
@@ -241,7 +242,7 @@ export const CONTACT = {
   email: SITE.email,
   location: SITE.location,
   privacy_note:
-    "You may receive marketing and promotional materials. Contact the merchant for their privacy practices.",
+    "You may receive marketing and promotional materials. See our Privacy Policy for how we handle your information.",
 } as const;
 
 export const TERMS_OF_SALE = {
@@ -286,7 +287,7 @@ export const TERMS_OF_SALE = {
     },
     {
       title: "10. Privacy and Data Security",
-      body: `All transactions and customer information are protected in accordance with our Privacy Policy, available on our website. Payment information is processed securely through trusted third-party gateways; Animas Reflections does not store full credit card details.`,
+      body: `All transactions and customer information are protected in accordance with our Privacy Policy, available at https://animas-reflections-pwa.web.app/privacy. Payment information is processed securely through trusted third-party gateways; Animas Reflections does not store full credit card details.`,
     },
     {
       title: "11. Governing Law and Venue",
@@ -299,6 +300,57 @@ export const TERMS_OF_SALE = {
     {
       title: "13. Entire Agreement",
       body: `These Terms, together with the order confirmation and any policies referenced on our website, constitute the entire agreement between Animas Reflections and the Customer regarding the sale and purchase of goods.`,
+    },
+  ],
+} as const;
+
+export const PRIVACY_POLICY = {
+  heading: "Privacy Policy",
+  subheading: "Effective Date: August 12, 2026",
+  sections: [
+    {
+      title: "Who We Are",
+      body: `Animas Reflections is a custom screen printing, embroidery, and sublimation business based in Durango, Colorado. This policy explains what information we collect when you use our website (animas-reflections-pwa.web.app), why we collect it, and how you can control it.`,
+    },
+    {
+      title: "Information We Collect",
+      body: `Account information: if you create an account or sign in, we store your name and email address (via Firebase Authentication). Order information: when you place an order, we collect your name, email, phone number, and shipping address so we can fulfill and ship your order. Custom designs: any image files you upload or text you enter in the customizer are stored with your order so we can produce your item.`,
+    },
+    {
+      title: "How We Use Your Information",
+      body: `We use your information to fulfill orders, ship products, communicate with you about your order, and maintain your account. We do not sell, rent, or share your personal information with third parties for their own marketing purposes.`,
+    },
+    {
+      title: "Payment Processing",
+      body: `Payments are processed by Square (Block, Inc.) through the Square Web Payments SDK. Your full card details are sent directly to Square and are never stored on or processed by our servers. Square's services may use cookies and device data for fraud prevention. Square's use of your information is governed by Square's Privacy Policy, available at https://squareup.com/legal/privacy.`,
+    },
+    {
+      title: "Cookies, Local Storage, and Offline Caching",
+      body: `This website does not use advertising or analytics cookies and does not track you across the web. We use only strictly necessary storage: authentication session data from Firebase, fraud-prevention data from Square, and a service worker that caches page content on your device so the site works offline. You can clear this cached data at any time through your browser's site-data controls.`,
+    },
+    {
+      title: "Service Providers",
+      body: `We rely on Google Firebase (Cloud Firestore, Cloud Storage, Authentication, and Hosting) to store data and run this website, and on Square to process payments. Data is hosted in the United States. These providers process your information only as necessary to provide these services to us.`,
+    },
+    {
+      title: "Data Retention",
+      body: `We retain order records and associated design files for as long as needed for business records, tax, and customer-service purposes. You may request deletion of your account and associated personal information at any time by contacting us.`,
+    },
+    {
+      title: "Your Rights",
+      body: `You may request access to, correction of, or deletion of the personal information we hold about you by contacting us at ${SITE.email} or ${SITE.phone}. We will honor verifiable requests in accordance with applicable law, including the Colorado Privacy Act.`,
+    },
+    {
+      title: "Children's Privacy",
+      body: `This website is not directed to children under 13, and we do not knowingly collect personal information from children under 13.`,
+    },
+    {
+      title: "Changes to This Policy",
+      body: `We may update this policy from time to time. The effective date at the top of this page reflects the most recent revision. Material changes will be posted on this page.`,
+    },
+    {
+      title: "Contact Us",
+      body: `Questions about this policy or your data? Contact Animas Reflections at ${SITE.email}, call ${SITE.phone}, or write to us at ${SITE.location}.`,
     },
   ],
 } as const;

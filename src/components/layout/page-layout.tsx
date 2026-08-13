@@ -17,8 +17,13 @@ export default function PageLayout({
         paddingTop: `var(--header-height, ${HEADER_FALLBACK})`,
       }}
     >
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <HeaderBar />
-      {children}
+      <div id="main-content" className="flex flex-col flex-1">
+        {children}
+      </div>
     </div>
   );
 }

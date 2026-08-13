@@ -9,6 +9,7 @@
   --color-primary-light: #2A6B6E;
   --color-gold: #D97706;
   --color-gold-light: #E68A00;
+  --color-gold-deep: #B45309;
   --color-plum: #935B8A;
   --color-plum-light: #A86B9F;
   --color-text: #111827;
@@ -43,6 +44,48 @@ h1, h2, h3, h4, h5, h6 {
 
 p {
   line-height: 1.7;
+}
+
+/* ─── Accessibility: visible keyboard focus ─────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+html.dark :focus-visible {
+  outline-color: var(--color-gold-light);
+}
+
+/* Skip-to-content link for keyboard users */
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus-visible {
+  top: 1rem;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ─── Paper Texture Background ──────────────────────────────────── */
@@ -98,6 +141,13 @@ html.dark .nav-dock-link.active {
   color: var(--color-gold);
   opacity: 1;
   background: rgba(217, 119, 6, 0.2);
+}
+
+/* Announcement banner: text-white remaps to slate-800 in dark mode, so keep
+   the lighter gold behind it to preserve the dark-text-on-gold contrast (4.5:1).
+   Light mode uses the deeper gold (white text, 4.9:1). */
+html.dark .announcement-banner {
+  background-color: #D97706;
 }
 
 html.dark .bg-ambient::before {

@@ -1,17 +1,68 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { useCart } from "@/context/cart-context";
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { cart, removeItem, subtotal, addonsTotal, shipping, total } = useCart();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Dialog keyboard behavior: Escape to close, Tab focus trap, focus restore
+  // to the element that opened the drawer on close.
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first || !panel.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !panel.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKey);
+    // Move focus into the dialog so keyboard users land inside the trap.
+    const raf = requestAnimationFrame(() => panelRef.current?.focus());
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("keydown", onKey);
+      previouslyFocused?.focus?.();
+    };
+  }, [open, onClose]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label="Shopping cart">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white shadow-xl flex flex-col h-full">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className="relative w-full max-w-md bg-white shadow-xl flex flex-col h-full outline-none"
+      >
         <div className="flex items-center justify-between p-4 border-b border-warm-sand">
           <h2 className="font-bold font-display text-lg">Your Cart</h2>
           <button onClick={onClose} className="text-foreground hover:text-primary transition-colors" aria-label="Close cart">
@@ -44,7 +95,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="font-semibold text-sm">${(item.base_price * item.quantity).toFixed(2)}</span>
-                  <button onClick={() => removeItem(item.id)} className="text-xs text-red-400 hover:text-red-600">
+                  <button onClick={() => removeItem(item.id)} className="text-xs text-red-600 hover:text-red-700">
                     Remove
                   </button>
                 </div>

@@ -66,7 +66,7 @@ export default function HeaderBar() {
         </div>
       )}
       {config.announcement_active && (
-        <div className="bg-gold text-white text-center text-sm py-2 px-4 font-medium">
+        <div className="announcement-banner bg-gold-deep text-white text-center text-sm py-2 px-4 font-medium">
           {config.announcement_text}
         </div>
       )}

@@ -14,7 +14,6 @@ export const viewport: Viewport = {
   themeColor: "#1E4D4F",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export const metadata: Metadata = {
@@ -63,7 +62,7 @@ export default function RootLayout({
         <WebsiteJsonLd />
         <link rel="apple-touch-icon" href="/logo.png" />
       </head>
-      <body className="min-h-full flex flex-col bg-cream text-primary">
+      <body className="min-h-full flex flex-col bg-cream text-foreground">
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

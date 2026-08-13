@@ -95,7 +95,7 @@ export default function Home() {
             </div>
             <div>
               <h2 className="text-3xl font-bold font-display mb-2">{OUR_STORY.heading}</h2>
-              <p className="text-gold font-semibold mb-4">{OUR_STORY.subheading}</p>
+              <p className="text-gold-deep font-semibold mb-4">{OUR_STORY.subheading}</p>
               <p className="text-foreground leading-relaxed">{siteConfig.about_body || OUR_STORY.body}</p>
               <div className="mt-4 text-sm text-foreground">
                 <p>{SITE.phone}</p>

@@ -20,7 +20,7 @@ export default function FundraisingPage() {
           <h1 className="text-4xl sm:text-5xl font-bold font-display mb-3">
             {FUNDRAISING.heading}
           </h1>
-          <p className="text-gold font-semibold text-lg mb-6">
+          <p className="text-gold-deep font-semibold text-lg mb-6">
             {FUNDRAISING.subheading}
           </p>
           <p className="text-foreground max-w-2xl mx-auto leading-relaxed">

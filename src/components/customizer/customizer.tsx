@@ -250,6 +250,27 @@ export default function Customizer({
     [designState, onDesignChange]
   );
 
+  // ── Keyboard reposition ──
+
+  // Arrow keys move the design by 1% of the canvas per press (Shift = 5%),
+  // clamped to the print zone so keyboard users can reposition like pointer users.
+  const handleOverlayKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const step = e.shiftKey ? 5 : 1;
+      let { xPercent, yPercent } = designState;
+      if (e.key === "ArrowLeft") xPercent -= step;
+      if (e.key === "ArrowRight") xPercent += step;
+      if (e.key === "ArrowUp") yPercent -= step;
+      if (e.key === "ArrowDown") yPercent += step;
+      const clamped = clampToPrintZone(xPercent, yPercent, designState.scale);
+      onDesignChange({ ...designState, xPercent: clamped.xPercent, yPercent: clamped.yPercent });
+    },
+    [designState, onDesignChange, clampToPrintZone]
+  );
+
   // ── Overlay style computation ──
 
   const overlayStyle = useMemo(() => {
@@ -340,6 +361,9 @@ export default function Customizer({
               ...overlayStyle,
               transformOrigin: "center center",
             }}
+            tabIndex={0}
+            aria-label="Design position. Use arrow keys to move, Shift plus arrow keys for larger steps"
+            onKeyDown={handleOverlayKeyDown}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -387,7 +411,7 @@ export default function Customizer({
       <div className="max-w-lg mx-auto space-y-4">
         {!hasDesign && (
           <p className="text-sm text-foreground/80 text-center">
-            Upload an image or add text to start customizing. Then drag, resize, and rotate your design.
+            Upload an image or add text to start customizing. Then drag, resize, and rotate your design — or focus the design and use arrow keys to reposition.
           </p>
         )}
 
@@ -517,7 +541,7 @@ export default function Customizer({
             </select>
           </div>
           <p className="text-[10px] text-foreground/70 mt-1">
-            Drag the design on the garment to reposition. Scroll or use size controls to resize.
+            Drag the design to reposition, or focus it and use arrow keys (Shift for bigger steps). Scroll or use size controls to resize.
           </p>
         </div>
         )}

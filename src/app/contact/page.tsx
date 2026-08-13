@@ -1,5 +1,6 @@
 import PageLayout from "@/components/layout/page-layout";
 import { CONTACT } from "@/lib/content";
+import Link from "next/link";
 
 export default function ContactPage() {
   return (
@@ -11,7 +12,12 @@ export default function ContactPage() {
           <p className="text-foreground"><strong>Phone:</strong> <a href={`tel:${CONTACT.phone}`} className="hover:text-gold">{CONTACT.phone}</a></p>
           <p className="text-foreground"><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`} className="hover:text-gold">{CONTACT.email}</a></p>
           <p className="text-foreground"><strong>Location:</strong> {CONTACT.location}</p>
-          <p className="text-xs text-foreground/80 mt-4">{CONTACT.privacy_note}</p>
+          <p className="text-xs text-foreground/80 mt-4">
+            {CONTACT.privacy_note}{" "}
+            <Link href="/privacy" className="underline hover:text-gold-deep">
+              Privacy Policy
+            </Link>
+          </p>
         </div>
       </main>
     </PageLayout>
