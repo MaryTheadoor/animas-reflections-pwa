@@ -636,6 +636,13 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics, G19/G22/G23 cross-browser/PWA
 - [ ] Patch `scripts/backup-commit.ps1` (CRLF stderr handling)
 
+### Post-session hotfix — 2026-08-12 | Admin Users tab permission error
+- **Bug:** Admin dashboard Users tab showed "Could not load users: Missing or insufficient permissions." — `firestore.rules` only allowed users to read their own `/users/{userId}` doc, but the Users tab lists the whole collection.
+- **Fix part 1 (rules):** Added `isSignedIn()` / `isAdmin()` helpers to `firestore.rules` (admin = email in `/config/admin` doc, the same source `saveAdminEmails` writes); `/users/{userId}` read now allows `request.auth.uid == userId || isAdmin()`. Deployed via `firebase deploy --only firestore:rules` — compiled + released.
+- **Fix part 2 (data):** Rules fix alone still failed because `/config/admin` emails held only `animasreflections@gmail.com` — the signed-in admin `mary.theadoor.doctor@gmail.com` was admin via the env hardcoded fallback only (see auth-context three-tier check: env email → @animasreflections.com domain → config/admin doc). Added her email to the managed list via Admin → Admins tab. Rules and client now agree.
+- **Verified:** Users tab loads live — 2 users (Mary Doctor, Cindy Fuss) with order counts + last-seen dates.
+- **NOTE (pre-existing, untouched):** `/orders` is readable by ANY signed-in user (`allow read: if request.auth != null`) — consider restricting to own orders + admins.
+
 ---
 
 ```
