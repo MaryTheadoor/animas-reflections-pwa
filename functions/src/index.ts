@@ -1,12 +1,9 @@
-﻿import * as logger from "firebase-functions/logger";
+import * as logger from "firebase-functions/logger";
 import { onCall, onRequest } from "firebase-functions/v2/https";
-import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { SquareClient, SquareEnvironment, SquareError } from "square";
 import { defineString } from "firebase-functions/params";
-import { syncProductsFromSquare, getSyncStatus, importFromSquare } from "./sync.js";
-import { runProductPipeline, getPipelineStatus } from "./product-pipeline.js";
 
 initializeApp();
 
@@ -24,191 +21,12 @@ function getSquareClient(): SquareClient {
   });
 }
 
-function cleanProductName(raw: string): string {
-  return raw
-    .replace(/\b(\d+(\.\d+)?\s*oz\.?)\b/gi, "")
-    .replace(/\bSORRY SOLD OUT\b/gi, "")
-    .replace(/\bOut of stock\b/gi, "")
-    .replace(/\bOnly \d+ Available\b/gi, "")
-    .replace(/\bLimited Edition\b/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function generateDescription(name: string, categories: { id: string }[]): string {
-  const catNames = categories.map((c) => c.id).filter(Boolean);
-  const typeHint = catNames.length > 0 ? ` | Category: ${catNames.join(", ")}` : "";
-  return `Custom ${name}. Professionally printed in Durango, CO.${typeHint}`;
-}
-
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Fetch Square Catalog Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-interface CatalogObjectRaw {
-  type: string;
-  id: string;
-  imageIds?: string[];
-  itemData?: {
-    name: string;
-    description?: string;
-    categoryId?: string;
-    imageIds?: string[];
-    categories?: { id: string }[];
-    ecom_visibility?: string;
-    ecom_available?: boolean;
-    variations?: CatalogObjectRaw[];
-  };
-  itemVariationData?: {
-    itemId: string;
-    name: string;
-    sku?: string;
-    priceMoney?: { amount: bigint | number; currency: string };
-  };
-  imageData?: { id?: string; url?: string; name?: string };
-  categoryData?: { name?: string };
-}
-
-interface CatalogCategory {
-  id: string;
-  name: string;
-}
-
-interface CatalogItem {
-  id: string;
-  name: string;
-  description: string;
-  categoryIds: string[];
-  image_url: string | null;
-  variations: {
-    id: string;
-    name: string;
-    price: number;
-    sku: string;
-  }[];
-}
-
-interface CatalogResponse {
-  items: CatalogItem[];
-  categories: CatalogCategory[];
-}
-
-export const fetchSquareCatalog = onCall(
-  { cors: true, region: "us-central1" },
-  async () => {
-    logger.info("fetchSquareCatalog invoked");
-
-    try {
-      const client = getSquareClient();
-
-      let allItems: CatalogObjectRaw[] = [];
-      let allRelated: CatalogObjectRaw[] = [];
-      let cursor: string | undefined;
-
-      do {
-        const itemResponse = await client.catalog.search({
-          objectTypes: ["ITEM"],
-          includeRelatedObjects: true,
-          limit: 1000,
-          cursor,
-        });
-
-        const pageItems = (Array.isArray(itemResponse.objects) ? itemResponse.objects : []) as CatalogObjectRaw[];
-        allItems = allItems.concat(pageItems);
-
-        const pageRelated = (Array.isArray((itemResponse as Record<string, unknown>).relatedObjects)
-          ? (itemResponse as Record<string, unknown>).relatedObjects
-          : []) as CatalogObjectRaw[];
-        allRelated = allRelated.concat(pageRelated);
-
-        cursor = (itemResponse as Record<string, unknown>).cursor as string | undefined;
-      } while (cursor);
-
-      const rawItems = allItems.filter((o) => {
-        return o.itemData?.ecom_visibility === "VISIBLE";
-      });
-
-      const related = allRelated;
-      const images = related.filter((o) => o.type === "IMAGE");
-      logger.info("Catalog items fetched", {
-        total: allItems.length,
-        visible: rawItems.length,
-        imagesInRelated: images.length,
-        itemsWithImageIds: rawItems.filter((o) => (o.itemData?.imageIds?.length ?? 0) > 0).length,
-      });
-
-      const imageMap = new Map<string, string>();
-      for (const img of images) {
-        const id = img.imageData?.id;
-        const url = img.imageData?.url;
-        if (id && url) imageMap.set(String(id), url);
-      }
-      logger.info("Image map built", { mappedImages: imageMap.size });
-
-      // Fetch categories separately
-      const catResponse = await client.catalog.search({
-        objectTypes: ["CATEGORY"],
-      });
-      const rawCategories: CatalogObjectRaw[] =
-        (Array.isArray(catResponse.objects) ? catResponse.objects : []) as CatalogObjectRaw[];
-      const categories = rawCategories.map((c) => ({
-        id: c.id,
-        name: c.categoryData?.name ?? c.id,
-      }));
-
-      const catalog: CatalogItem[] = rawItems
-        .map((item) => {
-          const itemData = item.itemData;
-          const itemImageIds = (itemData?.imageIds ?? []).map(String);
-          const itemImage = images.find(
-            (img) => img.imageData?.id && itemImageIds.includes(String(img.imageData.id))
-          );
-
-          const validVariations = (itemData?.variations ?? [])
-            .filter((v) => {
-              const vd = v.itemVariationData;
-              const amount = vd?.priceMoney?.amount ?? BigInt(0);
-              return Number(amount) >= 200; // Keep variations >= $2.00
-            })
-            .map((v: CatalogObjectRaw) => {
-              const vd = v.itemVariationData;
-              const rawAmount = vd?.priceMoney?.amount;
-              // Square SDK v42 returns BigInt for money amounts. Convert to Number
-              // before division; BigDecimal arithmetic in JS would be wrong otherwise.
-              const amount = typeof rawAmount === "bigint" ? Number(rawAmount) : (rawAmount ?? 0);
-              return { id: v.id, name: vd?.name ?? "", price: amount / 100, sku: vd?.sku ?? "" };
-            });
-
-          if (validVariations.length === 0) return null;
-
-          return {
-            id: item.id,
-            name: cleanProductName(itemData?.name ?? ""),
-            description: itemData?.description || generateDescription(itemData?.name ?? "", itemData?.categories ?? []),
-            categoryIds: (itemData?.categories ?? []).map((c) => c.id),
-            image_url: itemImage?.imageData?.url ?? null,
-            variations: validVariations,
-          };
-        })
-        .filter((item): item is CatalogItem => item !== null);
-
-      logger.info("Catalog fetched", { itemCount: catalog.length, catCount: categories.length });
-      return { items: catalog, categories } as CatalogResponse;
-    } catch (err) {
-      if (err instanceof SquareError) {
-        logger.error("Square API error", err);
-        throw new Error(`Square API error: ${err.message}`);
-      }
-      logger.error("Unexpected error", err);
-      throw new Error("Failed to fetch catalog");
-    }
-  }
-);
-
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Create Square Order & Process Payment Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Create Square Order & Process Payment ─────────────────────────
 
 interface OrderLineItem {
   /** Managed variant ID (provider-agnostic) */
   variant_id: string;
-  /** Square variation ID — cached from sync, used for Square checkout */
+  /** Square variation ID — used for Square checkout when available */
   squareVariationId?: string;
   /** Ad-hoc: item name for non-catalog orders */
   name?: string;
@@ -271,17 +89,14 @@ export const createSquareOrderAndPay = onCall(
           quantity: String(item.quantity ?? 1),
         };
 
-        // Two paths: catalog-based (product was synced from Square, has a
-        // squareVariationId) vs ad-hoc (product was created manually in admin,
-        // no Square catalog ID — we pass name + explicit price instead).
+        // Two paths: catalog-based (product has a squareVariationId from a
+        // createSquareProduct push) vs ad-hoc (product was created manually in
+        // admin, no Square catalog ID — we pass name + explicit price instead).
         if (catalogObjectId) {
           li.catalogObjectId = catalogObjectId;
         } else {
           li.name = item.name ?? `Item ${index + 1}`;
           li.basePriceMoney = {
-            // Square API expects BigInt for price in cents.
-            // JSON serialization converts BigInt to number in transit;
-            // the Square Node SDK handles the conversion back in the request.
             amount: BigInt(Math.round((item.price ?? 0) * 100)),
             currency: "USD",
           };
@@ -305,7 +120,6 @@ export const createSquareOrderAndPay = onCall(
       };
 
       if (data.customer) {
-        // Add customer info as order-level note for Square dashboard visibility
         const c = data.customer;
         const customerNote = [
           `Customer: ${c.firstName} ${c.lastName}`,
@@ -314,7 +128,6 @@ export const createSquareOrderAndPay = onCall(
           `Ship to: ${c.address.addressLine1}, ${c.address.locality}, ${c.address.administrativeDistrictLevel1} ${c.address.postalCode}`,
         ].filter(Boolean).join(" | ");
 
-        // Attach to first line item as note if no specific note exists
         if (lineItems.length > 0 && !(lineItems[0] as Record<string, unknown>).note) {
           (lineItems[0] as Record<string, unknown>).note = customerNote;
         }
@@ -346,7 +159,7 @@ export const createSquareOrderAndPay = onCall(
 
       const order = orderResponse.order as Record<string, unknown> | undefined;
       if (!order?.id) {
-        throw new Error("Order creation failed Ã¢â‚¬â€ no order ID returned");
+        throw new Error("Order creation failed — no order ID returned");
       }
 
       logger.info("Order created", { orderId: order.id });
@@ -374,8 +187,6 @@ export const createSquareOrderAndPay = onCall(
       });
 
       // Mirror order to Firestore so customers can view their orders in /account.
-      // Uses Square order ID prefixed with "order_" to avoid collision.
-      // Mirroring is non-critical — payment succeeded regardless.
       try {
         const db = getFirestore();
         const customerEmail = data.customer?.email || "";
@@ -387,7 +198,6 @@ export const createSquareOrderAndPay = onCall(
           name: li.name || li.note?.split(" | ")[0]?.replace("Customer: ", "") || "Item",
           quantity: parseInt(String(li.quantity ?? 1), 10),
           price: li.price ?? 0,
-          // Persist customer design file so the admin can download/print it
           designUrl: li.designUrl,
           note: li.note,
         }));
@@ -420,7 +230,6 @@ export const createSquareOrderAndPay = onCall(
         logger.info("Order mirrored to Firestore", { orderDocId });
       } catch (mirrorErr) {
         logger.error("Failed to mirror order to Firestore", mirrorErr);
-        // Don't fail the payment â€” the order succeeded
       }
 
       return {
@@ -442,7 +251,7 @@ export const createSquareOrderAndPay = onCall(
   }
 );
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Health Check Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Health Check ──────────────────────────────────────────────────
 
 export const health = onRequest(
   { cors: true, region: "us-central1" },
@@ -455,7 +264,7 @@ export const health = onRequest(
   }
 );
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Fetch Site Config Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Site Config ───────────────────────────────────────────────────
 
 export const fetchSiteConfig = onCall(
   { cors: true, region: "us-central1" },
@@ -514,7 +323,7 @@ export const saveAdminEmails = onCall(
   }
 );
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Fetch Recent Orders Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Fetch Recent Orders (Square) ──────────────────────────────────
 
 export const fetchRecentOrders = onCall(
   { cors: true, region: "us-central1" },
@@ -564,114 +373,7 @@ export const fetchRecentOrders = onCall(
   }
 );
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Catalog Sync (Composite Products) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-export const syncProducts = onCall(
-  { cors: true, region: "us-central1", timeoutSeconds: 300 },
-  async () => {
-    logger.info("syncProducts invoked");
-    try {
-      const client = getSquareClient();
-      const db = getFirestore();
-      return await syncProductsFromSquare(client, db);
-    } catch (err) {
-      logger.error("Sync failed", err);
-      throw new Error(
-        err instanceof Error ? err.message : "Catalog sync failed"
-      );
-    }
-  }
-);
-
-export const fetchSyncStatus = onCall(
-  { cors: true, region: "us-central1" },
-  async () => {
-    const db = getFirestore();
-    return await getSyncStatus(db);
-  }
-);
-
-export const importProducts = onCall(
-  { cors: true, region: "us-central1", timeoutSeconds: 600 },
-  async () => {
-    logger.info("importProducts invoked");
-    try {
-      const client = getSquareClient();
-      const db = getFirestore();
-      return await importFromSquare(client, db);
-    } catch (err) {
-      logger.error("Import failed", err);
-      throw new Error(err instanceof Error ? err.message : "Import failed");
-    }
-  }
-);
-
-export const clearProducts = onCall(
-  { cors: true, region: "us-central1" },
-  async () => {
-    logger.info("clearProducts invoked");
-    const db = getFirestore();
-    const batchSize = 400;
-
-    for (const colName of ["products", "categories", "baseProducts", "designs", "productInstances"]) {
-      let deleted = 0;
-      do {
-        const snap = await db.collection(colName).limit(batchSize).get();
-        if (snap.empty) break;
-        const batch = db.batch();
-        snap.forEach((doc) => batch.delete(doc.ref));
-        await batch.commit();
-        deleted += snap.size;
-        logger.info(`Deleted ${deleted} from ${colName}`);
-      } while (true);
-    }
-
-    await db.collection("config").doc("sync_status").delete();
-    await db.collection("config").doc("import_status").delete();
-    await db.collection("config").doc("pipeline_status").delete();
-
-    return { success: true, message: "All products, categories, designs, and instances cleared" };
-  }
-);
-
-export const runPipeline = onCall(
-  { cors: true, region: "us-central1", timeoutSeconds: 600 },
-  async () => {
-    logger.info("runPipeline invoked");
-    try {
-      const client = getSquareClient();
-      const db = getFirestore();
-      return await runProductPipeline(client, db);
-    } catch (err) {
-      logger.error("Pipeline failed", err);
-      throw new Error(err instanceof Error ? err.message : "Pipeline failed");
-    }
-  }
-);
-
-export const fetchPipelineStatus = onCall(
-  { cors: true, region: "us-central1" },
-  async () => {
-    const db = getFirestore();
-    return await getPipelineStatus(db);
-  }
-);
-
-export const scheduledSync = onSchedule(
-  "0 4 * * *",
-  async () => {
-    logger.info("Scheduled sync triggered");
-    try {
-      const client = getSquareClient();
-      const db = getFirestore();
-      await runProductPipeline(client, db);
-    } catch (err) {
-      logger.error("Scheduled sync failed", err);
-    }
-  }
-);
-
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ AI-Powered Catalog Sync Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Push Product to Square (optional catalog linkage) ─────────────
 
 export const createSquareProduct = onCall(
   { cors: true, region: "us-central1" },
@@ -691,11 +393,9 @@ export const createSquareProduct = onCall(
 
     const client = getSquareClient();
 
-    // Build temp IDs that Square will replace with real IDs
     const tempItemId = `#${productId}`;
     const objects: Array<Record<string, unknown>> = [];
 
-    // ITEM
     objects.push({
       type: "ITEM",
       id: tempItemId,
@@ -711,7 +411,6 @@ export const createSquareProduct = onCall(
       },
     });
 
-    // ITEM_VARIATIONs
     variants.forEach((v, i) => {
       const priceCents = Math.round((typeof v.price === "number" ? v.price : 0) * 100);
       objects.push({
@@ -745,7 +444,6 @@ export const createSquareProduct = onCall(
         throw new Error("Square returned no ID mappings");
       }
 
-      // Build maps from temp IDs Ã¢â€ â€™ real Square IDs
       const tempToReal = new Map<string, string>();
       idMap.forEach((m) => {
         if (m.clientObjectId && m.objectId) {
@@ -756,14 +454,12 @@ export const createSquareProduct = onCall(
       const squareItemId = tempToReal.get(tempItemId) ?? "";
       const squareItemIds = squareItemId ? [squareItemId] : [];
 
-      // Update variants with real Square IDs
       const updatedVariants = variants.map((v, i) => ({
         ...v,
         squareItemId,
         squareVariationId: tempToReal.get(`#var_${i}`) ?? String(v.id ?? ""),
       }));
 
-      // Write back to Firestore
       await db.collection("products").doc(productId).set(
         {
           squareItemIds,
@@ -794,95 +490,7 @@ export const createSquareProduct = onCall(
   }
 );
 
-
-export const fetchInventoryCounts = onCall(
-  { cors: true, region: "us-central1", timeoutSeconds: 300 },
-  async () => {
-    logger.info("fetchInventoryCounts invoked");
-
-    const db = getFirestore();
-    const client = getSquareClient();
-    const locationId = squareLocationId.value();
-
-    const productsSnap = await db.collection("products").get();
-    const variationIds: string[] = [];
-
-    productsSnap.forEach((doc) => {
-      const data = doc.data() as Record<string, unknown>;
-      const variants = (data.variants ?? []) as Array<Record<string, unknown>>;
-      variants.forEach((v) => {
-        const svId = v.squareVariationId as string | undefined;
-        if (svId && !svId.startsWith("#")) {
-          variationIds.push(svId);
-        }
-      });
-    });
-
-    if (variationIds.length === 0) {
-      return { success: true, updated: 0, message: "No Square variation IDs found" };
-    }
-
-    const BATCH_SIZE = 100;
-    const quantityMap = new Map<string, number>();
-
-    for (let i = 0; i < variationIds.length; i += BATCH_SIZE) {
-      const batch = variationIds.slice(i, i + BATCH_SIZE);
-      const response = await client.inventory.batchGetCounts({
-        catalogObjectIds: batch,
-        locationIds: [locationId],
-      });
-
-      const items = (response.data ?? []) as never[];
-      for (const item of items) {
-        const c = item as { catalogObjectId?: string | null; quantity?: string | null };
-        if (c.catalogObjectId) {
-          const qty = parseInt(c.quantity ?? "0", 10);
-          quantityMap.set(c.catalogObjectId, isNaN(qty) ? 0 : qty);
-        }
-      }
-    }
-
-    const now = new Date().toISOString();
-    let updated = 0;
-    const batchWrite = db.batch();
-
-    productsSnap.forEach((doc) => {
-      const data = doc.data();
-      const variants = (data.variants ?? []);
-      let changed = false;
-      const updatedVariants = variants.map((v: Record<string, unknown>) => {
-        const svId = v.squareVariationId as string | undefined;
-        if (svId && quantityMap.has(svId)) {
-          changed = true;
-          return { ...v, inventory: quantityMap.get(svId), inventoryUpdatedAt: now };
-        }
-        return v;
-      });
-      if (changed) {
-        batchWrite.update(doc.ref, { variants: updatedVariants, updatedAt: now });
-        updated++;
-      }
-    });
-
-    await batchWrite.commit();
-
-    await db.collection("config").doc("inventory_sync_status").set({
-      lastSync: now,
-      variationCount: variationIds.length,
-      updatedProductCount: updated,
-      countsReturned: quantityMap.size,
-    });
-
-    return {
-      success: true,
-      updated,
-      totalVariations: variationIds.length,
-      countsReturned: quantityMap.size,
-    };
-  }
-);
-
-// â”€â”€â”€ Customer Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Customer Orders ───────────────────────────────────────────────
 
 export const fetchCustomerOrders = onCall(
   { cors: true, region: "us-central1" },
@@ -910,7 +518,7 @@ export const fetchCustomerOrders = onCall(
   }
 );
 
-// â”€â”€â”€ Customer Addresses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Customer Addresses ────────────────────────────────────────────
 
 export const getCustomerAddresses = onCall(
   { cors: true, region: "us-central1" },
@@ -954,7 +562,6 @@ export const saveCustomerAddress = onCall(
     const db = getFirestore();
     const addressId = data.id || crypto.randomUUID();
 
-    // If setting as default, unset other defaults
     if (data.isDefault) {
       const existing = await db
         .collection("customers")
@@ -1011,7 +618,7 @@ export const deleteCustomerAddress = onCall(
   }
 );
 
-// â”€â”€â”€ Customer Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Customer Profile ──────────────────────────────────────────────
 
 export const getCustomerProfile = onCall(
   { cors: true, region: "us-central1" },
@@ -1056,7 +663,7 @@ export const saveCustomerProfile = onCall(
   }
 );
 
-// â”€â”€â”€ Order Tracking (Admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Order Tracking (Admin) ────────────────────────────────────────
 
 export const updateOrderTracking = onCall(
   { cors: true, region: "us-central1" },
@@ -1083,4 +690,3 @@ export const updateOrderTracking = onCall(
     return { success: true };
   }
 );
-

@@ -14,28 +14,28 @@ service cloud.firestore {
         && request.auth.token.email in get(/databases/$(database)/documents/config/admin).data.emails;
     }
 
-    // Site config - public read, authenticated write
+    // Site config - public read, admin-only write
     match /config/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // Design catalog - public read, authenticated write
+    // Design catalog - public read, admin-only write
     match /designs/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // Products - public read, authenticated write
+    // Products - public read, admin-only write
     match /products/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // Categories - public read, authenticated write
+    // Categories - public read, admin-only write
     match /categories/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     // User profiles - users read/write their own doc; admins may read all

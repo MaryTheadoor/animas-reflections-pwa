@@ -112,9 +112,6 @@ function DashboardContent() {
   const [designTags, setDesignTags] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [managedCategories, setManagedCategories] = useState<ManagedCategory[]>([]);
@@ -141,14 +138,6 @@ function DashboardContent() {
       if (snap.exists()) setConfig({ ...DEFAULT_CONFIG, ...snap.data() } as SiteConfigData);
       } catch {}
     };
-    const loadSyncStatus = async () => {
-      try { const snap = await getDoc(doc(db, "config", "sync_status"));
-      if (snap.exists()) {
-        const data = snap.data() as { productCount?: number; categoryCount?: number; itemCount?: number };
-        setSyncResult({ products: data.productCount ?? 0, categories: data.categoryCount ?? 0, items: data.itemCount ?? 0 });
-      }
-      } catch {}
-    };
     const loadAdmins = async () => {
       try { const snap = await getDoc(doc(db, "config", "admin"));
       if (snap.exists()) setAdminEmails((snap.data() as { emails?: string[] }).emails ?? []);
@@ -163,7 +152,6 @@ function DashboardContent() {
       } catch {}
     };
     loadConfig();
-    loadSyncStatus();
     loadAdmins();
     loadCats();
   }, []);
@@ -287,86 +275,6 @@ function DashboardContent() {
     } catch {}
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncError(null);
-    try {
-      const callable = httpsCallable<object, { success: boolean; products: number; categories: number; items: number; errors: string[] }>(
-        functions,
-        "syncProducts"
-      );
-      const result = await callable({});
-      const data = result.data;
-      setSyncResult({ products: data.products ?? 0, categories: data.categories ?? 0, items: data.items ?? 0 });
-      if (data.errors?.length) {
-        setSyncError(data.errors.join(", "));
-      }
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Sync failed");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleImport = async () => {
-    setSyncing(true);
-    setSyncError(null);
-    try {
-      const callable = httpsCallable<object, { imported: number; errors: string[] }>(
-        functions,
-        "importProducts"
-      );
-      const result = await callable({});
-      const data = result.data;
-      setSyncResult({ products: data.imported ?? 0, categories: 0, items: data.imported ?? 0 });
-      if (data.errors?.length) {
-        setSyncError(data.errors.join(", "));
-      }
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Import failed");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleClear = async () => {
-    if (!confirm("Delete ALL products, categories, designs, and instances?")) return;
-    setSyncing(true);
-    try {
-      const callable = httpsCallable<object, { success: boolean; message: string }>(
-        functions,
-        "clearProducts"
-      );
-      await callable({});
-      setSyncResult({ products: 0, categories: 0, items: 0 });
-      setSyncing(false);
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Clear failed");
-      setSyncing(false);
-    }
-  };
-
-  const handlePipeline = async () => {
-    setSyncing(true);
-    setSyncError(null);
-    try {
-      const callable = httpsCallable<object, { baseProducts: number; designs: number; instances: number; items: number; errors: string[] }>(
-        functions,
-        "runPipeline"
-      );
-      const result = await callable({});
-      const data = result.data;
-      setSyncResult({ products: data.instances ?? 0, categories: (data.baseProducts ?? 0) + (data.designs ?? 0), items: data.items ?? 0 });
-      if (data.errors?.length) {
-        setSyncError(data.errors.slice(0, 3).join("; "));
-      }
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Pipeline failed");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const addAdmin = async () => {
     const email = newAdminEmail.trim().toLowerCase();
     if (!email || adminEmails.includes(email)) return;
@@ -449,69 +357,6 @@ function DashboardContent() {
         {/* ── Settings ── */}
         {tab === "settings" && (
           <>
-            {/* ── Square Sync ── */}
-        <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-bold font-display">Catalog Sync</h2>
-              <p className="text-sm text-foreground mt-1">
-                Pull products from Square and build composite product catalog
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-light transition-colors disabled:opacity-50 btn-tactile btn-primary-tactile"
-              >
-                {syncing ? "Syncing..." : "Sync Now"}
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={syncing}
-                className="px-4 py-2.5 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
-              >
-                {syncing ? "Importing..." : "Import from Square"}
-              </button>
-              <button
-                onClick={handlePipeline}
-                disabled={syncing}
-                className="px-4 py-2.5 bg-plum text-white rounded-xl text-sm font-semibold hover:bg-plum-light transition-colors disabled:opacity-50 btn-tactile btn-plum-tactile"
-              >
-                {syncing ? "Running..." : "Run Pipeline"}
-              </button>
-              <button
-                onClick={handleClear}
-                className="px-4 py-2.5 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors"
-              >
-                Clear All
-              </button>
-            </div>
-          </div>
-          {syncResult && (
-            <div className="grid grid-cols-3 gap-4 text-center mb-4">
-              <div className="bg-warm-sand/50 rounded-xl p-3">
-                <p className="text-2xl font-bold text-primary">{syncResult.products}</p>
-                <p className="text-xs text-foreground">Products</p>
-              </div>
-              <div className="bg-warm-sand/50 rounded-xl p-3">
-                <p className="text-2xl font-bold text-primary">{syncResult.categories}</p>
-                <p className="text-xs text-foreground">Categories</p>
-              </div>
-              <div className="bg-warm-sand/50 rounded-xl p-3">
-                <p className="text-2xl font-bold text-primary">{syncResult.items}</p>
-                <p className="text-xs text-foreground">Square Items</p>
-              </div>
-            </div>
-          )}
-          {syncError && (
-            <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{syncError}</div>
-          )}
-          <p className="text-xs text-foreground/70">
-            Sync runs automatically daily at 4 AM Mountain Time. Click &quot;Sync Now&quot; to run manually.
-          </p>
-        </section>
-
         {/* ── Site Settings — Theming Engine ── */}
         <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
           <h2 className="text-xl font-bold font-display mb-6">Theme Settings</h2>

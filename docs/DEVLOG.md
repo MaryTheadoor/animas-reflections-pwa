@@ -652,6 +652,79 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 16 — 2026-08-19 | Catalog architecture overhaul: Phase 1 (remove Square sync)
+
+### Context Restored From
+- DEVLOG Sessions 1–15; PRODUCT_MODIFIER_AUDIT.md (Phase 1 audit)
+- User direction: Square is payment processor only — Firestore is the master catalog. Remove all sync, make options/modifiers/customer fields admin-configurable. Minimize hardcoded variables.
+
+### Actions Taken
+1. **Deleted Square sync code:**
+   - Deleted `functions/src/sync.ts` (entire file — `syncProductsFromSquare`, `importFromSquare`, brand detection, color extraction, image download)
+   - Deleted `functions/src/product-pipeline.ts` (entire file — `runProductPipeline`, base product/design/instance model)
+   - Removed 9 Cloud Functions from `functions/src/index.ts`: `fetchSquareCatalog`, `syncProducts`, `importProducts`, `runPipeline`, `scheduledSync`, `fetchSyncStatus`, `fetchPipelineStatus`, `fetchInventoryCounts`, `clearProducts`
+   - Removed `onSchedule` import (no more daily 4 AM cron)
+   - Removed `cleanProductName`, `generateDescription`, catalog helper interfaces
+2. **Removed sync UI from admin dashboard** (`src/app/admin/page.tsx`):
+   - Deleted Catalog Sync section (Sync Now / Import / Pipeline / Clear All buttons + stats grid)
+   - Removed `handleSync`, `handleImport`, `handleClear`, `handlePipeline`, `loadSyncStatus`
+   - Removed `syncing`, `syncError`, `syncResult` state
+   - File reduced from 1133 → 978 lines
+3. **Cleaned up Firestore:**
+   - Deleted orphaned config docs: `config/sync_status`, `config/import_status`, `config/pipeline_status`, `config/inventory_sync_status`
+4. **Hardened Firestore rules:**
+   - `products`, `categories`, `designs`, `config` write rules changed from `request.auth != null` (any signed-in user) to `isAdmin()`
+   - Closes a real security gap where any authenticated customer could write products or overwrite site config
+5. **Deployed everything:**
+   - Deleted 9 old sync functions from Google Cloud via `firebase functions:delete`
+   - Deployed 14 remaining functions (payment, orders, config, customer, addresses, profiles, tracking, health, `createSquareProduct`)
+   - Deployed hardened Firestore rules
+   - Deployed hosting (22 routes)
+6. **Verified:** lint 0, tests 85/85, build 22 routes, functions compile clean, live site returns 200 on all key routes
+
+### What Was Kept
+- `createSquareOrderAndPay` (payment processing — the core reason Square stays)
+- `fetchRecentOrders` (reads Square orders for admin dashboard)
+- `createSquareProduct` (optional push to Square for catalog linkage — Cindy can push a Firestore product to Square if she wants it in the Square POS)
+- `fetchCustomerOrders`, address/profile CRUD, `updateOrderTracking`, `fetchSiteConfig`, `saveSiteConfig`, `saveAdminEmails`, `health`
+
+### Decisions Made
+- Firestore is now the master catalog. No more sync from Square. Products are created/edited in the admin dashboard.
+- The `scheduledSync` cron trigger is gone — no daily 4 AM pipeline.
+- `createSquareProduct` stays as an optional one-way push (Firestore → Square) for POS catalog linkage.
+- Rules now require `isAdmin()` for all catalog/config writes. Customers can only read public data and write their own profile/addresses.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| functions/src/index.ts | Removed 9 sync functions, helpers, interfaces; kept payment/orders/config/customer functions |
+| functions/src/sync.ts | **DELETED** |
+| functions/src/product-pipeline.ts | **DELETED** |
+| src/app/admin/page.tsx | Removed Catalog Sync UI section + handlers + state (155 lines removed) |
+| firestore.rules | Write rules for products/categories/designs/config changed to `isAdmin()` |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| (pending at time of writing) | |
+
+### Current State at Session End
+- Lint 0 | Tests 85/85 (9 suites) | Build 22 routes | 14 Cloud Functions deployed
+- `development` pushed to origin; deployed live (hosting + rules + functions)
+- USE_SYNTHETIC = false; dev server running on :3000
+- `_webbridge/` untracked (scratch tooling)
+
+### Pending / Next Session
+- [ ] Phase 2: Config-driven catalog defaults (colors, sizes, product types, add-on defaults, customer fields in SiteConfig)
+- [ ] Phase 4: Add-on pricing model (fixed fee OR percentage)
+- [ ] Phase 5: Configurable customer fields at checkout
+- [ ] Phase 3: Dynamic product options schema (ProductOption/ProductModifier types, N-dimension matrix editor)
+- [ ] Phase 6: Admin UI polish (visual photo picker, print zone editor, component split, category hierarchy)
+- [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 
