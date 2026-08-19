@@ -87,10 +87,20 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     <p className="text-xs text-foreground/80 capitalize">Color: {item.selected_color}</p>
                   )}
                   <p className="text-xs text-foreground">Qty: {item.quantity}</p>
+                  {item.selectedOptions?.map((o) => (
+                    <p key={o.optionId} className="text-xs text-foreground/80">
+                      {o.optionName}: {o.value}
+                    </p>
+                  ))}
                   {item.addons.map((a) => (
-                    <span key={a.type} className="inline-block text-xs bg-plum/10 text-plum rounded-full px-2 py-0.5 mt-1 mr-1">
-                      +{a.label} (${a.price})
+                    <span key={a.addon_id ?? a.type} className="inline-block text-xs bg-plum/10 text-plum rounded-full px-2 py-0.5 mt-1 mr-1">
+                      +{a.label} (${a.price.toFixed(2)})
                     </span>
+                  ))}
+                  {item.modifierInputs?.map((m) => (
+                    <p key={m.modifierId} className="text-xs text-foreground/80 mt-1">
+                      {m.modifierName}: {m.value ?? ""}
+                    </p>
                   ))}
                 </div>
                 <div className="flex flex-col items-end gap-1">

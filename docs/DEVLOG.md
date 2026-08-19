@@ -725,6 +725,168 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 17 — 2026-08-19 | Catalog architecture overhaul: Phase 2 (config-driven catalog options)
+
+### Context Restored From
+- DEVLOG Session 16 (Phase 1 complete — Square sync removed, Firestore is master catalog)
+- PRODUCT_MODIFIER_AUDIT.md (Phase 1 audit identified hardcoded colors/sizes/addons/customer fields)
+- User direction: make catalog options admin-configurable, minimize hardcoded variables, support dynamic product options
+
+### Actions Taken
+1. **Extended SiteConfig with catalog configuration:**
+   - Added `catalog_options` (colors with hex tints, sizes, product types, custom option names)
+   - Added `addon_defaults` (default price type, default price, standard add-ons list)
+   - Added `customer_fields` (checkout field definitions with type/required/placeholder/Square mapping)
+   - All fields have sensible FALLBACK defaults in `site-config-context.tsx`
+
+2. **New type system (`src/types/index.ts`):**
+   - `CatalogColor` (name + hex)
+   - `CatalogProductType` (value + label)
+   - `AddonPriceType` ("fixed" | "percentage")
+   - `StandardAddon` (id, name, priceType, price)
+   - `CustomerField` (id, label, type, required, placeholder, squareMapping)
+   - `CatalogOptions` (colors, sizes, productTypes, customOptionNames)
+   - `AddonDefaults` (defaultPriceType, defaultPrice, standardAddons)
+
+3. **Migrated hardcoded constants to config-driven approach:**
+   - `product-manager.tsx`: colors now read from `config.catalog_options.colors`, standard add-ons from `config.addon_defaults.standardAddons`
+   - `variant-matrix-editor.tsx`: sizes/colors read from config with fallback to constants
+   - `search-bar.tsx`: color filters read from config
+   - `constants.ts`: marked as FALLBACK ONLY (kept for backward compatibility)
+
+4. **Comprehensive admin UI for catalog options (`src/app/admin/page.tsx`):**
+   - Colors manager: add/remove/reorder colors with name + hex tint, live preview
+   - Sizes manager: add/remove/reorder size values
+   - Product types manager: add/remove type values with display labels
+   - Custom options manager: add/remove custom option type names (e.g., "Wood Type", "Grommet Count")
+   - Standard add-ons editor: configure default add-ons (name, price type, price)
+   - Customer fields editor: add/remove/reorder checkout fields, set required, type, Square mapping
+   - All changes save via existing "Save Theme" button (writes to `config/site` in Firestore)
+
+5. **Seed script (`scripts/seed-config.ts`):**
+   - TypeScript script to initialize Firestore `config/site` with defaults
+   - Requires Firebase service account credentials (not run locally — config will be populated when admin saves from UI)
+
+6. **Verification:**
+   - Lint: 0 errors (fixed unescaped quotes in JSX, removed unused imports)
+   - Tests: 85/85 pass (9 suites)
+   - Build: 22 routes, TypeScript clean
+   - Deployed to Firebase hosting
+
+### Decisions Made
+- **Config-driven, not code-driven:** All catalog options (colors, sizes, product types, add-ons, customer fields) are now editable from the admin UI without code changes
+- **Backward compatible:** Existing products continue to work — the FALLBACK defaults in SiteConfig provide immediate values until admin saves
+- **No migration needed:** Old products with hardcoded colors/add-ons will continue to render; new products will use config-driven options
+- **Seed script deferred:** Config will be populated when admin opens Settings and clicks "Save Theme" (writes full config including new fields to Firestore)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/types/index.ts | Added CatalogColor, CatalogProductType, AddonPriceType, StandardAddon, CustomerField, CatalogOptions, AddonDefaults |
+| src/context/site-config-context.tsx | Extended SiteConfig with catalog_options, addon_defaults, customer_fields + FALLBACK defaults |
+| src/lib/constants.ts | Marked as FALLBACK ONLY (kept for backward compatibility) |
+| src/components/admin/product-manager.tsx | Colors + standard add-ons read from config |
+| src/components/admin/variant-matrix-editor.tsx | Sizes/colors read from config with fallback |
+| src/components/search/search-bar.tsx | Color filters read from config |
+| src/app/admin/page.tsx | Added comprehensive catalog options UI (colors, sizes, types, custom options, add-ons, customer fields) |
+| scripts/seed-config.ts | NEW — Firestore initialization script (requires service account) |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `b7760f8` | feat: Phase 2 - config-driven catalog options, admin UI, and type system |
+
+### Current State at Session End
+- Lint 0 | Tests 85/85 (9 suites) | Build 22 routes | 14 Cloud Functions deployed
+- `development` pushed to origin; deployed live (hosting)
+- USE_SYNTHETIC = false; dev server running on :3000
+- Config will be populated when admin saves from Settings page
+
+### Pending / Next Session
+- [ ] Phase 4: Add-on pricing model (fixed fee OR percentage) — partially done (types exist, UI needs work)
+- [ ] Phase 5: Configurable customer fields at checkout (types exist, checkout page needs update)
+- [ ] Phase 6: Admin UI polish (visual photo picker, print zone editor, component split, category hierarchy)
+- [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics
+
+---
+
+## Session 18 — 2026-08-19 | Catalog architecture overhaul: Phase 3 (dynamic product options + modifiers)
+
+### Context Restored From
+- DEVLOG Session 17 (Phase 2 complete — config-driven catalog options)
+- PRODUCT_MODIFIER_AUDIT.md (Phase 3 scope: ProductOption/ProductModifier types, N-dimension matrix editor)
+
+### Actions Taken
+1. **New type system (`src/types/index.ts`):**
+   - `ProductOption` — a variant-defining dimension (Size, Color, Material, etc.) with `type` (select/color/text), `values`, `required`
+   - `ProductModifier` — an add-on with `priceType` (fixed/percentage), `price`, `inputType` (toggle/text/file), `inputLabel`
+   - `SelectedOption` / `ModifierInput` — customer's choices/inputs captured on cart lines
+   - `ManagedVariant.options?: Record<string, string>` — structured option values that define the variant
+   - `ManagedProduct.options?: ProductOption[]` — product-defined variant dimensions
+   - `ManagedProduct.modifiers?: ProductModifier[]` — takes precedence over legacy `productAddons`
+   - `CartItem.selectedOptions?` / `CartItem.modifierInputs?` — captured for order fulfillment
+
+2. **Generalized variant-matrix-editor (`src/components/admin/variant-matrix-editor.tsx`):**
+   - Now accepts an optional `options` prop (product-defined dimensions)
+   - Builds the matrix from N dimensions instead of hardcoded Size × Color
+   - Handles 0/1/2+ dimensions (no dimensions → manual entry; 1 dimension → single-select list; 2+ → matrix with extra dimensions noted)
+   - Variants now carry structured `options` map; falls back to parsing legacy "A / B" names
+
+3. **Admin product editor UI (`src/components/admin/product-manager.tsx`):**
+   - New "Product Options" section — add/remove/reorder option dimensions (name, type, values, required flag)
+   - New "Modifiers" section — add/remove modifiers (name, priceType, price, inputType, inputLabel)
+   - VariantMatrixEditor now receives `form.options` so the matrix reflects product-defined dimensions
+
+4. **Customer-facing integration:**
+   - **Customizer** (`src/app/customizer/page.tsx`): three-state modifier resolution; modifier UI with text/file inputs (FileUpload for file modifiers); percentage pricing resolved against base price; captures `selectedOptions` + `modifierInputs` on add-to-cart
+   - **Product page** (`src/app/product/page.tsx`): showPersonalization checks modifiers; captures personalization text as a modifier input; captures selectedOptions on add-to-cart
+   - **Checkout** (`src/app/checkout/page.tsx`): order note includes selectedOptions + modifierInputs for fulfillment
+   - **Cart drawer** (`src/components/cart/cart-drawer.tsx`): renders selectedOptions + modifierInputs; addon badges keyed by addon_id (supports arbitrary modifier ids)
+
+5. **Verification:**
+   - Lint: 0 errors (only 1 warning from a backup copy)
+   - Tests: 85/85 pass (9 suites)
+   - Build: 22 routes, TypeScript clean
+   - Deployed to Firebase hosting
+
+### Decisions Made
+- **Backward compatible:** Products without `options`/`modifiers` continue to work via the legacy path (site-standard sizes/colors and productAddons)
+- **Modifiers take precedence** over legacy productAddons when both are configured
+- **Percentage modifiers** resolve against the variant's base price at add-to-cart time (stored as resolved dollar amount on the cart line)
+- **Order fulfillment** captures selectedOptions + modifierInputs in the order note (visible in admin Orders tab)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/types/index.ts | Added ProductOption, ProductModifier, SelectedOption, ModifierInput; extended ManagedVariant/ManagedProduct/CartItem |
+| src/components/admin/variant-matrix-editor.tsx | Generalized to N dimensions; accepts options prop; structured variant options |
+| src/components/admin/product-manager.tsx | Product Options + Modifiers editor sections; passes options to matrix editor |
+| src/app/customizer/page.tsx | Modifier resolution, modifier UI with text/file inputs, percentage pricing, captures selectedOptions/modifierInputs |
+| src/app/product/page.tsx | showPersonalization checks modifiers; captures modifierInputs + selectedOptions |
+| src/app/checkout/page.tsx | Order note includes selectedOptions + modifierInputs |
+| src/components/cart/cart-drawer.tsx | Renders selectedOptions + modifierInputs; addon badges keyed by addon_id |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| (pending at time of writing) | |
+
+### Current State at Session End
+- Lint 0 | Tests 85/85 (9 suites) | Build 22 routes | 14 Cloud Functions deployed
+- `development` pushed to origin; deployed live (hosting)
+- USE_SYNTHETIC = false; dev server needs restart
+- Existing products unaffected — new options/modifiers are opt-in per product
+
+### Pending / Next Session
+- [ ] Phase 4: Add-on pricing model (fixed fee OR percentage) — types exist; need to wire percentage resolution through cart context TOGGLE_ADDON + site defaults UI
+- [ ] Phase 5: Configurable customer fields at checkout (types exist; checkout page needs dynamic render)
+- [ ] Phase 6: Admin UI polish (visual photo picker, print zone editor, component split, category hierarchy)
+- [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 

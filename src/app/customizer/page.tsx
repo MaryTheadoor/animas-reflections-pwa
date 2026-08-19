@@ -12,7 +12,7 @@ import Customizer, { type DesignState, defaultDesignPosition } from "@/component
 import FileUpload from "@/components/customizer/file-upload";
 import { SITE_NAME } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
-import type { AddonType, DesignAsset, ManagedProduct, ManagedVariant, PrintZone, PrintZoneTemplate, ProductAddon } from "@/types";
+import type { AddonType, DesignAsset, ManagedProduct, ManagedVariant, ModifierInput, PrintZone, PrintZoneTemplate, ProductAddon, ProductModifier } from "@/types";
 
 const DEFAULT_PRINT_ZONE: PrintZone = {
   x_percent: 30, y_percent: 22, width_percent: 40, height_percent: 48,
@@ -159,6 +159,37 @@ function CustomizerContent() {
     selectedProduct?.productAddons === undefined
       ? ADDONS.map((a) => ({ id: a.type, name: a.label, price: addonPrice }))
       : selectedProduct.productAddons;
+
+  // Three-state modifier resolution (Phase 3). Modifiers take precedence over
+  // the legacy productAddons when both are configured on the product.
+  //   undefined = site-standard modifiers from config (or legacy ADDONS fallback)
+  //   []        = admin explicitly removed all modifiers
+  //   [...]     = exactly these modifiers
+  const effectiveModifiers: ProductModifier[] =
+    selectedProduct?.modifiers !== undefined
+      ? selectedProduct.modifiers
+      : selectedProduct?.productAddons !== undefined
+        ? [] // product configured legacy add-ons — handled by effectiveAddons path
+        : (siteConfig.addon_defaults?.standardAddons ?? []).map((a) => ({
+            id: a.id,
+            name: a.name,
+            priceType: a.priceType,
+            price: a.price,
+            inputType: a.id === "personalization" ? ("text" as const) : ("toggle" as const),
+            inputLabel: a.id === "personalization" ? "Enter name/number" : undefined,
+          }));
+
+  // Customer inputs for text/file modifiers, keyed by modifier id.
+  const [modifierInputs, setModifierInputs] = useState<Record<string, string>>({});
+
+  // Resolve a modifier's price to a dollar amount (percentage applies to base price).
+  const resolveModifierPrice = (mod: ProductModifier, base: number): number =>
+    mod.priceType === "percentage" ? base * (mod.price / 100) : mod.price;
+
+  const formatModifierPrice = (mod: ProductModifier): string =>
+    mod.priceType === "percentage"
+      ? `+${mod.price}%`
+      : `+$${mod.price.toFixed(2)}`;
   const [orderId] = useState(() => crypto.randomUUID());
   const [designLibrary, setDesignLibrary] = useState<DesignAsset[]>([]);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -258,6 +289,57 @@ function CustomizerContent() {
     const price = getProductPrice(selectedProduct, variantIndex);
     const variant: ManagedVariant | undefined = selectedProduct?.variants[variantIndex];
 
+    // Build addons from modifiers (Phase 3) when available; otherwise fall back
+    // to the legacy add-on path. Modifier prices are resolved to dollars here
+    // (percentage modifiers apply to the variant's base price).
+    const useModifiers = selectedProduct?.modifiers !== undefined || selectedProduct?.productAddons === undefined;
+    const addons = useModifiers
+      ? Array.from(selectedAddons)
+          .map((id) => {
+            const mod = effectiveModifiers.find((m) => m.id === id);
+            if (!mod) return null;
+            return {
+              type: (["back_print", "sleeve_print", "personalization"].includes(mod.id) ? mod.id : "back_print") as AddonType,
+              label: mod.name,
+              price: resolveModifierPrice(mod, price),
+              addon_id: mod.id,
+            };
+          })
+          .filter((a): a is NonNullable<typeof a> => a !== null)
+      : Array.from(selectedAddons).map((id) => {
+          const addon = effectiveAddons.find((a) => a.id === id);
+          return {
+            type: id as AddonType,
+            label: addon?.name ?? id,
+            price: addon?.price ?? addonPrice,
+            addon_id: id,
+          };
+        });
+
+    // Capture customer inputs for text/file modifiers.
+    const capturedModifierInputs: ModifierInput[] = useModifiers
+      ? Array.from(selectedAddons)
+          .map((id): ModifierInput | null => {
+            const mod = effectiveModifiers.find((m) => m.id === id);
+            if (!mod) return null;
+            return {
+              modifierId: mod.id,
+              modifierName: mod.name,
+              value: modifierInputs[mod.id] || undefined,
+            };
+          })
+          .filter((m): m is ModifierInput => m !== null)
+      : [];
+
+    // Capture the customer's variant option choices for order fulfillment display.
+    const selectedOptions = variant?.options
+      ? Object.entries(variant.options).map(([optionName, value]) => ({
+          optionId: optionName.toLowerCase().replace(/\s+/g, "_"),
+          optionName,
+          value,
+        }))
+      : undefined;
+
     addItem({
       id: orderId,
       product_id: selectedProduct?.id ?? "custom",
@@ -277,15 +359,9 @@ function CustomizerContent() {
       design_scale: designState.scale,
       design_rotation: designState.rotation,
       shipping_rate: selectedProduct?.shippingRate,
-      addons: Array.from(selectedAddons).map((id) => {
-        const addon = effectiveAddons.find((a) => a.id === id);
-        return {
-          type: id as AddonType,
-          label: addon?.name ?? id,
-          price: addon?.price ?? addonPrice,
-          addon_id: id,
-        };
-      }),
+      addons,
+      selectedOptions,
+      modifierInputs: capturedModifierInputs.length > 0 ? capturedModifierInputs : undefined,
     });
   };
 
@@ -299,10 +375,18 @@ function CustomizerContent() {
   const effectiveBaseImage = colorMockup ?? currentView.baseImage;
   const tintColor = !colorMockup && selectedColor ? selectedProduct?.colorTints?.[selectedColor] : undefined;
   const basePrice = getProductPrice(selectedProduct, variantIndex);
-  const addonsCost = Array.from(selectedAddons).reduce((sum, id) => {
-    const addon = effectiveAddons.find((a) => a.id === id);
-    return sum + (addon?.price ?? addonPrice);
-  }, 0);
+  // Add-on cost uses modifiers when available (percentage modifiers resolve against
+  // the base price); otherwise falls back to the legacy flat-price add-ons.
+  const useModifiersForCost = selectedProduct?.modifiers !== undefined || selectedProduct?.productAddons === undefined;
+  const addonsCost = useModifiersForCost
+    ? Array.from(selectedAddons).reduce((sum, id) => {
+        const mod = effectiveModifiers.find((m) => m.id === id);
+        return mod ? sum + resolveModifierPrice(mod, basePrice) : sum;
+      }, 0)
+    : Array.from(selectedAddons).reduce((sum, id) => {
+        const addon = effectiveAddons.find((a) => a.id === id);
+        return sum + (addon?.price ?? addonPrice);
+      }, 0);
   const totalPrice = basePrice + addonsCost;
 
   // Sort catalog products for dropdown
@@ -570,26 +654,65 @@ function CustomizerContent() {
               )}
             </div>
 
-            {/* Add-ons — hidden when no product or when the product offers none */}
-            {selectedProduct && effectiveAddons.length > 0 && (
+            {/* Add-ons / Modifiers — hidden when no product or when the product offers none */}
+            {selectedProduct && (useModifiersForCost ? effectiveModifiers.length > 0 : effectiveAddons.length > 0) && (
             <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
               <h2 className="font-bold font-display text-lg mb-4">Add-ons</h2>
               <div className="space-y-2">
-                {effectiveAddons.map((addon) => (
-                  <label
-                    key={addon.id}
-                    className="flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-warm-sand/50 transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedAddons.has(addon.id)}
-                      onChange={() => handleToggleAddon(addon.id)}
-                      className="accent-gold w-4 h-4"
-                    />
-                    <span className="text-sm text-primary">{addon.name}</span>
-                    <span className="ml-auto text-sm text-gold font-medium">+${addon.price.toFixed(2)}</span>
-                  </label>
-                ))}
+                {useModifiersForCost
+                  ? effectiveModifiers.map((mod) => (
+                      <div key={mod.id} className="p-2 rounded-xl hover:bg-warm-sand/50 transition-colors">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedAddons.has(mod.id)}
+                            onChange={() => handleToggleAddon(mod.id)}
+                            className="accent-gold w-4 h-4"
+                          />
+                          <span className="text-sm text-primary">{mod.name}</span>
+                          <span className="ml-auto text-sm text-gold font-medium">
+                            {formatModifierPrice(mod)}
+                          </span>
+                        </label>
+                        {/* Text input for text modifiers — shown when the modifier is selected */}
+                        {selectedAddons.has(mod.id) && mod.inputType === "text" && (
+                          <input
+                            type="text"
+                            value={modifierInputs[mod.id] ?? ""}
+                            onChange={(e) => setModifierInputs((prev) => ({ ...prev, [mod.id]: e.target.value }))}
+                            placeholder={mod.inputLabel ?? "Enter text"}
+                            className="mt-2 ml-7 w-[calc(100%-1.75rem)] px-3 py-1.5 rounded-lg border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                          />
+                        )}
+                        {/* File upload for file modifiers — shown when the modifier is selected */}
+                        {selectedAddons.has(mod.id) && mod.inputType === "file" && (
+                          <div className="mt-2 ml-7">
+                            <FileUpload
+                              onUploadComplete={(url) => setModifierInputs((prev) => ({ ...prev, [mod.id]: url }))}
+                              onError={(err) => console.error(err)}
+                            />
+                            {modifierInputs[mod.id] && (
+                              <p className="text-xs text-green-600 mt-1">File uploaded</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  : effectiveAddons.map((addon) => (
+                      <label
+                        key={addon.id}
+                        className="flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-warm-sand/50 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedAddons.has(addon.id)}
+                          onChange={() => handleToggleAddon(addon.id)}
+                          className="accent-gold w-4 h-4"
+                        />
+                        <span className="text-sm text-primary">{addon.name}</span>
+                        <span className="ml-auto text-sm text-gold font-medium">+${addon.price.toFixed(2)}</span>
+                      </label>
+                    ))}
               </div>
             </div>
             )}

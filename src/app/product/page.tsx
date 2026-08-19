@@ -109,9 +109,14 @@ function ProductContent() {
   // ignored (the product id check resets it automatically).
   const effectiveColor =
     product && selectedColor && product.colors.includes(selectedColor) ? selectedColor : product?.colors?.[0];
-  // Gated by productAddons so the Name/Number field only shows when the
-  // personalization add-on is enabled per product (undefined = site defaults).
-  const showPersonalization = product.productAddons === undefined || product.productAddons.some((a) => a.id === "personalization");
+  // Gated by modifiers (Phase 3) or productAddons so the Name/Number field only
+  // shows when a personalization/text input is enabled per product (undefined = site defaults).
+  const showPersonalization =
+    product.modifiers !== undefined
+      ? product.modifiers.some((m) => m.inputType === "text")
+      : product.productAddons === undefined || product.productAddons.some((a) => a.id === "personalization");
+  // When modifiers provide the text input, capture it as a modifier input too.
+  const textModifier = product.modifiers?.find((m) => m.inputType === "text");
 
   return (
     <PageLayout>
@@ -302,6 +307,20 @@ function ProductContent() {
               <button
                 onClick={() => {
                   if (!variant) return;
+                  // Capture the customer's variant option choices for fulfillment display.
+                  const selectedOptions = variant.options
+                    ? Object.entries(variant.options).map(([optionName, value]) => ({
+                        optionId: optionName.toLowerCase().replace(/\s+/g, "_"),
+                        optionName,
+                        value,
+                      }))
+                    : undefined;
+                  // Capture personalization text as a modifier input when the product
+                  // uses the Phase 3 modifier model.
+                  const modifierInputs =
+                    textModifier && showPersonalization && customText
+                      ? [{ modifierId: textModifier.id, modifierName: textModifier.name, value: customText }]
+                      : undefined;
                   addItem({
                     id: crypto.randomUUID(),
                     product_id: product.id,
@@ -317,6 +336,8 @@ function ProductContent() {
                     selected_color: effectiveColor,
                     shipping_rate: product.shippingRate,
                     addons: [],
+                    selectedOptions,
+                    modifierInputs,
                   });
                 }}
                 className="flex-1 px-6 py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"

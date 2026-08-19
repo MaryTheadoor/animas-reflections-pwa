@@ -114,6 +114,56 @@ export interface AddonDefaults {
   standardAddons: StandardAddon[];
 }
 
+/* ─── Dynamic Product Options & Modifiers ───────────────────────── */
+
+/** A product option dimension that defines variants (SKUs).
+ *  Standard examples: "Size", "Color". Admin can add any dimension
+ *  (e.g. "Material", "Finish", "Grommet Count") per product. */
+export interface ProductOption {
+  id: string;
+  /** Human-readable dimension name, e.g. "Size", "Color", "Material" */
+  name: string;
+  /** select = pick from a fixed value list; color = like select but rendered as swatches;
+   *  text = free-text entry (captured at order time, not part of the variant SKU). */
+  type: "select" | "color" | "text";
+  /** Available values for select/color options. Ignored for text options. */
+  values: string[];
+  /** Required options must have a value chosen before the item can be added to cart. */
+  required: boolean;
+}
+
+/** A per-product modifier (add-on). Replaces ProductAddon with pricing model + input type.
+ *  - toggle: simple checkbox that adjusts price (back print, sleeve print)
+ *  - text: checkbox + text input captured for fulfillment (name/number, engraving)
+ *  - file: checkbox + file upload captured for fulfillment (custom artwork) */
+export interface ProductModifier {
+  id: string;
+  name: string;
+  priceType: AddonPriceType;
+  /** For "fixed": dollar amount. For "percentage": percent of base price (e.g. 10 = 10%). */
+  price: number;
+  inputType?: "toggle" | "text" | "file";
+  /** Label for the text/file input, e.g. "Enter name/number" */
+  inputLabel?: string;
+}
+
+/** A customer's choice for one product option, captured on the cart line. */
+export interface SelectedOption {
+  optionId: string;
+  /** The option dimension name, denormalized for order fulfillment display */
+  optionName: string;
+  value: string;
+}
+
+/** A customer's input for one modifier, captured on the cart line. */
+export interface ModifierInput {
+  modifierId: string;
+  /** The modifier name, denormalized for order fulfillment display */
+  modifierName: string;
+  /** Text value for "text" modifiers, or Storage URL for "file" modifiers */
+  value?: string;
+}
+
 /* ─── CMS Managed Product ────────────────────────────────────────── */
 
 export interface ManagedVariant {
@@ -128,6 +178,10 @@ export interface ManagedVariant {
   inventoryUpdatedAt?: string;
   /** Custom key-value attributes (e.g. grommets: '4', material: 'cotton') */
   customFields?: { key: string; value: string }[];
+  /** Structured option values that define this variant (e.g. {Size: "L", Color: "Navy"}).
+   *  When present, variant name is generated from these values. Falls back to parsing
+   *  the name string for legacy products. */
+  options?: Record<string, string>;
 }
 
 export interface ManagedProduct {
@@ -172,8 +226,22 @@ export interface ManagedProduct {
    *  Three-state meaning:
    *    undefined = not configured → storefront shows the site-standard add-ons
    *    []        = explicitly none → storefront shows no add-ons
-   *    [...]     = exactly these add-ons */
+   *    [...]     = exactly these add-ons
+   *  @deprecated Prefer `modifiers` (supports pricing model + text/file inputs).
+   *  Kept for backward compatibility with existing products. */
   productAddons?: ProductAddon[];
+  /** Per-product option dimensions that define variants (SKUs). When set,
+   *  the variant matrix editor builds from these dimensions instead of the
+   *  hardcoded size/color grid. When unset, falls back to site-standard
+   *  sizes/colors for backward compatibility. */
+  options?: ProductOption[];
+  /** Per-product modifiers (add-ons with pricing model + optional text/file input).
+   *  Three-state meaning (same as productAddons):
+   *    undefined = not configured → storefront shows the site-standard add-ons
+   *    []        = explicitly none → storefront shows no modifiers
+   *    [...]     = exactly these modifiers
+   *  Takes precedence over productAddons when both are present. */
+  modifiers?: ProductModifier[];
   /** When true, the customizer restricts the customer to a single design
    *  (one image; the text tool is hidden). Only one design prints per item. */
   singleDesign?: boolean;
@@ -274,6 +342,12 @@ export interface CartItem {
   design_scale?: number;
   design_rotation?: number;
   addons: CartAddon[];
+  /** Customer's choices for the product's option dimensions (e.g. {Size: "L", Color: "Navy"}).
+   *  Captured at add-to-cart time and preserved for order fulfillment display. */
+  selectedOptions?: SelectedOption[];
+  /** Customer's inputs for modifiers with text/file input types.
+   *  Captured at add-to-cart time and preserved for order fulfillment. */
+  modifierInputs?: ModifierInput[];
   /** Per-product flat shipping rate, if set on the product. Used by the cart to
    *  override the global shipping tier for this item. */
   shipping_rate?: number;

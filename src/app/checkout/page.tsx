@@ -118,6 +118,12 @@ export default function CheckoutPage() {
           item.design_url ? `Design: ${item.design_url}` : "",
           item.design_text ? `Text: ${item.design_text}` : "",
           item.selected_color ? `Color: ${item.selected_color}` : "",
+          item.selectedOptions?.length
+            ? `Options: ${item.selectedOptions.map((o) => `${o.optionName}: ${o.value}`).join(", ")}`
+            : "",
+          item.modifierInputs?.length
+            ? `Modifier Inputs: ${item.modifierInputs.map((m) => `${m.modifierName}: ${m.value ?? ""}`).join(", ")}`
+            : "",
           `View: ${item.selected_view}`,
           (item.design_x != null) ? `Pos: ${item.design_x.toFixed(0)}%,${item.design_y?.toFixed(0)}%` : "",
           (item.design_scale != null) ? `Scale: ${item.design_scale.toFixed(2)}` : "",

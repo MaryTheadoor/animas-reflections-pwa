@@ -961,6 +961,96 @@ export default function ProductManager({ categories }: Props) {
             </div>
           </div>
 
+          {/* Product Options — dynamic variant dimensions (Phase 3) */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-primary">
+                Product Options ({(form.options ?? []).length} configured)
+              </label>
+            </div>
+            <p className="text-xs text-foreground/70 mb-3">
+              Option dimensions define your variants (SKUs). Standard examples: Size, Color.
+              Add custom dimensions like Material, Finish, or Grommet Count for non-apparel products.
+              Leave empty to use the site-standard Size × Color grid.
+            </p>
+            <div className="space-y-2 mb-3">
+              {(form.options ?? []).map((opt, idx) => (
+                <div key={opt.id} className="bg-warm-sand/30 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={opt.name}
+                      onChange={(e) => {
+                        const opts = [...(form.options ?? [])];
+                        opts[idx] = { ...opt, name: e.target.value };
+                        updateField("options", opts);
+                      }}
+                      placeholder="Option name (e.g. Size)"
+                      className="flex-1 px-2 py-1 rounded border border-primary/10 bg-white text-sm focus:border-gold outline-none"
+                    />
+                    <select
+                      value={opt.type}
+                      onChange={(e) => {
+                        const opts = [...(form.options ?? [])];
+                        opts[idx] = { ...opt, type: e.target.value as "select" | "color" | "text" };
+                        updateField("options", opts);
+                      }}
+                      className="w-24 px-2 py-1 rounded border border-primary/10 bg-white text-xs focus:border-gold outline-none"
+                    >
+                      <option value="select">Select</option>
+                      <option value="color">Color</option>
+                      <option value="text">Text</option>
+                    </select>
+                    <label className="flex items-center gap-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={opt.required}
+                        onChange={(e) => {
+                          const opts = [...(form.options ?? [])];
+                          opts[idx] = { ...opt, required: e.target.checked };
+                          updateField("options", opts);
+                        }}
+                        className="accent-gold"
+                      />
+                      Required
+                    </label>
+                    <button
+                      onClick={() => {
+                        const opts = (form.options ?? []).filter((_, i) => i !== idx);
+                        updateField("options", opts);
+                      }}
+                      className="text-red-400 hover:text-red-600 text-xs px-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {opt.type !== "text" && (
+                    <input
+                      type="text"
+                      value={opt.values.join(", ")}
+                      onChange={(e) => {
+                        const opts = [...(form.options ?? [])];
+                        opts[idx] = { ...opt, values: e.target.value.split(",").map((v) => v.trim()).filter(Boolean) };
+                        updateField("options", opts);
+                      }}
+                      placeholder="Values separated by commas (e.g. S, M, L, XL)"
+                      className="w-full px-2 py-1 rounded border border-primary/10 bg-white text-xs focus:border-gold outline-none"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const opts = [...(form.options ?? []), { id: crypto.randomUUID(), name: "", type: "select" as const, values: [], required: true }];
+                updateField("options", opts);
+              }}
+              className="w-full py-2 border-2 border-dashed border-primary/20 rounded-xl text-xs text-foreground/80 hover:border-primary/40 transition-colors"
+            >
+              + Add Option Dimension
+            </button>
+          </div>
+
           {/* Variants */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -979,6 +1069,7 @@ export default function ProductManager({ categories }: Props) {
               <VariantMatrixEditor
                 variants={form.variants}
                 onChange={(variants) => updateField("variants", variants)}
+                options={form.options}
               />
             ) : (
               <>
@@ -1352,6 +1443,115 @@ export default function ProductManager({ categories }: Props) {
 
             {form.productAddons !== undefined && (
               <button onClick={() => updateField("productAddons", undefined)} className="mt-2 text-xs text-foreground/80 hover:text-gold transition-colors">
+                Reset to site defaults
+              </button>
+            )}
+          </div>
+
+          {/* Modifiers — add-ons with pricing model + text/file inputs (Phase 3) */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-primary">
+                Modifiers ({(form.modifiers ?? []).length} configured)
+              </label>
+            </div>
+            <p className="text-xs text-foreground/70 mb-3">
+              Modifiers are add-ons that adjust price and can collect customer input.
+              &quot;Fixed&quot; = dollar amount; &quot;Percent&quot; = % of base price.
+              Input types: Toggle (price only), Text (e.g. name/number, engraving), File (e.g. custom artwork upload).
+              Takes precedence over the legacy Add-ons section above.
+            </p>
+            <div className="space-y-2 mb-3">
+              {(form.modifiers ?? []).map((mod, idx) => (
+                <div key={mod.id} className="bg-warm-sand/30 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={mod.name}
+                      onChange={(e) => {
+                        const mods = [...(form.modifiers ?? [])];
+                        mods[idx] = { ...mod, name: e.target.value };
+                        updateField("modifiers", mods);
+                      }}
+                      placeholder="Modifier name"
+                      className="flex-1 px-2 py-1 rounded border border-primary/10 bg-white text-sm focus:border-gold outline-none"
+                    />
+                    <select
+                      value={mod.priceType}
+                      onChange={(e) => {
+                        const mods = [...(form.modifiers ?? [])];
+                        mods[idx] = { ...mod, priceType: e.target.value as "fixed" | "percentage" };
+                        updateField("modifiers", mods);
+                      }}
+                      className="w-24 px-2 py-1 rounded border border-primary/10 bg-white text-xs focus:border-gold outline-none"
+                    >
+                      <option value="fixed">$ Fixed</option>
+                      <option value="percentage">% Percent</option>
+                    </select>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={mod.price}
+                      onChange={(e) => {
+                        const mods = [...(form.modifiers ?? [])];
+                        mods[idx] = { ...mod, price: parseFloat(e.target.value) || 0 };
+                        updateField("modifiers", mods);
+                      }}
+                      className="w-20 px-2 py-1 rounded border border-primary/10 bg-white text-sm text-right focus:border-gold outline-none"
+                    />
+                    <button
+                      onClick={() => {
+                        const mods = (form.modifiers ?? []).filter((_, i) => i !== idx);
+                        updateField("modifiers", mods);
+                      }}
+                      className="text-red-400 hover:text-red-600 text-xs px-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={mod.inputType ?? "toggle"}
+                      onChange={(e) => {
+                        const mods = [...(form.modifiers ?? [])];
+                        mods[idx] = { ...mod, inputType: e.target.value as "toggle" | "text" | "file" };
+                        updateField("modifiers", mods);
+                      }}
+                      className="w-28 px-2 py-1 rounded border border-primary/10 bg-white text-xs focus:border-gold outline-none"
+                    >
+                      <option value="toggle">Toggle</option>
+                      <option value="text">Text input</option>
+                      <option value="file">File upload</option>
+                    </select>
+                    {(mod.inputType === "text" || mod.inputType === "file") && (
+                      <input
+                        type="text"
+                        value={mod.inputLabel ?? ""}
+                        onChange={(e) => {
+                          const mods = [...(form.modifiers ?? [])];
+                          mods[idx] = { ...mod, inputLabel: e.target.value };
+                          updateField("modifiers", mods);
+                        }}
+                        placeholder="Input label (e.g. Enter name/number)"
+                        className="flex-1 px-2 py-1 rounded border border-primary/10 bg-white text-xs focus:border-gold outline-none"
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const mods = [...(form.modifiers ?? []), { id: crypto.randomUUID(), name: "", priceType: "fixed" as const, price: 0, inputType: "toggle" as const }];
+                updateField("modifiers", mods);
+              }}
+              className="w-full py-2 border-2 border-dashed border-primary/20 rounded-xl text-xs text-foreground/80 hover:border-primary/40 transition-colors"
+            >
+              + Add Modifier
+            </button>
+            {form.modifiers !== undefined && (
+              <button onClick={() => updateField("modifiers", undefined)} className="mt-2 text-xs text-foreground/80 hover:text-gold transition-colors">
                 Reset to site defaults
               </button>
             )}
