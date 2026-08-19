@@ -266,6 +266,9 @@ export interface ManagedCategory {
   name: string;
   slug: string;
   order: number;
+  /** Optional parent category id for subcategory hierarchy. When set, this
+   *  category is a subcategory of the referenced parent. */
+  parentId?: string;
   createdAt: string;
   updatedAt: string;
 }

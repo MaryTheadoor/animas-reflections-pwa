@@ -961,6 +961,66 @@ export default function ProductManager({ categories }: Props) {
             </div>
           </div>
 
+          {/* Print Zones — printable area coordinates per view (Phase 6) */}
+          <div>
+            <label className="block text-xs font-medium text-primary mb-2">
+              Print Zones (printable area per view, as % of mockup)
+            </label>
+            <p className="text-[10px] text-foreground/70 mb-2">
+              Defines where the customer can place a design in the customizer. Leave a view blank to use the default zone.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => {
+                const zone = form.printZones?.[view];
+                const setZoneField = (field: "x_percent" | "y_percent" | "width_percent" | "height_percent", value: number) => {
+                  const currentZones = form.printZones ?? ({} as NonNullable<typeof form.printZones>);
+                  const currentZone = currentZones[view] ?? { x_percent: 30, y_percent: 25, width_percent: 40, height_percent: 50 };
+                  updateField("printZones", { ...currentZones, [view]: { ...currentZone, [field]: value } });
+                };
+                const clearZone = () => {
+                  if (!form.printZones) return;
+                  const rest = { ...form.printZones };
+                  delete rest[view];
+                  updateField("printZones", Object.keys(rest).length ? rest : undefined);
+                };
+                return (
+                  <div key={view} className="border border-primary/10 rounded-lg p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-medium text-foreground capitalize">
+                        {view === "sideL" ? "Left Side" : view === "sideR" ? "Right Side" : view}
+                      </span>
+                      {zone && (
+                        <button onClick={clearZone} className="text-[10px] text-red-400 hover:text-red-600">reset</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {([
+                        ["x_percent", "X %"],
+                        ["y_percent", "Y %"],
+                        ["width_percent", "W %"],
+                        ["height_percent", "H %"],
+                      ] as const).map(([field, label]) => (
+                        <div key={field}>
+                          <label className="block text-[9px] text-foreground/70">{label}</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={zone?.[field] ?? ""}
+                            placeholder="—"
+                            onChange={(e) => setZoneField(field, parseFloat(e.target.value) || 0)}
+                            className="w-full px-1.5 py-1 rounded border border-primary/20 focus:border-gold outline-none text-[11px]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Product Options — dynamic variant dimensions (Phase 3) */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -1317,17 +1377,28 @@ export default function ProductManager({ categories }: Props) {
                                 )}
                               </div>
                               <div className="flex flex-col gap-0.5">
-                                <select
-                                  value={photo ?? ""}
-                                  onChange={(e) => (e.target.value ? setPerColorImage(color, view, e.target.value) : removePerColorImage(color, view))}
-                                  className="text-[9px] max-w-[96px] px-1 py-0.5 rounded border border-primary/15 bg-white text-foreground"
-                                  title={`${view} photo for ${color}`}
-                                >
-                                  <option value="">gallery…</option>
+                                {/* Visual photo picker — click a thumbnail to assign it to this view */}
+                                <div className="flex gap-0.5 flex-wrap max-w-[120px]">
+                                  {form.images.length === 0 && (
+                                    <span className="text-[8px] text-foreground/70">no gallery images</span>
+                                  )}
                                   {form.images.map((url, i) => (
-                                    <option key={url} value={url}>img {i + 1}</option>
+                                    <button
+                                      key={url}
+                                      type="button"
+                                      onClick={() => setPerColorImage(color, view, url)}
+                                      title={`Use image ${i + 1} for ${color} ${view}`}
+                                      className={"w-6 h-6 rounded overflow-hidden border transition-all " + (
+                                        photo === url
+                                          ? "border-gold ring-1 ring-gold scale-110"
+                                          : "border-primary/15 hover:border-gold opacity-70 hover:opacity-100"
+                                      )}
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={url} alt={`img ${i + 1}`} className="w-full h-full object-cover" />
+                                    </button>
                                   ))}
-                                </select>
+                                </div>
                                 {photo && (
                                   <button onClick={() => removePerColorImage(color, view)} className="text-[9px] text-red-400 hover:text-red-600 text-left">
                                     remove
@@ -1338,7 +1409,7 @@ export default function ProductManager({ categories }: Props) {
                           );
                         })}
                         <p className="text-[9px] text-foreground/70 w-full">
-                          A real photo replaces the tint in the customizer. Upload photos in the Image Manager, then pick a gallery image here.
+                          A real photo replaces the tint in the customizer. Upload photos in the Image Manager, then click a thumbnail to assign it.
                         </p>
                       </div>
                     </div>

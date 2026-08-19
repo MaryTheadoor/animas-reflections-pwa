@@ -934,7 +934,7 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 ### Commits This Session
 | Hash | Message |
 |------|---------|
-| (pending at time of writing) | |
+| `9e97b3f` | feat: Phases 4+5 - percentage add-on pricing end-to-end + dynamic customer fields at checkout |
 
 ### Current State at Session End
 - Lint 0 | Tests 89/89 (9 suites) | Build 22 routes | 14 Cloud Functions deployed
@@ -943,6 +943,63 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ### Pending / Next Session
 - [ ] Phase 6: Admin UI polish (print zone editor, visual photo picker, category hierarchy, component split)
+- [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics
+
+---
+
+## Session 20 — 2026-08-19 | Catalog architecture overhaul: Phase 6 (admin polish)
+
+### Context Restored From
+- DEVLOG Sessions 17–19 (config-driven catalog, dynamic options/modifiers, percentage pricing, dynamic customer fields)
+- PRODUCT_MODIFIER_AUDIT.md (Phase 6 scope: print zone editor, visual photo picker, category hierarchy, component split)
+
+### Actions Taken
+1. **Print Zone Editor** (`src/components/admin/product-manager.tsx`):
+   - New section lets the admin define the printable area per view (front/back/sleeve/sideL/sideR) as X/Y/W/H percentages
+   - Writes to `form.printZones` (previously only editable by direct Firestore writes); blank views fall back to the customizer's default zone; per-view "reset" clears back to default
+
+2. **Visual Photo Picker** for per-color mockups:
+   - Replaced the `gallery…/img 1/img 2` dropdowns with clickable image thumbnails — clicking a thumbnail assigns that gallery image to the color+view; the active photo is highlighted with a gold ring
+
+3. **Category Hierarchy** (`parentId` on `ManagedCategory`):
+   - `src/types/index.ts`: added optional `parentId` to `ManagedCategory`
+   - `src/components/admin/category-manager.tsx`: parent selector on add + edit, indented display + "under <parent>" badge for subcategories, self-reference prevented when editing
+   - Flat categories continue to work unchanged (parentId omitted)
+
+4. **Deferred (Phase 6 remainder):** splitting the 1,600-line `product-manager.tsx` into smaller components and the brand collection. The component split is a large refactor with no user-facing behavior change; deferred to keep this change shippable and low-risk.
+
+5. **Verification:**
+   - Lint: 0 errors, 0 warnings (live files)
+   - Tests: 89/89 pass (9 suites)
+   - Build: 22 routes, TypeScript clean
+   - Deployed to Firebase hosting
+
+### Decisions Made
+- **Print zones are now admin-editable** — closes the long-standing gap where `printZones` existed in the schema but had no admin UI
+- **Category hierarchy is opt-in** — existing flat categories are unaffected; subcategories are created by choosing a parent
+- **Component split deferred** — high effort, no user-facing benefit this iteration; noted as future cleanup
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/components/admin/product-manager.tsx | Print Zone Editor section; visual thumbnail photo picker for per-color mockups |
+| src/components/admin/category-manager.tsx | Parent selector on add/edit; indented subcategory display; self-ref guard |
+| src/types/index.ts | ManagedCategory.parentId |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| (pending at time of writing) | |
+
+### Current State at Session End
+- Lint 0 | Tests 89/89 (9 suites) | Build 22 routes | 14 Cloud Functions deployed
+- `development` pushed to origin; deployed live (hosting)
+- USE_SYNTHETIC = false; dev server needs restart
+
+### Pending / Next Session
+- [ ] Split product-manager.tsx into smaller components (deferred refactor)
+- [ ] Brand collection / taxonomy (needs Cindy's answer on "Biscuit Hockey")
 - [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
 - [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics
 
