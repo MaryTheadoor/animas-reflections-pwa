@@ -136,8 +136,3 @@ export function useProductSearch(
 ) {
   return useMemo(() => searchProducts(products, filters, sort), [products, filters, sort]);
 }
-
-export const AVAILABLE_COLORS = [
-  "black", "white", "gray", "navy", "blue", "red", "green",
-  "sage", "cream", "heather", "ash", "charcoal",
-] as const;

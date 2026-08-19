@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import type { ManagedVariant } from "@/types";
 import { PRODUCT_SIZES, PRODUCT_COLORS } from "@/lib/constants";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 interface VariantMatrixEditorProps {
   variants: ManagedVariant[];
@@ -10,6 +11,8 @@ interface VariantMatrixEditorProps {
 }
 
 export default function VariantMatrixEditor({ variants, onChange }: VariantMatrixEditorProps) {
+  const siteConfig = useSiteConfig();
+  
   const existingMatrix = useMemo(() => {
     const matrix = new Map<string, ManagedVariant>();
     variants.forEach((v) => {
@@ -46,8 +49,13 @@ export default function VariantMatrixEditor({ variants, onChange }: VariantMatri
     }
   };
 
-  const sizes = [...PRODUCT_SIZES] as readonly string[];
-  const colors = [...PRODUCT_COLORS] as readonly string[];
+  // Use config-driven sizes and colors, fall back to constants if not configured
+  const sizes = siteConfig.catalog_options?.sizes?.length 
+    ? siteConfig.catalog_options.sizes 
+    : [...PRODUCT_SIZES] as readonly string[];
+  const colors = siteConfig.catalog_options?.colors?.length 
+    ? siteConfig.catalog_options.colors.map(c => c.name)
+    : [...PRODUCT_COLORS] as readonly string[];
 
   return (
     <div className="space-y-4">

@@ -62,6 +62,58 @@ export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
   other: "Other",
 };
 
+/* ─── Catalog Config Types (admin-managed, stored in config/site) ── */
+
+/** A color option with its display name and tint hex for mockup preview. */
+export interface CatalogColor {
+  name: string;
+  hex: string;
+}
+
+/** A product type with its machine value and human label. */
+export interface CatalogProductType {
+  value: string;
+  label: string;
+}
+
+/** Add-on pricing model — fixed dollar amount or percentage of base price. */
+export type AddonPriceType = "fixed" | "percentage";
+
+/** A standard add-on definition stored in site config. */
+export interface StandardAddon {
+  id: string;
+  name: string;
+  priceType: AddonPriceType;
+  price: number;
+}
+
+/** A customer information field definition for checkout. */
+export interface CustomerField {
+  id: string;
+  label: string;
+  type: "text" | "email" | "tel" | "select";
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+  /** Maps this field to a Square fulfillment recipient field. */
+  squareMapping?: string;
+}
+
+/** Catalog-wide option definitions — replaces hardcoded constants. */
+export interface CatalogOptions {
+  colors: CatalogColor[];
+  sizes: string[];
+  productTypes: CatalogProductType[];
+  customOptionNames: string[];
+}
+
+/** Default add-on configuration stored in site config. */
+export interface AddonDefaults {
+  defaultPriceType: AddonPriceType;
+  defaultPrice: number;
+  standardAddons: StandardAddon[];
+}
+
 /* ─── CMS Managed Product ────────────────────────────────────────── */
 
 export interface ManagedVariant {

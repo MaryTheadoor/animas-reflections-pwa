@@ -2,7 +2,7 @@
 
 import { useState, useCallback, type FormEvent } from "react";
 import type { SearchFilters, SortMode } from "@/hooks/useSearch";
-import { AVAILABLE_COLORS } from "@/hooks/useSearch";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 interface SearchBarProps {
   categories: { id: string; name: string }[];
@@ -22,6 +22,7 @@ export default function SearchBar({
   onSearch,
   initialQuery = "",
 }: SearchBarProps) {
+  const siteConfig = useSiteConfig();
   const [query, setQuery] = useState(initialQuery);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -142,18 +143,18 @@ export default function SearchBar({
               {selectedColors.length > 0 && ` (${selectedColors.length} selected)`}
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {AVAILABLE_COLORS.map((color) => (
+              {(siteConfig.catalog_options?.colors ?? []).map((color) => (
                 <button
-                  key={color}
+                  key={color.name}
                   type="button"
-                  onClick={() => toggleColor(color)}
+                  onClick={() => toggleColor(color.name.toLowerCase())}
                   className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
-                    selectedColors.includes(color)
+                    selectedColors.includes(color.name.toLowerCase())
                       ? "bg-primary text-white"
                       : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                   }`}
                 >
-                  {color}
+                  {color.name}
                 </button>
               ))}
             </div>

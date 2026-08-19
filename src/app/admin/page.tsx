@@ -68,6 +68,25 @@ interface SiteConfigData {
   fundraising_heading: string;
   fundraising_subheading: string;
   footer_tagline: string;
+  catalog_options?: {
+    colors?: { name: string; hex: string }[];
+    sizes?: string[];
+    productTypes?: { value: string; label: string }[];
+    customOptionNames?: string[];
+  };
+  addon_defaults?: {
+    defaultPriceType?: "fixed" | "percentage";
+    defaultPrice?: number;
+    standardAddons?: { id: string; name: string; priceType: "fixed" | "percentage"; price: number }[];
+  };
+  customer_fields?: {
+    id: string;
+    label: string;
+    type: "text" | "email" | "tel" | "select";
+    required: boolean;
+    placeholder?: string;
+    squareMapping?: string;
+  }[];
 }
 
 const DEFAULT_CONFIG: SiteConfigData = {
@@ -94,6 +113,49 @@ const DEFAULT_CONFIG: SiteConfigData = {
   fundraising_heading: "Fundraising Made Easy",
   fundraising_subheading: "Raise money for your team, school, or cause with custom merchandise.",
   footer_tagline: "Family owned and operated design & print operation based in Durango, CO.",
+  catalog_options: {
+    colors: [
+      { name: "Black", hex: "#000000" },
+      { name: "White", hex: "#FFFFFF" },
+      { name: "Navy", hex: "#1E3A5F" },
+      { name: "Heather Grey", hex: "#9CA3AF" },
+      { name: "Charcoal", hex: "#4B5563" },
+      { name: "Royal Blue", hex: "#2563EB" },
+      { name: "Red", hex: "#DC2626" },
+      { name: "Forest Green", hex: "#166534" },
+      { name: "Maroon", hex: "#7F1D1D" },
+      { name: "Sand", hex: "#D4A574" },
+    ],
+    sizes: ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"],
+    productTypes: [
+      { value: "apparel", label: "Apparel" },
+      { value: "sticker", label: "Sticker / Slap" },
+      { value: "sign", label: "Wood Sign" },
+      { value: "jewelry", label: "Jewelry" },
+      { value: "accessory", label: "Accessory" },
+      { value: "other", label: "Other" },
+    ],
+    customOptionNames: [],
+  },
+  addon_defaults: {
+    defaultPriceType: "fixed",
+    defaultPrice: 5.0,
+    standardAddons: [
+      { id: "back_print", name: "Back Print", priceType: "fixed", price: 5.0 },
+      { id: "sleeve_print", name: "Sleeve Print", priceType: "fixed", price: 5.0 },
+      { id: "personalization", name: "Name/Number", priceType: "fixed", price: 5.0 },
+    ],
+  },
+  customer_fields: [
+    { id: "firstName", label: "First Name", type: "text", required: true, squareMapping: "recipient.name" },
+    { id: "lastName", label: "Last Name", type: "text", required: false },
+    { id: "email", label: "Email", type: "email", required: true, squareMapping: "recipient.emailAddress" },
+    { id: "phone", label: "Phone", type: "tel", required: false, squareMapping: "recipient.phoneNumber" },
+    { id: "address", label: "Street Address", type: "text", required: true, squareMapping: "recipient.address.addressLine1" },
+    { id: "city", label: "City", type: "text", required: true, squareMapping: "recipient.address.locality" },
+    { id: "state", label: "State", type: "text", required: false, squareMapping: "recipient.address.administrativeDistrictLevel1" },
+    { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "recipient.address.postalCode" },
+  ],
 };
 
 function DashboardContent() {
@@ -357,6 +419,403 @@ function DashboardContent() {
         {/* ── Settings ── */}
         {tab === "settings" && (
           <>
+        {/* ── Catalog Options ── */}
+        <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6 mb-6">
+          <h2 className="text-xl font-bold font-display mb-6">Catalog Options</h2>
+          <p className="text-sm text-foreground/80 mb-6">
+            Configure the available options for products across the site. These settings affect the product editor, customizer, and search filters.
+          </p>
+
+          {/* Colors */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-gold" /> Colors
+            </h3>
+            <div className="space-y-2 mb-3">
+              {(config.catalog_options?.colors ?? []).map((color, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={color.hex}
+                    onChange={(e) => {
+                      const colors = [...(config.catalog_options?.colors ?? [])];
+                      colors[idx] = { ...color, hex: e.target.value };
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, colors } });
+                    }}
+                    className="w-8 h-8 rounded border border-primary/20 cursor-pointer shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={color.name}
+                    onChange={(e) => {
+                      const colors = [...(config.catalog_options?.colors ?? [])];
+                      colors[idx] = { ...color, name: e.target.value };
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, colors } });
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded border border-primary/20 focus:border-gold outline-none text-sm"
+                    placeholder="Color name"
+                  />
+                  <input
+                    type="text"
+                    value={color.hex}
+                    onChange={(e) => {
+                      const colors = [...(config.catalog_options?.colors ?? [])];
+                      colors[idx] = { ...color, hex: e.target.value };
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, colors } });
+                    }}
+                    className="w-24 px-2 py-1.5 rounded border border-primary/20 focus:border-gold outline-none font-mono text-xs"
+                    placeholder="#000000"
+                  />
+                  <button
+                    onClick={() => {
+                      const colors = (config.catalog_options?.colors ?? []).filter((_, i) => i !== idx);
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, colors } });
+                    }}
+                    className="text-red-400 hover:text-red-600 text-xs px-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const colors = [...(config.catalog_options?.colors ?? []), { name: "", hex: "#000000" }];
+                setConfig({ ...config, catalog_options: { ...config.catalog_options, colors } });
+              }}
+              className="px-4 py-2 bg-warm-sand text-foreground rounded-xl text-sm font-medium hover:bg-warm-sand/80 transition-colors"
+            >
+              + Add Color
+            </button>
+          </div>
+
+          {/* Sizes */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-plum" /> Sizes
+            </h3>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {(config.catalog_options?.sizes ?? []).map((size, idx) => (
+                <div key={idx} className="flex items-center gap-1 bg-warm-sand/50 rounded-lg px-3 py-1.5">
+                  <input
+                    type="text"
+                    value={size}
+                    onChange={(e) => {
+                      const sizes = [...(config.catalog_options?.sizes ?? [])];
+                      sizes[idx] = e.target.value;
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, sizes } });
+                    }}
+                    className="w-16 px-2 py-0.5 rounded border border-primary/20 focus:border-gold outline-none text-sm text-center"
+                  />
+                  <button
+                    onClick={() => {
+                      const sizes = (config.catalog_options?.sizes ?? []).filter((_, i) => i !== idx);
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, sizes } });
+                    }}
+                    className="text-red-400 hover:text-red-600 text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const sizes = [...(config.catalog_options?.sizes ?? []), ""];
+                setConfig({ ...config, catalog_options: { ...config.catalog_options, sizes } });
+              }}
+              className="px-4 py-2 bg-warm-sand text-foreground rounded-xl text-sm font-medium hover:bg-warm-sand/80 transition-colors"
+            >
+              + Add Size
+            </button>
+          </div>
+
+          {/* Product Types */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary" /> Product Types
+            </h3>
+            <div className="space-y-2 mb-3">
+              {(config.catalog_options?.productTypes ?? []).map((pt, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={pt.value}
+                    onChange={(e) => {
+                      const productTypes = [...(config.catalog_options?.productTypes ?? [])];
+                      productTypes[idx] = { ...pt, value: e.target.value };
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, productTypes } });
+                    }}
+                    className="w-32 px-3 py-1.5 rounded border border-primary/20 focus:border-gold outline-none text-sm font-mono"
+                    placeholder="value"
+                  />
+                  <input
+                    type="text"
+                    value={pt.label}
+                    onChange={(e) => {
+                      const productTypes = [...(config.catalog_options?.productTypes ?? [])];
+                      productTypes[idx] = { ...pt, label: e.target.value };
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, productTypes } });
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded border border-primary/20 focus:border-gold outline-none text-sm"
+                    placeholder="Display label"
+                  />
+                  <button
+                    onClick={() => {
+                      const productTypes = (config.catalog_options?.productTypes ?? []).filter((_, i) => i !== idx);
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, productTypes } });
+                    }}
+                    className="text-red-400 hover:text-red-600 text-xs px-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const productTypes = [...(config.catalog_options?.productTypes ?? []), { value: "", label: "" }];
+                setConfig({ ...config, catalog_options: { ...config.catalog_options, productTypes } });
+              }}
+              className="px-4 py-2 bg-warm-sand text-foreground rounded-xl text-sm font-medium hover:bg-warm-sand/80 transition-colors"
+            >
+              + Add Product Type
+            </button>
+          </div>
+
+          {/* Custom Option Names */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-teal" /> Custom Option Names
+            </h3>
+            <p className="text-xs text-foreground/70 mb-3">
+              Additional option dimensions beyond size/color (e.g., &quot;Material&quot;, &quot;Finish&quot;, &quot;Grommet Count&quot;)
+            </p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {(config.catalog_options?.customOptionNames ?? []).map((name, idx) => (
+                <div key={idx} className="flex items-center gap-1 bg-warm-sand/50 rounded-lg px-3 py-1.5">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      const customOptionNames = [...(config.catalog_options?.customOptionNames ?? [])];
+                      customOptionNames[idx] = e.target.value;
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, customOptionNames } });
+                    }}
+                    className="w-32 px-2 py-0.5 rounded border border-primary/20 focus:border-gold outline-none text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      const customOptionNames = (config.catalog_options?.customOptionNames ?? []).filter((_, i) => i !== idx);
+                      setConfig({ ...config, catalog_options: { ...config.catalog_options, customOptionNames } });
+                    }}
+                    className="text-red-400 hover:text-red-600 text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const customOptionNames = [...(config.catalog_options?.customOptionNames ?? []), ""];
+                setConfig({ ...config, catalog_options: { ...config.catalog_options, customOptionNames } });
+              }}
+              className="px-4 py-2 bg-warm-sand text-foreground rounded-xl text-sm font-medium hover:bg-warm-sand/80 transition-colors"
+            >
+              + Add Custom Option
+            </button>
+          </div>
+
+          {/* Standard Add-ons */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-gold" /> Standard Add-ons
+            </h3>
+            <p className="text-xs text-foreground/70 mb-3">
+              Default add-ons available on all products (can be overridden per product)
+            </p>
+            <div className="space-y-2 mb-3">
+              {(config.addon_defaults?.standardAddons ?? []).map((addon, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={addon.id}
+                    onChange={(e) => {
+                      const standardAddons = [...(config.addon_defaults?.standardAddons ?? [])];
+                      standardAddons[idx] = { ...addon, id: e.target.value };
+                      setConfig({ ...config, addon_defaults: { ...config.addon_defaults, standardAddons } });
+                    }}
+                    className="w-32 px-3 py-1.5 rounded border border-primary/20 focus:border-gold outline-none text-sm font-mono"
+                    placeholder="id"
+                  />
+                  <input
+                    type="text"
+                    value={addon.name}
+                    onChange={(e) => {
+                      const standardAddons = [...(config.addon_defaults?.standardAddons ?? [])];
+                      standardAddons[idx] = { ...addon, name: e.target.value };
+                      setConfig({ ...config, addon_defaults: { ...config.addon_defaults, standardAddons } });
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded border border-primary/20 focus:border-gold outline-none text-sm"
+                    placeholder="Name"
+                  />
+                  <select
+                    value={addon.priceType}
+                    onChange={(e) => {
+                      const standardAddons = [...(config.addon_defaults?.standardAddons ?? [])];
+                      standardAddons[idx] = { ...addon, priceType: e.target.value as "fixed" | "percentage" };
+                      setConfig({ ...config, addon_defaults: { ...config.addon_defaults, standardAddons } });
+                    }}
+                    className="w-24 px-2 py-1.5 rounded border border-primary/20 focus:border-gold outline-none text-sm"
+                  >
+                    <option value="fixed">$ Fixed</option>
+                    <option value="percentage">% Percent</option>
+                  </select>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={addon.price}
+                    onChange={(e) => {
+                      const standardAddons = [...(config.addon_defaults?.standardAddons ?? [])];
+                      standardAddons[idx] = { ...addon, price: parseFloat(e.target.value) || 0 };
+                      setConfig({ ...config, addon_defaults: { ...config.addon_defaults, standardAddons } });
+                    }}
+                    className="w-20 px-2 py-1.5 rounded border border-primary/20 focus:border-gold outline-none text-sm text-right"
+                  />
+                  <button
+                    onClick={() => {
+                      const standardAddons = (config.addon_defaults?.standardAddons ?? []).filter((_, i) => i !== idx);
+                      setConfig({ ...config, addon_defaults: { ...config.addon_defaults, standardAddons } });
+                    }}
+                    className="text-red-400 hover:text-red-600 text-xs px-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const standardAddons = [...(config.addon_defaults?.standardAddons ?? []), { id: "", name: "", priceType: "fixed" as const, price: 0 }];
+                setConfig({ ...config, addon_defaults: { ...config.addon_defaults, standardAddons } });
+              }}
+              className="px-4 py-2 bg-warm-sand text-foreground rounded-xl text-sm font-medium hover:bg-warm-sand/80 transition-colors"
+            >
+              + Add Add-on
+            </button>
+          </div>
+
+          {/* Customer Fields */}
+          <div className="mb-8">
+            <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary" /> Customer Fields
+            </h3>
+            <p className="text-xs text-foreground/70 mb-3">
+              Fields collected at checkout for shipping and order processing
+            </p>
+            <div className="space-y-3 mb-3">
+              {(config.customer_fields ?? []).map((field, idx) => (
+                <div key={idx} className="bg-warm-sand/30 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={field.id}
+                      onChange={(e) => {
+                        const customer_fields = [...(config.customer_fields ?? [])];
+                        customer_fields[idx] = { ...field, id: e.target.value };
+                        setConfig({ ...config, customer_fields });
+                      }}
+                      className="w-32 px-2 py-1 rounded border border-primary/20 focus:border-gold outline-none text-xs font-mono"
+                      placeholder="field id"
+                    />
+                    <input
+                      type="text"
+                      value={field.label}
+                      onChange={(e) => {
+                        const customer_fields = [...(config.customer_fields ?? [])];
+                        customer_fields[idx] = { ...field, label: e.target.value };
+                        setConfig({ ...config, customer_fields });
+                      }}
+                      className="flex-1 px-2 py-1 rounded border border-primary/20 focus:border-gold outline-none text-sm"
+                      placeholder="Label"
+                    />
+                    <select
+                      value={field.type}
+                      onChange={(e) => {
+                        const customer_fields = [...(config.customer_fields ?? [])];
+                        customer_fields[idx] = { ...field, type: e.target.value as "text" | "email" | "tel" | "select" };
+                        setConfig({ ...config, customer_fields });
+                      }}
+                      className="w-24 px-2 py-1 rounded border border-primary/20 focus:border-gold outline-none text-xs"
+                    >
+                      <option value="text">Text</option>
+                      <option value="email">Email</option>
+                      <option value="tel">Phone</option>
+                      <option value="select">Select</option>
+                    </select>
+                    <label className="flex items-center gap-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={field.required}
+                        onChange={(e) => {
+                          const customer_fields = [...(config.customer_fields ?? [])];
+                          customer_fields[idx] = { ...field, required: e.target.checked };
+                          setConfig({ ...config, customer_fields });
+                        }}
+                        className="accent-gold"
+                      />
+                      Required
+                    </label>
+                    <button
+                      onClick={() => {
+                        const customer_fields = (config.customer_fields ?? []).filter((_, i) => i !== idx);
+                        setConfig({ ...config, customer_fields });
+                      }}
+                      className="text-red-400 hover:text-red-600 text-xs px-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={field.placeholder || ""}
+                      onChange={(e) => {
+                        const customer_fields = [...(config.customer_fields ?? [])];
+                        customer_fields[idx] = { ...field, placeholder: e.target.value };
+                        setConfig({ ...config, customer_fields });
+                      }}
+                      className="flex-1 px-2 py-1 rounded border border-primary/20 focus:border-gold outline-none text-xs"
+                      placeholder="Placeholder text"
+                    />
+                    <input
+                      type="text"
+                      value={field.squareMapping || ""}
+                      onChange={(e) => {
+                        const customer_fields = [...(config.customer_fields ?? [])];
+                        customer_fields[idx] = { ...field, squareMapping: e.target.value };
+                        setConfig({ ...config, customer_fields });
+                      }}
+                      className="flex-1 px-2 py-1 rounded border border-primary/20 focus:border-gold outline-none text-xs font-mono"
+                      placeholder="Square mapping (e.g., recipient.emailAddress)"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const customer_fields = [...(config.customer_fields ?? []), { id: "", label: "", type: "text" as const, required: false }];
+                setConfig({ ...config, customer_fields });
+              }}
+              className="px-4 py-2 bg-warm-sand text-foreground rounded-xl text-sm font-medium hover:bg-warm-sand/80 transition-colors"
+            >
+              + Add Customer Field
+            </button>
+          </div>
+        </section>
+
         {/* ── Site Settings — Theming Engine ── */}
         <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
           <h2 className="text-xl font-bold font-display mb-6">Theme Settings</h2>

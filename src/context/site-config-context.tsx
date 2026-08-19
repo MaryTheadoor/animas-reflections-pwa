@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import type { CatalogOptions, AddonDefaults, CustomerField } from "@/types";
 
 export interface SiteConfig {
   // Announcement
@@ -39,6 +40,11 @@ export interface SiteConfig {
   fundraising_heading: string;
   fundraising_subheading: string;
   footer_tagline: string;
+
+  // ── Catalog Options (admin-managed) ──
+  catalog_options: CatalogOptions;
+  addon_defaults: AddonDefaults;
+  customer_fields: CustomerField[];
 }
 
 const FALLBACK: SiteConfig = {
@@ -69,6 +75,52 @@ const FALLBACK: SiteConfig = {
   fundraising_heading: "Fundraising Made Easy",
   fundraising_subheading: "Raise money for your team, school, or cause with custom merchandise.",
   footer_tagline: "Family owned and operated design & print operation based in Durango, CO, creating unique custom designs.",
+
+  catalog_options: {
+    colors: [
+      { name: "Black", hex: "#000000" },
+      { name: "White", hex: "#FFFFFF" },
+      { name: "Navy", hex: "#1E3A5F" },
+      { name: "Heather Grey", hex: "#9CA3AF" },
+      { name: "Charcoal", hex: "#4B5563" },
+      { name: "Royal Blue", hex: "#2563EB" },
+      { name: "Red", hex: "#DC2626" },
+      { name: "Forest Green", hex: "#166534" },
+      { name: "Maroon", hex: "#7F1D1D" },
+      { name: "Sand", hex: "#D4A574" },
+    ],
+    sizes: ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"],
+    productTypes: [
+      { value: "apparel", label: "Apparel" },
+      { value: "sticker", label: "Sticker / Slap" },
+      { value: "sign", label: "Wood Sign" },
+      { value: "jewelry", label: "Jewelry" },
+      { value: "accessory", label: "Accessory" },
+      { value: "other", label: "Other" },
+    ],
+    customOptionNames: [],
+  },
+
+  addon_defaults: {
+    defaultPriceType: "fixed",
+    defaultPrice: 5.0,
+    standardAddons: [
+      { id: "back_print", name: "Back Print", priceType: "fixed", price: 5.0 },
+      { id: "sleeve_print", name: "Sleeve Print", priceType: "fixed", price: 5.0 },
+      { id: "personalization", name: "Name/Number", priceType: "fixed", price: 5.0 },
+    ],
+  },
+
+  customer_fields: [
+    { id: "firstName", label: "First Name", type: "text", required: true, squareMapping: "recipient.name" },
+    { id: "lastName", label: "Last Name", type: "text", required: false },
+    { id: "email", label: "Email", type: "email", required: true, squareMapping: "recipient.emailAddress" },
+    { id: "phone", label: "Phone", type: "tel", required: false, squareMapping: "recipient.phoneNumber" },
+    { id: "address", label: "Street Address", type: "text", required: true, squareMapping: "recipient.address.addressLine1" },
+    { id: "city", label: "City", type: "text", required: true, squareMapping: "recipient.address.locality" },
+    { id: "state", label: "State", type: "text", required: false, squareMapping: "recipient.address.administrativeDistrictLevel1" },
+    { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "recipient.address.postalCode" },
+  ],
 };
 
 const SiteConfigContext = createContext<{
@@ -112,6 +164,9 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
             fundraising_heading: String(data.fundraising_heading || FALLBACK.fundraising_heading),
             fundraising_subheading: String(data.fundraising_subheading || FALLBACK.fundraising_subheading),
             footer_tagline: String(data.footer_tagline || FALLBACK.footer_tagline),
+            catalog_options: (data.catalog_options as CatalogOptions) || FALLBACK.catalog_options,
+            addon_defaults: (data.addon_defaults as AddonDefaults) || FALLBACK.addon_defaults,
+            customer_fields: (data.customer_fields as CustomerField[]) || FALLBACK.customer_fields,
           };
           setConfig(merged);
         }

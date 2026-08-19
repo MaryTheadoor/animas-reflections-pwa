@@ -16,7 +16,7 @@ import { db, storage, functions } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { ADDON_PRICE, DEFAULT_COLOR_TINTS } from "@/lib/constants";
-import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, AddonType, ProductAddon } from "@/types";
+import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, ProductAddon } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
 import AdminTooltip from "@/components/ui/admin-tooltip";
 
@@ -36,19 +36,6 @@ const EMPTY_PRODUCT: ManagedProduct = {
   updatedAt: "",
   designAssets: [],
 };
-
-const AVAILABLE_COLORS = [
-  "black", "white", "gray", "navy", "royal blue", "red",
-  "forest green", "cream", "charcoal", "maroon",
-];
-
-// The three site-standard add-ons. An unconfigured product (productAddons
-// undefined) shows these by default; the admin toggles/re-prices them per product.
-const STANDARD_ADDONS: { id: AddonType; name: string }[] = [
-  { id: "back_print", name: "Back Print" },
-  { id: "sleeve_print", name: "Sleeve Print" },
-  { id: "personalization", name: "Name/Number" },
-];
 
 interface Props {
   categories: ManagedCategory[];
@@ -105,20 +92,22 @@ export default function ProductManager({ categories }: Props) {
   // ── Add-on editor ────────────────────────────────────────────────────────
   const siteConfig = useSiteConfig();
   const defaultAddonPrice = siteConfig.addon_price ?? ADDON_PRICE;
-  // Working list = the product's configured add-ons, or the 3 site-standard ones
+  // Working list = the product's configured add-ons, or the site-standard ones
   // (as a starting template) when the product hasn't been configured yet. Any edit
   // below materializes form.productAddons; leaving it untouched keeps it undefined
   // so the storefront keeps showing site defaults.
+  const standardAddons = siteConfig.addon_defaults?.standardAddons ?? [];
   const workingAddons: ProductAddon[] =
-    form.productAddons ?? STANDARD_ADDONS.map((a) => ({ id: a.id, name: a.name, price: defaultAddonPrice }));
-  const standardIds = new Set<string>(STANDARD_ADDONS.map((a) => a.id));
-  const standardAddons = workingAddons.filter((a) => standardIds.has(a.id));
+    form.productAddons ?? standardAddons.map((a) => ({ id: a.id, name: a.name, price: a.price || defaultAddonPrice }));
+  const standardIds = new Set<string>(standardAddons.map((a) => a.id));
   const customAddons = workingAddons.filter((a) => !standardIds.has(a.id));
 
   const setAddons = (next: ProductAddon[]) => updateField("productAddons", next);
-  const toggleStandardAddon = (id: AddonType, name: string) => {
+  const toggleStandardAddon = (id: string, name: string) => {
     const exists = workingAddons.some((a) => a.id === id);
-    setAddons(exists ? workingAddons.filter((a) => a.id !== id) : [...workingAddons, { id, name, price: defaultAddonPrice }]);
+    const stdAddon = standardAddons.find((a) => a.id === id);
+    const price = stdAddon?.price || defaultAddonPrice;
+    setAddons(exists ? workingAddons.filter((a) => a.id !== id) : [...workingAddons, { id, name, price }]);
   };
   const updateAddon = (id: string, field: "name" | "price", value: string | number) =>
     setAddons(workingAddons.map((a) => (a.id === id ? { ...a, [field]: value } : a)));
@@ -1103,17 +1092,17 @@ export default function ProductManager({ categories }: Props) {
               Colors ({form.colors.length} selected)
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {AVAILABLE_COLORS.map((color) => (
+              {(siteConfig.catalog_options?.colors ?? []).map((color) => (
                 <button
-                  key={color}
-                  onClick={() => toggleColor(color)}
+                  key={color.name}
+                  onClick={() => toggleColor(color.name.toLowerCase())}
                   className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
-                    form.colors.includes(color)
+                    form.colors.includes(color.name.toLowerCase())
                       ? "bg-primary text-white"
                       : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                   }`}
                 >
-                  {color}
+                  {color.name}
                 </button>
               ))}
             </div>
@@ -1154,10 +1143,10 @@ export default function ProductManager({ categories }: Props) {
                 </button>
               </div>
             </div>
-            {form.colors.filter((c) => !AVAILABLE_COLORS.includes(c)).length > 0 && (
+            {(siteConfig.catalog_options?.colors ?? []).length > 0 && form.colors.filter((c) => !(siteConfig.catalog_options?.colors ?? []).some((cc) => cc.name.toLowerCase() === c)).length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 <span className="text-[10px] text-foreground/70 w-full">Custom colors:</span>
-                {form.colors.filter((c) => !AVAILABLE_COLORS.includes(c)).map((c) => (
+                {form.colors.filter((c) => !(siteConfig.catalog_options?.colors ?? []).some((cc) => cc.name.toLowerCase() === c)).map((c) => (
                   <span key={c} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full text-[10px]">
                     <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: colorSwatch(c) }} />
                     {c}
@@ -1313,8 +1302,8 @@ export default function ProductManager({ categories }: Props) {
 
             {/* Standard add-ons */}
             <div className="space-y-1 mb-3">
-              {STANDARD_ADDONS.map((std) => {
-                const active = standardAddons.find((a) => a.id === std.id);
+              {standardAddons.map((std) => {
+                const active = workingAddons.find((a) => a.id === std.id);
                 return (
                   <div key={std.id} className="flex items-center gap-2 bg-warm-sand/30 rounded-lg px-3 py-2 text-sm">
                     <input

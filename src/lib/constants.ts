@@ -30,20 +30,27 @@ export const SQUARE_LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || 
 // All Cloud Functions are deployed to us-central1. Must match firebase.json region.
 export const FIREBASE_FUNCTIONS_REGION = "us-central1";
 
-/** Standard apparel sizes for the variant matrix editor */
+/**
+ * FALLBACK DEFAULTS ONLY — authoritative source is SiteConfig.catalog_options.
+ * These constants are kept for backward compatibility and as fallbacks when
+ * SiteConfig hasn't loaded yet. The admin UI reads/writes to Firestore config/site.
+ */
+
+/** Standard apparel sizes for the variant matrix editor (fallback) */
 export const PRODUCT_SIZES = [
   "XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL",
 ] as const;
 
-/** Available product colors for the variant matrix editor */
+/** Available product colors for the variant matrix editor (fallback) */
 export const PRODUCT_COLORS = [
   "Black", "White", "Navy", "Heather Grey", "Charcoal",
   "Royal Blue", "Red", "Forest Green", "Maroon", "Sand",
 ] as const;
 
-/** Default tint hexes for standard product colors. Prefilled in the admin
- *  color editor when a standard color is toggled on, so the customizer mockup
- *  preview reflects the color without manual work. Admin can override per product. */
+/** Default tint hexes for standard product colors (fallback).
+ *  Prefilled in the admin color editor when a standard color is toggled on,
+ *  so the customizer mockup preview reflects the color without manual work.
+ *  Admin can override per product. */
 export const DEFAULT_COLOR_TINTS: Record<string, string> = {
   black: "#2f2f2f",
   white: "#f7f6f2",
