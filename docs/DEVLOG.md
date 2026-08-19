@@ -643,6 +643,13 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - **Verified:** Users tab loads live — 2 users (Mary Doctor, Cindy Fuss) with order counts + last-seen dates.
 - **NOTE (pre-existing, untouched):** `/orders` is readable by ANY signed-in user (`allow read: if request.auth != null`) — consider restricting to own orders + admins.
 
+### Post-session follow-up — 2026-08-19 | Three deployed bug patches
+- **Admin description editor list formatting** — `contentEditable` toolbar created `<ul>/<ol>` markup, but Tailwind preflight removed bullets/numbers inside the editor. Added `.desc-editor` CSS in `globals.css` mirroring `.rich-desc` (disc/decimal lists, bold/italic); applied class to the editor in `product-manager.tsx`. Verified via WebBridge: bullet list renders with `list-style: disc`.
+- **Homepage skip-to-content link** — `src/app/page.tsx` imported `HeaderBar` directly and skipped `PageLayout`, so the skip link was missing on the homepage. Added skip link + `#main-content` wrapper directly in `page.tsx`.
+- **`/orders` Firestore rules tightened** — changed from `allow read: if request.auth != null` (any signed-in user could read all orders) to `isAdmin() || request.auth.token.email == resource.data.customerEmail`. Account page already uses `fetchCustomerOrders` Cloud Function; admin dashboard queries directly and still works for admins.
+- **Deployed:** `firebase deploy --only hosting,firestore:rules` — build 22 routes, rules compiled + released.
+- **Live verified:** skip link present on homepage; admin Orders tab loads; editor list formatting confirmed locally.
+
 ---
 
 ```
