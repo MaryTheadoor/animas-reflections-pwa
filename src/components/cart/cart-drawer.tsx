@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useCart } from "@/context/cart-context";
+import { resolveAddonPrice } from "@/types";
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { cart, removeItem, subtotal, addonsTotal, shipping, total } = useCart();
@@ -94,7 +95,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                   ))}
                   {item.addons.map((a) => (
                     <span key={a.addon_id ?? a.type} className="inline-block text-xs bg-plum/10 text-plum rounded-full px-2 py-0.5 mt-1 mr-1">
-                      +{a.label} (${a.price.toFixed(2)})
+                      +{a.label} (${resolveAddonPrice(a, item.base_price).toFixed(2)})
                     </span>
                   ))}
                   {item.modifierInputs?.map((m) => (

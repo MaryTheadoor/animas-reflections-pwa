@@ -63,14 +63,14 @@ const DEFAULT_CONFIG = {
     ],
   },
   customer_fields: [
-    { id: "firstName", label: "First Name", type: "text", required: true, squareMapping: "recipient.name" },
-    { id: "lastName", label: "Last Name", type: "text", required: false },
-    { id: "email", label: "Email", type: "email", required: true, squareMapping: "recipient.emailAddress" },
-    { id: "phone", label: "Phone", type: "tel", required: false, squareMapping: "recipient.phoneNumber" },
-    { id: "address", label: "Street Address", type: "text", required: true, squareMapping: "recipient.address.addressLine1" },
-    { id: "city", label: "City", type: "text", required: true, squareMapping: "recipient.address.locality" },
-    { id: "state", label: "State", type: "text", required: false, squareMapping: "recipient.address.administrativeDistrictLevel1" },
-    { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "recipient.address.postalCode" },
+    { id: "firstName", label: "First Name", type: "text", required: true, squareMapping: "firstName" },
+    { id: "lastName", label: "Last Name", type: "text", required: false, squareMapping: "lastName" },
+    { id: "email", label: "Email", type: "email", required: true, squareMapping: "email" },
+    { id: "phone", label: "Phone", type: "tel", required: false, squareMapping: "phone" },
+    { id: "address", label: "Street Address", type: "text", required: true, squareMapping: "address.addressLine1" },
+    { id: "city", label: "City", type: "text", required: true, squareMapping: "address.locality" },
+    { id: "state", label: "State", type: "text", required: false, squareMapping: "address.administrativeDistrictLevel1" },
+    { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "address.postalCode" },
   ],
 };
 

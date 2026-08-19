@@ -887,6 +887,67 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 19 — 2026-08-19 | Catalog architecture overhaul: Phases 4 + 5 (percentage pricing + dynamic customer fields)
+
+### Context Restored From
+- DEVLOG Sessions 17–18 (config-driven catalog options + dynamic product options/modifiers)
+- PRODUCT_MODIFIER_AUDIT.md (Phases 4–5 scope)
+
+### Actions Taken
+1. **Phase 4 — percentage add-on pricing wired end-to-end:**
+   - `CartAddon` gains `priceType?: AddonPriceType`; new `resolveAddonPrice(addon, basePrice)` helper in `src/types/index.ts` resolves percentage add-ons against the line's base price
+   - `cart-context.tsx`: `addonsTotal` now resolves via `resolveAddonPrice`; `TOGGLE_ADDON` reducer no longer hardcodes labels (accepts `addonLabel` + `priceType`); `toggleAddon` signature extended
+   - `customizer/page.tsx`: stores raw price + `priceType` on the cart addon (cart is the source of truth for resolution)
+   - `cart-drawer.tsx` + `checkout/page.tsx`: addon display/Square payload resolve percentage via `resolveAddonPrice`
+   - Added 4 tests (custom label/priceType on toggle, resolveAddonPrice fixed/percentage/default) — 89/89 pass
+
+2. **Phase 5 — dynamic customer fields at checkout:**
+   - Checkout now renders the shipping form from `siteConfig.customer_fields` (admin-managed), with a `FALLBACK_CUSTOMER_FIELDS` matching the traditional form for backward compat
+   - Supports text/email/tel/select inputs, required flags, and email format validation
+   - Customer payload is built by mapping each field's value into the backend's nested shape via its `squareMapping` path (`setNestedPath` helper)
+   - Standardized `squareMapping` convention to backend-customer paths (`firstName`, `lastName`, `email`, `phone`, `address.addressLine1`, etc.) across `site-config-context.tsx`, `admin/page.tsx` DEFAULT_CONFIG, and `seed-config.ts`; added `lastName` mapping
+
+3. **Verification:**
+   - Lint: 0 errors (live files; only 1 warning from a backup copy)
+   - Tests: 89/89 pass (9 suites)
+   - Build: 22 routes, TypeScript clean
+   - Deployed to Firebase hosting
+
+### Decisions Made
+- **Percentage resolution happens in the cart**, not at display time — `resolveAddonPrice` is the single source of truth, so cart drawer, checkout, and Square payload all agree
+- **Backend `createSquareOrderAndPay` unchanged** — the checkout maps dynamic fields into the existing customer shape via `squareMapping`, keeping the payment function stable
+- **squareMapping convention** = paths into the backend customer object (not Square `recipient.*`), so admins can remap fields from the Settings UI without code changes
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/types/index.ts | CartAddon.priceType; resolveAddonPrice helper; CheckoutAddon doc |
+| src/context/cart-context.tsx | percentage-aware addonsTotal; de-hardcoded TOGGLE_ADDON; extended toggleAddon |
+| src/context/__tests__/cart.test.ts | updated reducer shape + 4 new percentage/label tests |
+| src/app/customizer/page.tsx | store raw price + priceType on cart addons |
+| src/components/cart/cart-drawer.tsx | resolve percentage for display |
+| src/app/checkout/page.tsx | dynamic customer form from config; buildCustomerPayload via squareMapping |
+| src/context/site-config-context.tsx | squareMapping convention update + lastName mapping |
+| src/app/admin/page.tsx | DEFAULT_CONFIG squareMapping convention update |
+| scripts/seed-config.ts | squareMapping convention update |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| (pending at time of writing) | |
+
+### Current State at Session End
+- Lint 0 | Tests 89/89 (9 suites) | Build 22 routes | 14 Cloud Functions deployed
+- `development` pushed to origin; deployed live (hosting)
+- USE_SYNTHETIC = false; dev server needs restart
+
+### Pending / Next Session
+- [ ] Phase 6: Admin UI polish (print zone editor, visual photo picker, category hierarchy, component split)
+- [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 

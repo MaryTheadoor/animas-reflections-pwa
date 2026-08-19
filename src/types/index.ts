@@ -306,11 +306,23 @@ export type AddonType = "back_print" | "sleeve_print" | "personalization";
 export interface CartAddon {
   type: AddonType;
   label: string;
+  /** For fixed pricing: dollar amount. For percentage pricing: percent of the
+   *  line's base price (e.g. 10 = 10%). Use resolveAddonPrice() to get dollars. */
   price: number;
+  /** Pricing model. Defaults to "fixed" when omitted (backward compatible). */
+  priceType?: AddonPriceType;
   /** Managed addon ID (provider-agnostic) */
   addon_id?: string;
   /** Square modifier ID — set during Square sync, used by Square checkout path */
   squareModifierId?: string;
+}
+
+/** Resolve an add-on's price to a dollar amount. Percentage add-ons apply to the
+ *  line item's base price; fixed add-ons are returned as-is. */
+export function resolveAddonPrice(addon: CartAddon, basePrice: number): number {
+  return addon.priceType === "percentage"
+    ? basePrice * (addon.price / 100)
+    : addon.price;
 }
 
 export interface CartItem {
@@ -368,6 +380,7 @@ export interface CheckoutAddon {
   addon_id?: string;
   squareModifierId?: string;
   label: string;
+  /** Resolved dollar amount (percentage add-ons are resolved before checkout). */
   price: number;
 }
 

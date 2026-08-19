@@ -301,7 +301,10 @@ function CustomizerContent() {
             return {
               type: (["back_print", "sleeve_print", "personalization"].includes(mod.id) ? mod.id : "back_print") as AddonType,
               label: mod.name,
-              price: resolveModifierPrice(mod, price),
+              // Store the raw price + pricing model; the cart resolves percentage
+              // add-ons against the line's base price via resolveAddonPrice.
+              price: mod.price,
+              priceType: mod.priceType,
               addon_id: mod.id,
             };
           })

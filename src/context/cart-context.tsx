@@ -9,7 +9,8 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import type { CartItem, CartAddon, AddonType } from "@/types";
+import type { CartItem, CartAddon, AddonType, AddonPriceType } from "@/types";
+import { resolveAddonPrice } from "@/types";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 interface CartState {
@@ -21,7 +22,7 @@ type CartAction =
   | { type: "ADD_ITEM"; item: CartItem }
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
-  | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; addonId?: string; addonPrice: number }
+  | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; addonId?: string; addonPrice: number; addonLabel?: string; priceType?: AddonPriceType }
   | { type: "SET_SHIPPING_TIER"; tier: "stickers" | "apparel" | "free" }
   | { type: "CLEAR_CART" };
 
@@ -55,13 +56,17 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           }
           const addon: CartAddon = {
             type: action.addonType,
+            // Use the caller-provided label when available; fall back to a
+            // readable default for the three legacy add-on types.
             label:
-              action.addonType === "back_print"
+              action.addonLabel ??
+              (action.addonType === "back_print"
                 ? "Back Print"
                 : action.addonType === "sleeve_print"
                   ? "Sleeve Print"
-                  : "Name/Number Personalization",
+                  : "Name/Number Personalization"),
             price: action.addonPrice,
+            priceType: action.priceType,
             addon_id: action.addonId,
           };
           return { ...i, addons: [...i.addons, addon] };
@@ -87,7 +92,7 @@ interface CartContextValue {
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
-  toggleAddon: (id: string, addonType: AddonType, modifierId?: string) => void;
+  toggleAddon: (id: string, addonType: AddonType, modifierId?: string, addonLabel?: string, priceType?: AddonPriceType, addonPrice?: number) => void;
   clearCart: () => void;
   subtotal: number;
   addonsTotal: number;
@@ -135,8 +140,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleAddon = useCallback(
-    (id: string, addonType: AddonType, addonId?: string) => {
-      dispatch({ type: "TOGGLE_ADDON", id, addonType, addonId, addonPrice: siteConfig.addon_price });
+    (id: string, addonType: AddonType, addonId?: string, addonLabel?: string, priceType?: AddonPriceType, addonPrice?: number) => {
+      dispatch({
+        type: "TOGGLE_ADDON",
+        id,
+        addonType,
+        addonId,
+        addonLabel,
+        priceType,
+        addonPrice: addonPrice ?? siteConfig.addon_price,
+      });
     },
     [siteConfig.addon_price]
   );
@@ -158,9 +171,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   // Addons are multiplied by quantity (each item gets its own add-ons).
+  // Percentage add-ons resolve against the line's base price via resolveAddonPrice.
   // Example: 2 shirts with Back Print (+$5) = $10 addon total.
   const addonsTotal = cart.items.reduce(
-    (sum, i) => sum + i.addons.reduce((s, a) => s + a.price, 0) * i.quantity,
+    (sum, i) => sum + i.addons.reduce((s, a) => s + resolveAddonPrice(a, i.base_price), 0) * i.quantity,
     0
   );
 

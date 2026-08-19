@@ -9,32 +9,50 @@ import { functions } from "@/lib/firebase";
 import { useCart } from "@/context/cart-context";
 import { SITE } from "@/lib/content";
 import { SQUARE_APP_ID, SQUARE_LOCATION_ID } from "@/lib/constants";
+import { resolveAddonPrice } from "@/types";
+import type { CustomerField } from "@/types";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 // Square SDK is loaded once per page lifecycle. The module-level flag prevents
 // re-initialization on React re-renders, but the useEffect cleanup resets it on
 // unmount so re-mounting (route back-and-forth) triggers a fresh setup.
 let squareInitialized = false;
 
-interface CustomerInfo {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-}
+// Fallback customer fields used when site config hasn't loaded or has none.
+// Mirrors the traditional shipping form so checkout always works.
+const FALLBACK_CUSTOMER_FIELDS: CustomerField[] = [
+  { id: "firstName", label: "First Name", type: "text", required: true, squareMapping: "firstName" },
+  { id: "lastName", label: "Last Name", type: "text", required: false, squareMapping: "lastName" },
+  { id: "email", label: "Email", type: "email", required: true, squareMapping: "email" },
+  { id: "phone", label: "Phone", type: "tel", required: false, squareMapping: "phone" },
+  { id: "address", label: "Street Address", type: "text", required: true, squareMapping: "address.addressLine1" },
+  { id: "city", label: "City", type: "text", required: true, squareMapping: "address.locality" },
+  { id: "state", label: "State", type: "text", required: false, squareMapping: "address.administrativeDistrictLevel1" },
+  { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "address.postalCode" },
+];
 
-const emptyCustomer: CustomerInfo = {
-  firstName: "", lastName: "", email: "", phone: "",
-  address: "", city: "", state: "", zip: "",
-};
+// Set a value at a dot-separated path on a nested object (e.g. "address.locality").
+function setNestedPath(obj: Record<string, unknown>, path: string, value: string) {
+  const keys = path.split(".");
+  let cur: Record<string, unknown> = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (typeof cur[keys[i]] !== "object" || cur[keys[i]] === null) cur[keys[i]] = {};
+    cur = cur[keys[i]] as Record<string, unknown>;
+  }
+  cur[keys[keys.length - 1]] = value;
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, subtotal, addonsTotal, shipping, total, clearCart } = useCart();
-  const [customer, setCustomer] = useState<CustomerInfo>(emptyCustomer);
+  const siteConfig = useSiteConfig();
+  // Customer fields come from site config (admin-managed); fall back to the
+  // standard shipping form when config has none.
+  const customerFields: CustomerField[] =
+    siteConfig.customer_fields?.length ? siteConfig.customer_fields : FALLBACK_CUSTOMER_FIELDS;
+
+  // Customer values keyed by field id.
+  const [customer, setCustomer] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ orderId: string; paymentId: string; paymentStatus: string } | null>(null);
@@ -86,11 +104,30 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const updateCustomer = (field: keyof CustomerInfo, value: string) => {
-    setCustomer((prev) => ({ ...prev, [field]: value }));
+  const updateCustomer = (fieldId: string, value: string) => {
+    setCustomer((prev) => ({ ...prev, [fieldId]: value }));
   };
 
-  const customerValid = customer.firstName && customer.email && customer.address && customer.city && customer.zip;
+  // A field is valid if it's optional and empty, or non-empty; email fields also
+  // need a plausible address. Required fields must be non-empty.
+  const isFieldValid = (field: CustomerField): boolean => {
+    const value = (customer[field.id] ?? "").trim();
+    if (!value) return !field.required;
+    if (field.type === "email") return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    return true;
+  };
+  const customerValid = customerFields.every(isFieldValid);
+
+  // Build the customer payload for the payment backend by mapping each field's
+  // value into the nested shape the backend expects, driven by squareMapping.
+  const buildCustomerPayload = (): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {};
+    for (const field of customerFields) {
+      const value = (customer[field.id] ?? "").trim();
+      if (field.squareMapping && value) setNestedPath(payload, field.squareMapping, value);
+    }
+    return payload;
+  };
 
   const handlePayment = async () => {
     if (!squareCardRef.current || !customerValid) return;
@@ -133,7 +170,8 @@ export default function CheckoutPage() {
         addons: item.addons.map((a) => ({
           squareModifierId: a.squareModifierId,
           label: a.label,
-          price: a.price,
+          // Resolve percentage add-ons to a dollar amount — Square requires fixed cents.
+          price: resolveAddonPrice(a, item.base_price),
         })),
       }));
 
@@ -150,18 +188,7 @@ export default function CheckoutPage() {
         shippingRate: shipping,
         sourceId: tokenResult.token,
         idempotencyKey: idempotencyRef.current.key,
-        customer: {
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          email: customer.email,
-          phone: customer.phone,
-          address: {
-            addressLine1: customer.address,
-            locality: customer.city,
-            administrativeDistrictLevel1: customer.state,
-            postalCode: customer.zip,
-          },
-        },
+        customer: buildCustomerPayload(),
       });
 
       const data = orderResult.data as { success: boolean; orderId: string; paymentId: string; paymentStatus: string };
@@ -226,18 +253,43 @@ export default function CheckoutPage() {
       <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-10">
         <h1 className="text-3xl font-bold font-display mb-8">Checkout</h1>
 
-        {/* Customer Info */}
+        {/* Customer Info — rendered dynamically from site-config customer_fields */}
         <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6 mb-6">
           <h2 className="font-bold mb-4">Shipping Information</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input type="text" placeholder="First Name *" value={customer.firstName} onChange={(e) => updateCustomer("firstName", e.target.value)} className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
-            <input type="text" placeholder="Last Name" value={customer.lastName} onChange={(e) => updateCustomer("lastName", e.target.value)} className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-            <input type="email" placeholder="Email *" value={customer.email} onChange={(e) => updateCustomer("email", e.target.value)} className="sm:col-span-2 px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
-            <input type="tel" placeholder="Phone" value={customer.phone} onChange={(e) => updateCustomer("phone", e.target.value)} className="sm:col-span-2 px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-            <input type="text" placeholder="Street Address *" value={customer.address} onChange={(e) => updateCustomer("address", e.target.value)} className="sm:col-span-2 px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
-            <input type="text" placeholder="City *" value={customer.city} onChange={(e) => updateCustomer("city", e.target.value)} className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
-            <input type="text" placeholder="State (e.g. CO)" value={customer.state} onChange={(e) => updateCustomer("state", e.target.value)} className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
-            <input type="text" placeholder="ZIP Code *" value={customer.zip} onChange={(e) => updateCustomer("zip", e.target.value)} className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" required />
+            {customerFields.map((field) => {
+              // Email, phone, and address span both columns; short fields use one.
+              const wide = field.type === "email" || field.type === "tel" || field.id === "address" || field.squareMapping?.startsWith("address.addressLine1");
+              return (
+                <div key={field.id} className={wide ? "sm:col-span-2" : ""}>
+                  <label className="text-xs font-medium text-primary block mb-1">
+                    {field.label}{field.required ? " *" : ""}
+                  </label>
+                  {field.type === "select" ? (
+                    <select
+                      value={customer[field.id] ?? ""}
+                      onChange={(e) => updateCustomer(field.id, e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                      required={field.required}
+                    >
+                      <option value="">{field.placeholder ?? "Select..."}</option>
+                      {(field.options ?? []).map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={field.type}
+                      placeholder={field.placeholder ?? field.label}
+                      value={customer[field.id] ?? ""}
+                      onChange={(e) => updateCustomer(field.id, e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                      required={field.required}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -3,7 +3,8 @@
  * No React rendering needed.
  */
 import { describe, it, expect } from "@jest/globals";
-import type { CartItem, AddonType } from "@/types";
+import type { CartItem, AddonType, AddonPriceType } from "@/types";
+import { resolveAddonPrice } from "@/types";
 
 // --- Inline the reducer for pure-function testing ---
 
@@ -13,7 +14,7 @@ type CartAction =
   | { type: "ADD_ITEM"; item: CartItem }
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
-  | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; modifierId?: string; addonPrice: number }
+  | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; modifierId?: string; addonPrice: number; addonLabel?: string; priceType?: AddonPriceType }
   | { type: "SET_SHIPPING_TIER"; tier: "stickers" | "apparel" | "free" }
   | { type: "CLEAR_CART" };
 
@@ -40,12 +41,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
             return { ...i, addons: i.addons.filter((a) => a.type !== action.addonType) };
           }
           const label =
-            action.addonType === "back_print"
+            action.addonLabel ??
+            (action.addonType === "back_print"
               ? "Back Print"
               : action.addonType === "sleeve_print"
                 ? "Sleeve Print"
-                : "Name/Number Personalization";
-          return { ...i, addons: [...i.addons, { type: action.addonType, label, price: action.addonPrice }] };
+                : "Name/Number Personalization");
+          return { ...i, addons: [...i.addons, { type: action.addonType, label, price: action.addonPrice, priceType: action.priceType }] };
         }),
       };
     }
@@ -148,5 +150,37 @@ describe("cartReducer", () => {
     state = cartReducer(state, { type: "ADD_ITEM", item: makeItem("2", 45) });
     state = cartReducer(state, { type: "TOGGLE_ADDON", id: "1", addonType: "back_print", addonPrice: 5 });
     expect(state.items[1].addons).toHaveLength(0); // item 2 untouched
+  });
+
+  it("stores a custom label and priceType on toggled addon", () => {
+    let state = cartReducer(emptyCart, { type: "ADD_ITEM", item: makeItem("1", 40) });
+    state = cartReducer(state, {
+      type: "TOGGLE_ADDON",
+      id: "1",
+      addonType: "back_print",
+      addonPrice: 10,
+      addonLabel: "Premium Back Print",
+      priceType: "percentage",
+    });
+    expect(state.items[0].addons[0].label).toBe("Premium Back Print");
+    expect(state.items[0].addons[0].priceType).toBe("percentage");
+    expect(state.items[0].addons[0].price).toBe(10);
+  });
+});
+
+describe("resolveAddonPrice", () => {
+  it("returns fixed price as-is", () => {
+    const addon = { type: "back_print" as const, label: "Back Print", price: 5, priceType: "fixed" as const };
+    expect(resolveAddonPrice(addon, 100)).toBe(5);
+  });
+
+  it("resolves percentage against base price", () => {
+    const addon = { type: "back_print" as const, label: "Back Print", price: 10, priceType: "percentage" as const };
+    expect(resolveAddonPrice(addon, 40)).toBeCloseTo(4); // 10% of $40
+  });
+
+  it("defaults to fixed when priceType is omitted", () => {
+    const addon = { type: "back_print" as const, label: "Back Print", price: 7 };
+    expect(resolveAddonPrice(addon, 100)).toBe(7);
   });
 });
