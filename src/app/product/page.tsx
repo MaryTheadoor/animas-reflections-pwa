@@ -72,6 +72,7 @@ function ProductContent() {
   const [customText, setCustomText] = useState("");
   const [descExpanded, setDescExpanded] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>();
+  const [colorDisplayMode, setColorDisplayMode] = useState<"swatch" | "thumbnail">("swatch");
 
   const variant = product?.variants[selectedVariant];
 
@@ -261,12 +262,40 @@ function ProductContent() {
             {/* Color — shown when the product has garment colors configured */}
             {product.colors.length > 0 && (
               <div className="mb-6">
-                <span className="text-xs font-medium text-primary block mb-2">Color</span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-primary">Color</span>
+                  {product.colorThumbnails && Object.keys(product.colorThumbnails).length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setColorDisplayMode("swatch")}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                          colorDisplayMode === "swatch"
+                            ? "bg-primary text-white"
+                            : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
+                        }`}
+                      >
+                        Swatch
+                      </button>
+                      <button
+                        onClick={() => setColorDisplayMode("thumbnail")}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                          colorDisplayMode === "thumbnail"
+                            ? "bg-primary text-white"
+                            : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
+                        }`}
+                      >
+                        Image
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {product.colors.map((color) => {
                     const tint = product.colorTints?.[color];
+                    const thumbnail = product.colorThumbnails?.[color];
                     const swatch = tint || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
                     const isActive = effectiveColor === color;
+                    const showThumbnail = colorDisplayMode === "thumbnail" && thumbnail;
                     return (
                       <button
                         key={color}
@@ -277,7 +306,12 @@ function ProductContent() {
                             : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                         }`}
                       >
-                        <span className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0" style={{ backgroundColor: swatch }} />
+                        {showThumbnail ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={thumbnail} alt={color} className="w-6 h-6 rounded-full object-cover border border-black/10 shrink-0" />
+                        ) : (
+                          <span className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0" style={{ backgroundColor: swatch }} />
+                        )}
                         {color}
                       </button>
                     );

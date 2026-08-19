@@ -259,6 +259,9 @@ export interface ManagedProduct {
   /** Optional per-color mockup photos. When a color has a real photo it takes
    *  precedence over the colorTints overlay. */
   mockupImagesByColor?: Record<string, { front?: string; back?: string; sleeve?: string; sideL?: string; sideR?: string }>;
+  /** Optional per-color thumbnail images for display on product page.
+   *  Allows toggling between color swatch and thumbnail image display. */
+  colorThumbnails?: Record<string, string>;
 }
 
 export interface ManagedCategory {

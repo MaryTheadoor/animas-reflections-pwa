@@ -55,6 +55,8 @@ export default function ProductManager({ categories }: Props) {
   const [newTag, setNewTag] = useState("");
   const [newColor, setNewColor] = useState("");
   const [newHex, setNewHex] = useState("#1E4D4F");
+  const [colorPickerImage, setColorPickerImage] = useState<string | null>(null);
+  const [colorPickerCanvas, setColorPickerCanvas] = useState<HTMLCanvasElement | null>(null);
   const [newVariant, setNewVariant] = useState({ name: "", price: "", sku: "" });
 
   // Inline category creation
@@ -238,6 +240,46 @@ export default function ProductManager({ categories }: Props) {
     }));
     setNewColor("");
     setNewHex("#1E4D4F");
+  };
+
+  const handleColorPickerImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setColorPickerImage(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageColorPick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!colorPickerCanvas) return;
+    const canvas = colorPickerCanvas;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+    const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    const hex = `#${pixel[0].toString(16).padStart(2, "0")}${pixel[1].toString(16).padStart(2, "0")}${pixel[2].toString(16).padStart(2, "0")}`;
+    setNewHex(hex);
+  };
+
+  const loadCanvasImage = (canvas: HTMLCanvasElement | null) => {
+    if (!canvas || !colorPickerImage) return;
+    setColorPickerCanvas(canvas);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const img = new window.Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = colorPickerImage;
   };
 
   const removeTag = (tag: string) => {
@@ -1293,6 +1335,33 @@ export default function ProductManager({ categories }: Props) {
                   Add
                 </button>
               </div>
+              {/* Image color picker */}
+              <div className="mt-3">
+                <label className="text-xs text-foreground/70 block mb-1">Pick color from image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleColorPickerImageUpload}
+                  className="text-xs file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-warm-sand file:text-foreground hover:file:bg-warm-sand/80 file:cursor-pointer"
+                />
+                {colorPickerImage && (
+                  <div className="mt-2">
+                    <p className="text-xs text-foreground/70 mb-1">Click on the image to pick a color:</p>
+                    <canvas
+                      ref={loadCanvasImage}
+                      onClick={handleImageColorPick}
+                      className="max-w-full max-h-48 border border-primary/20 rounded-lg cursor-crosshair"
+                      style={{ imageRendering: "pixelated" }}
+                    />
+                    <button
+                      onClick={() => { setColorPickerImage(null); setColorPickerCanvas(null); }}
+                      className="mt-1 text-xs text-red-400 hover:text-red-600"
+                    >
+                      Clear image
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             {(siteConfig.catalog_options?.colors ?? []).length > 0 && form.colors.filter((c) => !(siteConfig.catalog_options?.colors ?? []).some((cc) => cc.name.toLowerCase() === c)).length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
@@ -1358,6 +1427,59 @@ export default function ProductManager({ categories }: Props) {
                         {tint && (
                           <button onClick={() => clearColorTint(color)} className="text-red-400 hover:text-red-600 text-xs shrink-0" title="Clear tint">✕</button>
                         )}
+                      </div>
+                      {/* Color thumbnail for product page display */}
+                      <div className="flex items-center gap-2">
+                        <span className="w-20 text-[10px] text-foreground/80 shrink-0">Thumbnail</span>
+                        <div className="flex items-center gap-2">
+                          {form.colorThumbnails?.[color] ? (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={form.colorThumbnails[color]} alt={`${color} thumbnail`} className="w-10 h-10 rounded-lg object-cover border border-primary/10" />
+                              <button
+                                onClick={() => {
+                                  const thumbnails = { ...(form.colorThumbnails ?? {}) };
+                                  delete thumbnails[color];
+                                  updateField("colorThumbnails", Object.keys(thumbnails).length > 0 ? thumbnails : undefined);
+                                }}
+                                className="text-red-400 hover:text-red-600 text-xs"
+                                title="Remove thumbnail"
+                              >
+                                ✕
+                              </button>
+                            </>
+                          ) : (
+                            <label className="text-[10px] text-gold hover:text-gold-light cursor-pointer">
+                              Upload
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setUploading(true);
+                                  setUploadError(null);
+                                  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                                  const refId = form.id || crypto.randomUUID();
+                                  const path = `products/${refId}/color-thumb-${color}_${Date.now()}_${safeName}`;
+                                  const fileRef = ref(storage, path);
+                                  const task = uploadBytesResumable(fileRef, file);
+                                  task.on("state_changed",
+                                    () => {},
+                                    (err) => { setUploading(false); setUploadError(err.message || "Upload failed"); },
+                                    async () => {
+                                      const url = await getDownloadURL(task.snapshot.ref);
+                                      updateField("colorThumbnails", { ...(form.colorThumbnails ?? {}), [color]: url });
+                                      setUploading(false);
+                                    }
+                                  );
+                                }}
+                              />
+                            </label>
+                          )}
+                          <span className="text-[9px] text-foreground/70">Display thumbnail on product page</span>
+                        </div>
                       </div>
                       {/* Per-color photo row — real photos take precedence over the tint */}
                       <div className="flex items-start gap-2 flex-wrap">
