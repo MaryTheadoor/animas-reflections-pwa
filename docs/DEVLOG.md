@@ -990,7 +990,7 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 ### Commits This Session
 | Hash | Message |
 |------|---------|
-| (pending at time of writing) | |
+| `c6c0143` | feat: Phase 6 - admin polish: print zone editor, visual per-color photo picker, category hierarchy |
 
 ### Current State at Session End
 - Lint 0 | Tests 89/89 (9 suites) | Build 22 routes | 14 Cloud Functions deployed
