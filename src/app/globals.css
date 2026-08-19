@@ -359,3 +359,11 @@ html.dark .nav-dock-theme {
 .rich-desc b, .rich-desc strong { font-weight: 600; }
 .rich-desc i, .rich-desc em { font-style: italic; }
 .rich-desc br { display: block; content: ""; margin-top: 0.25rem; }
+
+/* ─── Admin description editor formatting ───────────────────────── */
+/* Mirror .rich-desc so list buttons show bullets/numbers while editing. */
+.desc-editor ul { list-style: disc; padding-left: 1.25rem; margin: 0.25rem 0; }
+.desc-editor ol { list-style: decimal; padding-left: 1.25rem; margin: 0.25rem 0; }
+.desc-editor li { margin-bottom: 0.15rem; }
+.desc-editor b, .desc-editor strong { font-weight: 600; }
+.desc-editor i, .desc-editor em { font-style: italic; }

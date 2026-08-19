@@ -846,7 +846,7 @@ export default function ProductManager({ categories }: Props) {
               onInput={(e) => updateField("description", e.currentTarget.innerHTML)}
               onFocus={() => { descFocused.current = true; }}
               onBlur={(e) => { descFocused.current = false; updateField("description", e.currentTarget.innerHTML); }}
-              className="w-full min-h-[6rem] px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm bg-white"
+              className="desc-editor w-full min-h-[6rem] px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm bg-white"
               style={{ whiteSpace: "pre-wrap" }}
             />
           </div>

@@ -24,9 +24,13 @@ export default function Home() {
       className="flex flex-col flex-1 bg-ambient"
       style={{ paddingTop: "var(--header-height, 88px)" }}
     >
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <HeaderBar />
 
-      {/* Hero */}
+      <div id="main-content" className="flex flex-col flex-1">
+        {/* Hero */}
       <section className="relative overflow-hidden min-h-[70vh] sm:min-h-[85vh] flex items-center">
         <Image
           src="/hero-bg.jpg"
@@ -108,6 +112,7 @@ export default function Home() {
 
       {/* FAQ Teaser */}
       <FaqTeaser />
+      </div>
 
       {/* Footer */}
       <footer className="bg-white border-t border-warm-sand py-12 px-6 mt-auto">

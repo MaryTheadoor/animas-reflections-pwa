@@ -45,9 +45,9 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Orders - authenticated users can read their own orders; writes via Functions only
+    // Orders - read only by the customer who placed it OR an admin; writes via Functions only
     match /orders/{orderId} {
-      allow read: if request.auth != null;
+      allow read: if isSignedIn() && (isAdmin() || request.auth.token.email == resource.data.customerEmail);
       allow write: if false;  // Functions only (admin SDK bypasses rules)
     }
 
