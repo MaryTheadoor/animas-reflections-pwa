@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ManagedProduct } from "@/types";
 import { getProductImageUrl } from "@/hooks/useCatalog";
+import { stripTags } from "@/lib/html-utils";
 
 interface ProductDetailProps {
   product: ManagedProduct;
@@ -39,7 +40,7 @@ export default function ProductDetail({ product, onClose }: ProductDetailProps) 
           <h2 className="text-lg sm:text-xl font-bold font-display mb-1">{product.name}</h2>
           {product.description && (
             <p className="text-sm text-foreground mb-4 leading-relaxed line-clamp-4">
-              {product.description.replace(/<[^>]*>/g, " ").substring(0, 300)}
+              {stripTags(product.description).substring(0, 300)}
             </p>
           )}
 

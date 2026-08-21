@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import PlaceholderImage from "@/components/ui/placeholder-image";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
-import { sanitizeHTML } from "@/lib/html-utils";
+import { sanitizeHTML, stripTags } from "@/lib/html-utils";
 import { useCart } from "@/context/cart-context";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
@@ -30,7 +30,7 @@ function ProductJsonLd({
     "@context": "https://schema.org",
     "@type": "Product",
     name,
-    description: description.replace(/<[^>]*>/g, " ").substring(0, 300),
+    description: stripTags(description).substring(0, 300),
     image: imageUrl || "https://www.animasreflections.com/logo.png",
     sku,
     offers: {
@@ -109,11 +109,11 @@ function ProductContent() {
   const effectiveColor =
     product && selectedColor && product.colors.includes(selectedColor) ? selectedColor : product?.colors?.[0];
   // Dynamic image: when a color is selected, show its per-color image if one
-  // is configured. Falls back to the product's primary gallery image.
+  // is configured. Falls back to the front mockup, then the primary gallery image.
   const colorImage = effectiveColor
     ? product?.mockupImagesByColor?.[effectiveColor]?.front ?? product?.colorThumbnails?.[effectiveColor]
     : undefined;
-  const imageUrl = colorImage ?? getProductImageUrl(product);
+  const imageUrl = colorImage ?? product?.mockupImages?.front ?? getProductImageUrl(product);
   // Gated by modifiers (Phase 3) or productAddons so the Name/Number field only
   // shows when a personalization/text input is enabled per product (undefined = site defaults).
   const showPersonalization =
@@ -128,8 +128,8 @@ function ProductContent() {
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 pt-8 sm:pt-12 pb-16">
         {/* JSON-LD Structured Data */}
         <ProductJsonLd
-          name={product.name}
-          description={product.description}
+          name={product.seoTitle || product.name}
+          description={product.seoDescription || product.description}
           imageUrl={imageUrl}
           price={price}
           productId={product.id}
@@ -169,9 +169,9 @@ function ProductContent() {
 
           {/* Product Details */}
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-display mb-2">{product.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold font-display mb-2">{product.seoTitle || product.name}</h1>
             {product.description && (() => {
-              const stripped = product.description.replace(/<[^>]*>/g, " ");
+              const stripped = stripTags(product.description);
               const isLong = stripped.length > 200;
               const hasHTML = /<[a-z][\s\S]*?>/i.test(product.description);
               // Rich formatting shows immediately for short descriptions; long

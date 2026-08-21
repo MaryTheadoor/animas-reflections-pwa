@@ -215,8 +215,6 @@ export interface ManagedProduct {
   };
   /** Weight in ounces for calculated shipping */
   weightOz?: number;
-  /** Parent product ID — groups same-design variants across garment types */
-  baseProductId?: string;
   /** Optional per-product flat shipping rate. When set, the cart uses the higher
    *  of this rate or the global shipping tier. If unset, the global tier applies. */
   shippingRate?: number;

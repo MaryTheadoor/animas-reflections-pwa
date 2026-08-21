@@ -142,68 +142,20 @@ export function useCatalog(): UseCatalogResult {
         return;
       }
       } catch (err) {
-        // If Firestore is empty (first deploy, sync never run), fall back to
-        // fetching the Square catalog directly via the Cloud Function.
-        console.warn("Firestore read failed, falling back to Square API", err);
+        // Firestore read failed — surface the error rather than falling back to
+        // a removed Square sync path. (Square is payment-only since Phase 1.)
+        console.warn("Firestore products read failed", err);
+        setError(err instanceof Error ? err.message : "Failed to load catalog");
+        setLoading(false);
+        return;
       }
 
-      // Fallback: fetch from Square via Cloud Function
-      try {
-      const { httpsCallable } = await import("firebase/functions");
-      const { functions } = await import("@/lib/firebase");
-      const callable = httpsCallable<object, { items: SquareCatalogItem[]; categories?: CatalogCategory[] }>(
-        functions,
-        "fetchSquareCatalog"
-      );
-      const result = await callable({});
-      const catalogItems = result.data.items ?? [];
-      const catalogCategories = result.data.categories ?? [];
-
-      if (catalogCategories.length > 0) {
-        setCategories(catalogCategories);
-      } else {
-        const categoryMap = new Map<string, CatalogCategory>();
-        catalogItems.forEach((item) => {
-          item.categoryIds.forEach((cid) => {
-            if (!categoryMap.has(cid)) categoryMap.set(cid, { id: cid, name: cid });
-          });
-        });
-        setCategories(Array.from(categoryMap.values()));
-      }
-
-      // Convert SquareCatalogItem → ManagedProduct for the Square API fallback path
-      const managedProducts: ManagedProduct[] = catalogItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        categoryId: item.categoryIds?.[0] ?? "",
-        productType: (item.productType as ManagedProduct["productType"]) ?? "other",
-        colors: item.colors ?? [],
-        tags: item.tags ?? [],
-        images: item.images ?? (item.image_url ? [item.image_url] : []),
-        variants: item.variations.map((v) => ({
-          id: v.id,
-          name: v.name,
-          price: v.price,
-          sku: v.sku ?? "",
-          squareVariationId: v.id,
-          inventory: v.inventory,
-          inventoryUpdatedAt: v.inventoryUpdatedAt,
-        })),
-        active: true,
-        featured: false,
-        createdAt: "",
-        updatedAt: "",
-        printZones: item.printZones,
-        mockupImages: item.mockupImages,
-      }));
-      setProducts(managedProducts);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load catalog");
-    } finally {
+      // Firestore catalog exists but has no active products — show an empty
+      // catalog rather than an error or a stale Square fallback.
+      setProducts([]);
+      setCategories([]);
       setLoading(false);
-    }
-  }, []);
+    }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

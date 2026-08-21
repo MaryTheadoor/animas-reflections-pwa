@@ -941,6 +941,42 @@ export default function ProductManager({ categories }: Props) {
             <span className="text-[10px] text-foreground/70">leave empty for site default</span>
           </div>
 
+          {/* SEO + weight (optional) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-primary block mb-1">SEO Title</label>
+              <input
+                type="text"
+                value={form.seoTitle ?? ""}
+                onChange={(e) => updateField("seoTitle", e.target.value.trim() || undefined)}
+                placeholder="Defaults to product name"
+                className="w-full px-3 py-1.5 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-primary block mb-1">SEO Description</label>
+              <input
+                type="text"
+                value={form.seoDescription ?? ""}
+                onChange={(e) => updateField("seoDescription", e.target.value.trim() || undefined)}
+                placeholder="Defaults to description"
+                className="w-full px-3 py-1.5 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-primary block mb-1">Weight (oz)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={form.weightOz ?? ""}
+                onChange={(e) => updateField("weightOz", e.target.value === "" ? undefined : parseFloat(e.target.value) || 0)}
+                placeholder="Optional"
+                className="w-full px-3 py-1.5 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm"
+              />
+            </div>
+          </div>
+
           {/* Mockup Images */}
           <div>
             <label className="block text-xs font-medium text-primary mb-2">Mockup Images (blank product shots for customizer)</label>
@@ -1216,20 +1252,37 @@ export default function ProductManager({ categories }: Props) {
                       >
                         ✕
                       </button>
-                      {/* Custom fields toggle per variant */}
-                      {(v.customFields?.length ?? 0) > 0 ? (
-                        <div className="flex items-center gap-1 text-[10px] text-foreground/80">
-                          {v.customFields!.map((f) => (
-                            <span key={f.key} className="bg-primary/5 px-1.5 py-0.5 rounded">{f.key}: {f.value}</span>
+                      {/* Custom fields per variant — key/value attrs (grommets, material, etc.) */}
+                      {(v.customFields?.length ?? 0) > 0 && (
+                        <div className="w-full space-y-1">
+                          <label className="block text-[10px] font-medium text-foreground">Custom Fields</label>
+                          {v.customFields!.map((f, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <input type="text" value={f.key} placeholder="Key" onChange={(e) => {
+                                const fields = [...(v.customFields ?? [])];
+                                fields[i] = { ...fields[i], key: e.target.value };
+                                updateVariant(v.id, "customFields", fields);
+                              }} className="flex-1 px-2 py-1 rounded-lg border border-primary/20 focus:border-gold outline-none text-xs" />
+                              <input type="text" value={f.value} placeholder="Value" onChange={(e) => {
+                                const fields = [...(v.customFields ?? [])];
+                                fields[i] = { ...fields[i], value: e.target.value };
+                                updateVariant(v.id, "customFields", fields);
+                              }} className="flex-1 px-2 py-1 rounded-lg border border-primary/20 focus:border-gold outline-none text-xs" />
+                              <button onClick={() => {
+                                const fields = (v.customFields ?? []).filter((_, j) => j !== i);
+                                updateVariant(v.id, "customFields", fields.length > 0 ? fields : undefined);
+                              }} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
+                            </div>
                           ))}
                           <button
                             onClick={() => updateVariant(v.id, "customFields", [...(v.customFields ?? []), { key: "", value: "" }])}
-                            className="text-gold hover:text-gold-light"
+                            className="text-[10px] text-gold hover:text-gold-light"
                           >
-                            +
+                            + Add field
                           </button>
                         </div>
-                      ) : (
+                      )}
+                      {(v.customFields?.length ?? 0) === 0 && (
                         <button
                           onClick={() => updateVariant(v.id, "customFields", [{ key: "", value: "" }])}
                           className="text-[10px] text-foreground/70 hover:text-gold"
