@@ -1050,6 +1050,34 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 22 — 2026-08-21 | Context refresh prep (session close)
+
+### Actions Taken
+1. Verified working tree clean; `development` in sync with origin; `master` 17 commits behind (merge pending user approval — see PROJECT_CONTEXT §11.6)
+2. Updated `PROJECT_CONTEXT.md` recovery blueprint:
+   - §6 functions: 23 → 14 (removed deleted Square-sync functions; added DELETED list)
+   - §8 known issues: marked #1–3 obsolete (Square sync removed); revised #12/#18 (color system rework); added #22–28 (Firestore master catalog, config in config/site, modifiers, dynamic customer fields, branch state, WebBridge checkout note, session-log discipline)
+   - §10: added "Catalog Architecture Overhaul" summary (Phases 1–6 + color-image rework + data-linkage audit)
+   - §11: refreshed counts (tests 89/89), master-merge gate, new discipline items
+   - §12: removed obsolete "restoring Square" note
+   - Header date → 2026-08-21
+3. Ran `npm run backup:snapshot` full-project snapshot (see Snapshots)
+
+### Current State at Session End
+- Lint 0 | Tests 89/89 (9 suites) | Build 22 routes | 14 Cloud Functions
+- Working tree: clean | Branch: `development` = origin/development
+- Deployed live: hosting (all Phases 1–6 + color-image rework + data-linkage fixes)
+- USE_SYNTHETIC = false
+- Context files current: PROJECT_CONTEXT.md + DEVLOG.md (Sessions 1–22)
+
+### Pending / Next Session
+- [ ] Split product-manager.tsx into smaller components (deferred refactor)
+- [ ] Brand collection / taxonomy (needs Cindy's answer on "Biscuit Hockey")
+- [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 
