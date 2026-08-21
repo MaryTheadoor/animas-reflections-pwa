@@ -25,6 +25,14 @@ describe("sanitizeHTML", () => {
     expect(sanitizeHTML('<a href="javascript:alert(1)">x</a>')).toBe('<a href="#alert(1)">x</a>');
     expect(sanitizeHTML("<a href='javascript:alert(1)'>x</a>")).toBe("<a href='#alert(1)'>x</a>");
   });
+
+  it("strips unquoted event handlers (fallback)", () => {
+    expect(sanitizeHTML("<img src=x onerror=alert(1)>")).not.toContain("onerror");
+  });
+
+  it("removes style, meta, and form elements (fallback)", () => {
+    expect(sanitizeHTML('<style>body{}</style>Hello<form action="x"></form>')).toBe("Hello");
+  });
 });
 
 describe("stripTags", () => {

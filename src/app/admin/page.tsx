@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Component, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
@@ -194,6 +194,16 @@ function DashboardContent() {
     }
   }, []);
 
+  const loadCats = useCallback(async () => {
+    try {
+      const snap = await getDocs(collection(db, "categories"));
+      const cats: ManagedCategory[] = [];
+      snap.forEach((d) => { const data = d.data() as ManagedCategory; if (data.id && data.name) cats.push(data); });
+      cats.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      setManagedCategories(cats);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     const loadConfig = async () => {
       try { const snap = await getDoc(doc(db, "config", "site"));
@@ -205,18 +215,23 @@ function DashboardContent() {
       if (snap.exists()) setAdminEmails((snap.data() as { emails?: string[] }).emails ?? []);
       } catch {}
     };
-    const loadCats = async () => {
-      try { const snap = await getDocs(collection(db, "categories"));
-      const cats: ManagedCategory[] = [];
-      snap.forEach((d) => { const data = d.data() as ManagedCategory; if (data.id && data.name) cats.push(data); });
-      cats.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      setManagedCategories(cats);
-      } catch {}
-    };
-    loadConfig();
-    loadAdmins();
-    loadCats();
-  }, []);
+    // Deferred via setTimeout (same pattern as the designs-tab loader) so the
+    // initial data fetch doesn't set state synchronously in the effect body.
+    const t = setTimeout(() => {
+      loadConfig();
+      loadAdmins();
+      void loadCats();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [loadCats]);
+
+  // CategoryManager broadcasts this after any category mutation so this
+  // dashboard (and the product editor) sees the current list without a reload.
+  useEffect(() => {
+    const onChanged = () => { void loadCats(); };
+    window.addEventListener("admin-categories-changed", onChanged);
+    return () => window.removeEventListener("admin-categories-changed", onChanged);
+  }, [loadCats]);
 
   // Reload designs when switching tabs
   useEffect(() => {
@@ -340,22 +355,30 @@ function DashboardContent() {
   const addAdmin = async () => {
     const email = newAdminEmail.trim().toLowerCase();
     if (!email || adminEmails.includes(email)) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert("Enter a valid email address");
+      return;
+    }
     const updated = [...adminEmails, email];
-    setAdminEmails(updated);
     try {
       const callable = httpsCallable(functions, "saveAdminEmails");
       await callable({ emails: updated });
-    } catch {}
-    setNewAdminEmail("");
+      setAdminEmails(updated); // only on success — the UI must not lie
+      setNewAdminEmail("");
+    } catch (err) {
+      alert("Failed to add admin: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
   };
 
   const removeAdmin = async (email: string) => {
     const updated = adminEmails.filter((e) => e !== email);
-    setAdminEmails(updated);
     try {
       const callable = httpsCallable(functions, "saveAdminEmails");
       await callable({ emails: updated });
-    } catch {}
+      setAdminEmails(updated); // only on success
+    } catch (err) {
+      alert("Failed to remove admin: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
   };
 
   return (
@@ -402,19 +425,17 @@ function DashboardContent() {
           ))}
         </div>
 
-        {/* ── Products ── */}
-        {tab === "products" && (
-          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-            <ProductManager categories={managedCategories} />
-          </section>
-        )}
+        {/* ── Products ──
+            Kept mounted (hidden via CSS) — switching tabs used to unmount the
+            editor and silently destroy in-progress product edits. */}
+        <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "products" ? "" : "hidden"}`}>
+          <ProductManager categories={managedCategories} />
+        </section>
 
-        {/* ── Categories ── */}
-        {tab === "categories" && (
-          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-            <CategoryManager />
-          </section>
-        )}
+        {/* ── Categories ── — same keep-mounted treatment as Products */}
+        <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "categories" ? "" : "hidden"}`}>
+          <CategoryManager />
+        </section>
 
         {/* ── Settings ── */}
         {tab === "settings" && (
@@ -1156,7 +1177,9 @@ function OrdersSection() {
   const loadOrders = useCallback(() => {
     Promise.all([
       httpsCallable(functions, "fetchRecentOrders")({}),
-      getDocs(collection(db, "orders")),
+      // Bounded read — the mirror exists to enrich Square orders with design
+      // files/tracking, so the 200 most recent mirrors is plenty.
+      getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(200))),
     ])
       .then(([r, fsSnap]) => {
         const squareOrders = (r.data as { orders: typeof orders }).orders ?? [];

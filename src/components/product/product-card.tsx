@@ -12,7 +12,8 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const variants = product.variants ?? [];
-  const minPrice = variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0;
+  const pricedVariants = variants.map((v) => v.price).filter((p) => Number.isFinite(p));
+  const minPrice = pricedVariants.length > 0 ? Math.min(...pricedVariants) : 0;
   const imageUrl = getProductImageUrl(product);
 
   return (
@@ -36,9 +37,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             </span>
           </div>
         )}
-        {product.variants.length > 1 && (
+        {variants.length > 1 && (
           <span className="absolute top-3 left-3 bg-primary text-white text-xs px-2 py-1 rounded-full shadow-sm">
-            {product.variants.length} variants
+            {variants.length} variants
           </span>
         )}
         {/* Stock indicator — must live inside the relative image container so
@@ -74,9 +75,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         <p className="text-gold font-bold text-lg leading-none">
           {variants.length === 0
             ? "Price varies"
-            : variants.length === 1 && variants[0].price > 0
+            : variants.length === 1 && (variants[0].price ?? 0) > 0
               ? `$${variants[0].price.toFixed(2)}`
-              : `Starting at $${minPrice.toFixed(2)}`}
+              : minPrice > 0
+                ? `Starting at $${minPrice.toFixed(2)}`
+                : "Price varies"}
         </p>
         <span className="text-xs font-semibold text-gold bg-gold/10 px-3 py-1.5 rounded-full group-hover:bg-gold group-hover:text-white transition-colors">
           View Product

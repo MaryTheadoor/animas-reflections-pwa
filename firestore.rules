@@ -59,9 +59,15 @@ service cloud.firestore {
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Orders - read only by the customer who placed it OR an admin; writes via Functions only
+    // Orders - read only by the customer who placed it OR an admin; writes via Functions only.
+    // Email matching is case-insensitive via the normalized customerEmailLower key
+    // (legacy docs without the field fall back to the exact-case comparison).
     match /orders/{orderId} {
-      allow read: if isSignedIn() && (isAdmin() || request.auth.token.email == resource.data.customerEmail);
+      allow read: if isSignedIn() && (
+        isAdmin()
+        || request.auth.token.email == resource.data.customerEmail
+        || ('customerEmailLower' in resource.data && request.auth.token.email.lower() == resource.data.customerEmailLower)
+      );
       allow write: if false;  // Functions only (admin SDK bypasses rules)
     }
 

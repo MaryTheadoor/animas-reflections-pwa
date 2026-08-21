@@ -64,22 +64,9 @@ export default function ProductManager({ categories }: Props) {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
 
-  // Sync state
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<string>("");
-  const [syncResult, setSyncResult] = useState<{ products: number; categories: number; items: number } | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
+  // Square push state (optional POS linkage — Square is payment-only otherwise)
   const [pushingToSquare, setPushingToSquare] = useState<string | null>(null); // productId being pushed
   const [pushError, setPushError] = useState<string | null>(null);
-
-  // Inventory sync state
-  const [syncingInventory, setSyncingInventory] = useState(false);
-  const [inventoryResult, setInventoryResult] = useState<{
-    updated: number;
-    totalVariations: number;
-    countsReturned: number;
-  } | null>(null);
-  const [inventoryError, setInventoryError] = useState<string | null>(null);
 
   // Matrix editor toggle
   const [useMatrixEditor, setUseMatrixEditor] = useState(false);
@@ -418,65 +405,55 @@ export default function ProductManager({ categories }: Props) {
     setForm((prev) => ({ ...prev, categoryId: id }));
     setNewCategoryName("");
     setAddingCategory(false);
+    // Let CategoryManager and the dashboard pick up the inline-created category.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("admin-categories-changed"));
+    }
+  };
+
+  // Collect every Storage URL a product references (gallery, mockups,
+  // per-color photos, thumbnails) for cleanup/ownership checks.
+  const collectProductUrls = (p: ManagedProduct): string[] => {
+    const urls = [...(p.images ?? [])];
+    if (p.mockupImages) {
+      urls.push(...(Object.values(p.mockupImages).filter(Boolean) as string[]));
+    }
+    if (p.mockupImagesByColor) {
+      for (const views of Object.values(p.mockupImagesByColor)) {
+        if (views) urls.push(...(Object.values(views).filter(Boolean) as string[]));
+      }
+    }
+    if (p.colorThumbnails) {
+      urls.push(...Object.values(p.colorThumbnails).filter(Boolean));
+    }
+    return urls;
+  };
+
+  // True when any OTHER product references the same URL. Duplicated products
+  // share files — deleting one must not delete the other's images.
+  const urlReferencedElsewhere = (url: string, excludeId: string): boolean =>
+    products.some((p) => p.id !== excludeId && collectProductUrls(p).includes(url));
+
+  const deleteProductStorage = async (p: ManagedProduct) => {
+    for (const url of collectProductUrls(p)) {
+      if (urlReferencedElsewhere(url, p.id)) continue;
+      try {
+        const urlPath = decodeURIComponent(url.split("/o/")[1]?.split("?")[0] ?? "");
+        if (urlPath) await deleteObject(ref(storage, urlPath));
+      } catch { /* already deleted or external URL — ignore */ }
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     // Clean up product images from Storage before removing the doc — prevents
-    // orphaned files from accumulating in the bucket over time.
+    // orphaned files, while skipping files still used by another product.
     const product = products.find((p) => p.id === id);
     if (product) {
-      const urls = [...(product.images ?? [])];
-      if (product.mockupImages) {
-        urls.push(...Object.values(product.mockupImages).filter(Boolean) as string[]);
-      }
-      for (const url of urls) {
-        try {
-          const urlPath = decodeURIComponent(url.split("/o/")[1]?.split("?")[0] ?? "");
-          if (urlPath) await deleteObject(ref(storage, urlPath));
-        } catch { /* already deleted or external URL — ignore */ }
-      }
+      await deleteProductStorage(product);
     }
     await deleteDoc(doc(db, "products", id));
     loadProducts();
-  };
-
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncError(null);
-    setSyncResult(null);
-    const startTime = Date.now();
-
-    try {
-      setSyncProgress("Connecting to Square...");
-      const callable = httpsCallable<object, { success: boolean; products: number; categories: number; items: number; errors: string[] }>(
-        functions,
-        "syncProducts"
-      );
-
-      setSyncProgress("Fetching catalog from Square...");
-      const result = await callable({});
-      const data = result.data;
-
-      setSyncProgress("Writing to Firestore...");
-      setSyncResult({ products: data.products ?? 0, categories: data.categories ?? 0, items: data.items ?? 0 });
-
-      if (data.errors?.length) {
-        setSyncError(data.errors.slice(0, 3).join("; "));
-      }
-
-      setSyncProgress("Reloading product list...");
-      await loadProducts();
-
-      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      setSyncProgress(`Done in ${elapsed}s`);
-      setTimeout(() => setSyncProgress(""), 3000);
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : "Sync failed");
-      setSyncProgress("");
-    } finally {
-      setSyncing(false);
-    }
   };
 
   const handlePushToSquare = async (productId: string) => {
@@ -493,22 +470,6 @@ export default function ProductManager({ categories }: Props) {
       setPushError(err instanceof Error ? err.message : "Failed to push to Square");
     } finally {
       setPushingToSquare(null);
-    }
-  };
-
-  const handleSyncInventory = async () => {
-    setSyncingInventory(true);
-    setInventoryError(null);
-    try {
-      const callable = httpsCallable(functions, "fetchInventoryCounts");
-      const result = await callable({});
-      const data = result.data as { success: boolean; updated: number; totalVariations: number; countsReturned: number };
-      setInventoryResult(data);
-      await loadProducts();
-    } catch (err) {
-      setInventoryError(err instanceof Error ? err.message : "Inventory sync failed");
-    } finally {
-      setSyncingInventory(false);
     }
   };
 
@@ -542,11 +503,24 @@ export default function ProductManager({ categories }: Props) {
 
   const bulkDelete = async () => {
     if (!confirm("Permanently delete " + selectedIds.size + " product(s)? This cannot be undone.")) return;
+    let deleted = 0;
+    let failed = 0;
     for (const id of selectedIds) {
-      await deleteDoc(doc(db, "products", id));
+      try {
+        const product = products.find((p) => p.id === id);
+        if (product) await deleteProductStorage(product);
+        await deleteDoc(doc(db, "products", id));
+        deleted++;
+      } catch (err) {
+        failed++;
+        console.error("Bulk delete failed for product", id, err);
+      }
     }
     setSelectedIds(new Set());
     loadProducts();
+    if (failed > 0) {
+      alert(`Deleted ${deleted} product(s); ${failed} failed. Check the console for details.`);
+    }
   };
 
   const handleDuplicate = async (product: ManagedProduct) => {
@@ -592,26 +566,10 @@ export default function ProductManager({ categories }: Props) {
         <div>
           <h3 className="font-bold font-display text-lg">{products.length} Products</h3>
           <p className="text-xs text-foreground/80">
-            {products.filter((p) => p.squareItemIds?.length).length} synced from Square
+            Firestore is the master catalog — Square is payment-only
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-light transition-colors disabled:opacity-50 btn-tactile btn-primary-tactile"
-            title="Pull latest products from Square and sync to Firestore"
-          >
-            {syncing ? "Syncing..." : "Sync from Square"}
-          </button>
-          <button
-            onClick={handleSyncInventory}
-            disabled={syncingInventory}
-            className="px-4 py-2 bg-teal/10 text-teal rounded-xl text-sm font-semibold hover:bg-teal/20 transition-colors disabled:opacity-50"
-            title="Fetch current stock counts from Square for all products"
-          >
-            {syncingInventory ? "Syncing..." : "Sync Inventory"}
-          </button>
           <button
             onClick={() => startEdit(EMPTY_PRODUCT)}
             className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors"
@@ -621,60 +579,11 @@ export default function ProductManager({ categories }: Props) {
         </div>
       </div>
 
-      {/* Sync Progress */}
-      {syncProgress && (
-        <div className="bg-blue-50 text-blue-700 rounded-xl p-3 text-sm flex items-center gap-2">
-          <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          {syncProgress}
-        </div>
-      )}
-
-      {/* Sync Status */}
-      {syncResult && (
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-green-50 rounded-xl p-3">
-            <p className="text-xl font-bold text-green-700">{syncResult.products}</p>
-            <p className="text-xs text-green-600">Products</p>
-          </div>
-          <div className="bg-green-50 rounded-xl p-3">
-            <p className="text-xl font-bold text-green-700">{syncResult.categories}</p>
-            <p className="text-xs text-green-600">Categories</p>
-          </div>
-          <div className="bg-green-50 rounded-xl p-3">
-            <p className="text-xl font-bold text-green-700">{syncResult.items}</p>
-            <p className="text-xs text-green-600">Square Items</p>
-          </div>
-        </div>
-      )}
-      {syncError && (
-        <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{syncError}</div>
-      )}
       {pushError && (
         <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm flex items-center justify-between">
           <span>{pushError}</span>
           <button onClick={() => setPushError(null)} className="text-red-400 hover:text-red-600 ml-2">&times;</button>
         </div>
-      )}
-
-      {/* Inventory Sync Result */}
-      {inventoryResult && (
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-teal/5 rounded-xl p-3">
-            <p className="text-xl font-bold text-teal">{inventoryResult.updated}</p>
-            <p className="text-xs text-teal/60">Products Updated</p>
-          </div>
-          <div className="bg-teal/5 rounded-xl p-3">
-            <p className="text-xl font-bold text-teal">{inventoryResult.totalVariations}</p>
-            <p className="text-xs text-teal/60">Variations Checked</p>
-          </div>
-          <div className="bg-teal/5 rounded-xl p-3">
-            <p className="text-xl font-bold text-teal">{inventoryResult.countsReturned}</p>
-            <p className="text-xs text-teal/60">Counts Returned</p>
-          </div>
-        </div>
-      )}
-      {inventoryError && (
-        <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{inventoryError}</div>
       )}
 
       {/* Bulk Action Bar */}

@@ -190,7 +190,6 @@ function CustomizerContent() {
     mod.priceType === "percentage"
       ? `+${mod.price}%`
       : `+$${mod.price.toFixed(2)}`;
-  const [orderId] = useState(() => crypto.randomUUID());
   const [designLibrary, setDesignLibrary] = useState<DesignAsset[]>([]);
   const [libraryOpen, setLibraryOpen] = useState(false);
 
@@ -344,7 +343,9 @@ function CustomizerContent() {
       : undefined;
 
     addItem({
-      id: orderId,
+      // Fresh ID per line item — a shared ID makes REMOVE_ITEM/UPDATE_QUANTITY
+      // match every item added this session and produces duplicate React keys.
+      id: crypto.randomUUID(),
       product_id: selectedProduct?.id ?? "custom",
       variant_id: variant?.id ?? "",
       squareVariationId: variant?.squareVariationId,

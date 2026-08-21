@@ -15,7 +15,6 @@ import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 interface CartState {
   items: CartItem[];
-  shippingTier: "stickers" | "apparel" | "free";
 }
 
 type CartAction =
@@ -23,7 +22,6 @@ type CartAction =
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
   | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; addonId?: string; addonPrice: number; addonLabel?: string; priceType?: AddonPriceType }
-  | { type: "SET_SHIPPING_TIER"; tier: "stickers" | "apparel" | "free" }
   | { type: "CLEAR_CART" };
 
 function cartReducer(state: CartState, action: CartAction): CartState {
@@ -75,8 +73,6 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
     case "CLEAR_CART":
       return { ...state, items: [] };
-    case "SET_SHIPPING_TIER":
-      return { ...state, shippingTier: action.tier };
     default:
       return state;
   }
@@ -84,7 +80,6 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 const initialCart: CartState = {
   items: [],
-  shippingTier: "apparel",
 };
 
 interface CartContextValue {
@@ -99,7 +94,6 @@ interface CartContextValue {
   shipping: number;
   total: number;
   itemCount: number;
-  setShippingTier: (tier: "stickers" | "apparel" | "free") => void;
   cartOpen: boolean;
   setCartOpen: (v: boolean) => void;
   lastAdded: CartItem | null;
@@ -158,13 +152,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "CLEAR_CART" });
   }, []);
 
-  const setShippingTier = useCallback(
-    (tier: "stickers" | "apparel" | "free") => {
-      dispatch({ type: "SET_SHIPPING_TIER", tier });
-    },
-    []
-  );
-
   const subtotal = cart.items.reduce(
     (sum, i) => sum + i.base_price * i.quantity,
     0
@@ -178,15 +165,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     0
   );
 
-  // Shipping: free above threshold. Otherwise the highest applicable rate wins —
-  // per-product shippingRate (when set on a product) or the global sticker/apparel tier.
+  // Shipping: free above threshold; otherwise the higher of the per-product
+  // rate or the global tier. An empty cart ships nothing.
   const shipping =
-    subtotal >= freeThreshold
+    cart.items.length === 0 || subtotal >= freeThreshold
       ? 0
       : (() => {
           const perProductMax = cart.items.reduce((max, i) => Math.max(max, i.shipping_rate ?? 0), 0);
           const tierRate =
-            cart.items.length > 0 && cart.items.every((i) => i.productType === "sticker")
+            cart.items.every((i) => i.productType === "sticker")
               ? shippingTierStickers
               : shippingTierApparel;
           return Math.max(perProductMax, tierRate);
@@ -209,7 +196,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         shipping,
         total,
         itemCount,
-        setShippingTier,
         cartOpen,
         setCartOpen,
         lastAdded,

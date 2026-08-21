@@ -5,12 +5,32 @@ import Link from "next/link";
 import ProductCard from "@/components/product/product-card";
 
 export default function FeaturedProducts() {
-  const { products, loading } = useCatalog();
+  const { products, loading, error, refresh } = useCatalog();
 
   const featuredProducts = products.filter((p) => p.featured);
   const featured = featuredProducts.length > 0
     ? featuredProducts.slice(0, 6)
     : products.slice(0, 6);
+
+  if (error && !loading) {
+    return (
+      <section className="section-tile">
+        <h2 className="text-3xl font-bold font-display text-center mb-2">Featured Products</h2>
+        <p className="text-foreground text-center mb-12 max-w-md mx-auto">
+          Discover our diverse collection now and find your perfect style
+        </p>
+        <div className="text-center py-12 text-foreground">
+          Couldn&apos;t load products right now.
+          <button
+            onClick={refresh}
+            className="block mx-auto mt-4 px-6 py-2.5 rounded-xl btn-tactile btn-primary-tactile"
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   if (loading || featured.length === 0) {
     return (

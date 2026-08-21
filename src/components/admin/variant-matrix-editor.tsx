@@ -93,6 +93,12 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
 
   const [d1, d2, ...rest] = dimensions;
   const hasRest = rest.length > 0;
+  // For 3+ dimensions the 2-D grid shows ONE combination of the extra
+  // dimensions at a time; dropdowns pick which. (Previously extra dimensions
+  // were baked in as empty strings, corrupting the variant options map and
+  // creating duplicate variants with blank values.)
+  const [extraSelections, setExtraSelections] = useState<Record<number, string>>({});
+  const extraValues = rest.map((d, i) => extraSelections[i] ?? d.values[0]);
 
   return (
     <div className="space-y-4">
@@ -157,6 +163,25 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
       )}
 
       {dimensions.length >= 2 && d1 && d2 && (
+        <>
+          {hasRest && (
+            <div className="flex gap-3 flex-wrap bg-warm-sand/20 rounded-xl p-3">
+              {rest.map((d, i) => (
+                <div key={d.name}>
+                  <label className="block text-[10px] font-medium text-foreground/80 mb-0.5">{d.name}</label>
+                  <select
+                    value={extraSelections[i] ?? d.values[0]}
+                    onChange={(e) => setExtraSelections((prev) => ({ ...prev, [i]: e.target.value }))}
+                    className="px-2 py-1.5 rounded-lg border border-primary/20 bg-white text-xs"
+                  >
+                    {d.values.map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-xs">
             <thead>
@@ -178,12 +203,12 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
                     {rowValue}
                   </td>
                   {d2.values.map((colValue) => {
-                    const key = [rowValue, colValue, ...rest.map(() => "")].join("|");
+                    const key = [rowValue, colValue, ...extraValues].join("|");
                     const exists = existingMatrix.has(key);
                     return (
                       <td key={colValue} className="p-0.5 text-center">
                         <button
-                          onClick={() => toggleCell([rowValue, colValue, ...rest.map(() => "")])}
+                          onClick={() => toggleCell([rowValue, colValue, ...extraValues])}
                           className={"w-8 h-8 rounded-md transition-all text-[10px] font-medium " + (
                             exists
                               ? "bg-gold text-white shadow-sm scale-105"
@@ -202,11 +227,12 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
           </table>
           {hasRest && (
             <p className="text-[10px] text-foreground/70 mt-1">
-              Additional dimensions ({rest.map((d) => d.name).join(", ")}) apply to all matrix cells.
-              Edit individual variants below to adjust them.
+              {rest.map((d) => d.name).join(" × ")} are picked above — the grid
+              shows one combination of those values at a time.
             </p>
           )}
         </div>
+        </>
       )}
 
       {variants.filter((v) => {

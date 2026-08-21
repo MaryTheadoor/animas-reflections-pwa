@@ -9,6 +9,9 @@ function ConfirmationContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId") || "";
   const paymentStatus = searchParams.get("status") || "COMPLETED";
+  // "0" means the charge succeeded but the Firestore mirror write failed —
+  // surface a warning instead of a silently missing order history.
+  const mirrorFailed = searchParams.get("mirrored") === "0";
 
   return (
     <PageLayout>
@@ -27,6 +30,14 @@ function ConfirmationContent() {
           Thank you for your order! We&apos;ve received it and will begin processing
           right away. You&apos;ll receive a confirmation email with your order details.
         </p>
+
+        {mirrorFailed && (
+          <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-6 text-sm text-left max-w-md mx-auto">
+            Your payment succeeded, but we couldn&apos;t save your order to your
+            account history right away. Keep your order reference — if it
+            doesn&apos;t appear in your account, contact us and we&apos;ll sort it out.
+          </div>
+        )}
 
         {orderId && (
           <div className="bg-warm-sand rounded-2xl p-6 mb-8 inline-block">

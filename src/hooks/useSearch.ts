@@ -65,7 +65,9 @@ export function searchProducts(
 
     if (filters.colors.length > 0) {
       const productColors = (product.colors ?? []).map((c) => c.toLowerCase());
-      if (filters.colors.every((c) => productColors.includes(c.toLowerCase()))) {
+      // OR semantics: a product matching ANY selected color qualifies
+      // (ticking Black and White shouldn't require a product to be both).
+      if (filters.colors.some((c) => productColors.includes(c.toLowerCase()))) {
         score += 30;
       }
     }
@@ -85,7 +87,7 @@ export function searchProducts(
   if (filters.colors.length > 0) {
     scored = scored.filter((s) => {
       const productColors = (s.product.colors ?? []).map((c) => c.toLowerCase());
-      return filters.colors.every((c) => productColors.includes(c.toLowerCase()));
+      return filters.colors.some((c) => productColors.includes(c.toLowerCase()));
     });
   }
 

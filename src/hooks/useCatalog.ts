@@ -1,33 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import type { SquareCatalogItem, ManagedProduct, ManagedCategory } from "@/types";
+// The catalog hook now lives in a shared provider (one Firestore read per
+// session, consistent error/loading state). This module keeps the original
+// import path working and carries the converter/image helpers.
+export { useCatalog, USE_SYNTHETIC } from "@/context/catalog-context";
+export type { CatalogCategory } from "@/context/catalog-context";
 
-// Toggle synthetic (mock) data for UI development. Set to false in production
-// to use real Firestore data synced from Square. The admin "Sync from Square"
-// populates Firestore with ManagedProduct docs.
-export const USE_SYNTHETIC = false;
-
-const DATA_SOURCE: "synthetic" | "firestore" = USE_SYNTHETIC ? "synthetic" : "firestore";
-
-interface CatalogCategory {
-  id: string;
-  name: string;
-}
-
-interface UseCatalogResult {
-  /** Canonical managed products — use these directly in components */
-  products: ManagedProduct[];
-  categories: CatalogCategory[];
-  loading: boolean;
-  error: string | null;
-  refresh: () => void;
-}
+import type { SquareCatalogItem, ManagedProduct } from "@/types";
 
 /** Convert ManagedProduct → SquareCatalogItem (internal bridge, used only for
- *  Square API fallback compatibility and search hook. Components should use
+ *  Square API fallback compatibility and the search hook. Components should use
  *  ManagedProduct directly.) */
 export function managedToCatalogItem(p: ManagedProduct): SquareCatalogItem {
   const images = Array.isArray(p.images) ? p.images : [];
@@ -66,101 +48,4 @@ export function getProductImageUrl(product: ManagedProduct): string {
 /** Get the primary image URL from a SquareCatalogItem (legacy) */
 export function getCatalogItemImageUrl(item: SquareCatalogItem): string {
   return item.image_url ?? "";
-}
-
-export function useCatalog(): UseCatalogResult {
-  const [products, setProducts] = useState<ManagedProduct[]>([]);
-  const [categories, setCategories] = useState<CatalogCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCatalog = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    if (DATA_SOURCE === "synthetic") {
-      const { SYNTHETIC_PRODUCTS, SYNTHETIC_CATEGORIES } = await import("@/lib/synthetic-data");
-      await new Promise((r) => setTimeout(r, 300));
-      // Synthetic data is in SquareCatalogItem format — convert to ManagedProduct
-      const managed: ManagedProduct[] = SYNTHETIC_PRODUCTS.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        categoryId: item.categoryIds?.[0] ?? "",
-        productType: (item.productType as ManagedProduct["productType"]) ?? "other",
-        colors: item.colors ?? [],
-        tags: item.tags ?? [],
-        images: item.images ?? (item.image_url ? [item.image_url] : []),
-        variants: item.variations.map((v) => ({
-          id: v.id,
-          name: v.name,
-          price: v.price,
-          sku: v.sku ?? "",
-          inventory: v.inventory,
-          inventoryUpdatedAt: v.inventoryUpdatedAt,
-        })),
-        active: true,
-        featured: false,
-        createdAt: "",
-        updatedAt: "",
-        printZones: item.printZones,
-        mockupImages: item.mockupImages,
-      }));
-      setProducts(managed);
-      setCategories(SYNTHETIC_CATEGORIES);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const productsSnap = await getDocs(collection(db, "products"));
-      const productsList: ManagedProduct[] = [];
-      productsSnap.forEach((doc) => {
-        const data = doc.data() as ManagedProduct;
-        if (data.active !== false) {
-          productsList.push(data);
-        }
-      });
-
-      if (productsList.length > 0) {
-        setProducts(productsList);
-
-        try {
-          const catsSnap = await getDocs(collection(db, "categories"));
-          const cats: CatalogCategory[] = [];
-          catsSnap.forEach((doc) => {
-            const data = doc.data() as ManagedCategory;
-            cats.push({ id: data.id, name: data.name });
-          });
-          cats.sort((a, b) => a.name.localeCompare(b.name));
-          setCategories(cats);
-        } catch {
-          // Categories read failed — continue with products only
-        }
-
-        setLoading(false);
-        return;
-      }
-      } catch (err) {
-        // Firestore read failed — surface the error rather than falling back to
-        // a removed Square sync path. (Square is payment-only since Phase 1.)
-        console.warn("Firestore products read failed", err);
-        setError(err instanceof Error ? err.message : "Failed to load catalog");
-        setLoading(false);
-        return;
-      }
-
-      // Firestore catalog exists but has no active products — show an empty
-      // catalog rather than an error or a stale Square fallback.
-      setProducts([]);
-      setCategories([]);
-      setLoading(false);
-    }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCatalog();
-  }, [fetchCatalog]);
-
-  return { products, categories, loading, error, refresh: fetchCatalog };
 }

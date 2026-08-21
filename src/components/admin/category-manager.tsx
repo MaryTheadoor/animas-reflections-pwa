@@ -8,13 +8,35 @@ import {
   setDoc,
   deleteDoc,
   writeBatch,
+  query,
+  where,
+  limit,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { stripUndefined } from "@/lib/firestore-utils";
 import type { ManagedCategory } from "@/types";
+
+/** Collect every descendant of `id` (children, grandchildren, ...). */
+function collectDescendants(list: ManagedCategory[], id: string, out: Set<string>): void {
+  for (const c of list) {
+    if (c.parentId === id && !out.has(c.id)) {
+      out.add(c.id);
+      collectDescendants(list, c.id, out);
+    }
+  }
+}
+
+/** Broadcast after any category mutation so other admin components can refresh. */
+function notifyCategoriesChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("admin-categories-changed"));
+  }
+}
 
 export default function CategoryManager() {
   const [categories, setCategories] = useState<ManagedCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newParentId, setNewParentId] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,6 +64,7 @@ export default function CategoryManager() {
       setCategories(items);
     } catch (err) {
       console.error("Category load failed", err);
+      setError("Failed to load categories");
     } finally {
       setLoading(false);
     }
@@ -52,73 +75,136 @@ export default function CategoryManager() {
     loadCategories();
   }, [loadCategories]);
 
+  // Slug names must be unique — URL/SEO routing depends on them.
+  const uniqueSlug = (base: string, excludeId: string | null): string => {
+    const taken = new Set(categories.filter((c) => c.id !== excludeId).map((c) => c.slug));
+    if (!taken.has(base)) return base;
+    let i = 2;
+    while (taken.has(`${base}-${i}`)) i++;
+    return `${base}-${i}`;
+  };
+
   const addCategory = async () => {
     const name = newName.trim();
     if (!name) return;
+    setError(null);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    await setDoc(doc(db, "categories", id), {
-      id,
-      name,
-      slug,
-      order: categories.length,
-      parentId: newParentId || null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    setNewName("");
-    setNewParentId("");
-    loadCategories();
+    try {
+      await setDoc(doc(db, "categories", id), {
+        id,
+        name,
+        slug: uniqueSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), null),
+        order: categories.length,
+        parentId: newParentId || null,
+        createdAt: now,
+        updatedAt: now,
+      });
+      setNewName("");
+      setNewParentId("");
+      notifyCategoriesChanged();
+      loadCategories();
+    } catch (err) {
+      console.error("Category save failed", err);
+      setError("Failed to save category");
+    }
   };
 
   const startEdit = (cat: ManagedCategory) => {
     setEditingId(cat.id);
     setEditName(cat.name);
     setEditParentId(cat.parentId ?? "");
+    setError(null);
   };
 
   const saveEdit = async () => {
     if (!editingId || !editName.trim()) return;
-    const slug = editName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    await setDoc(doc(db, "categories", editingId), {
-      ...categories.find((c) => c.id === editingId),
-      name: editName.trim(),
-      slug,
-      parentId: editParentId || null,
-      updatedAt: new Date().toISOString(),
-    }, { merge: true });
-    setEditingId(null);
-    loadCategories();
+    setError(null);
+    const existing = categories.find((c) => c.id === editingId);
+    if (!existing) return;
+    try {
+      await setDoc(doc(db, "categories", editingId), stripUndefined({
+        ...existing,
+        name: editName.trim(),
+        slug: uniqueSlug(editName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"), editingId),
+        parentId: editParentId || null,
+        updatedAt: new Date().toISOString(),
+      }), { merge: true });
+      setEditingId(null);
+      notifyCategoriesChanged();
+      loadCategories();
+    } catch (err) {
+      console.error("Category edit failed", err);
+      setError("Failed to save category");
+    }
   };
 
   const deleteCategory = async (id: string) => {
-    if (!confirm("Delete this category? Products in this category will become uncategorized.")) return;
-    await deleteDoc(doc(db, "categories", id));
-    loadCategories();
+    setError(null);
+    // A category that still has children would orphan them, and one that still
+    // has products would leave dangling categoryIds on those products. Block
+    // both and ask the admin to reassign first.
+    const children = categories.filter((c) => c.parentId === id);
+    if (children.length > 0) {
+      setError(
+        `Cannot delete — ${children.length} subcategor${children.length === 1 ? "y is" : "ies are"} still under it. Move or delete them first.`
+      );
+      return;
+    }
+    try {
+      const productSnap = await getDocs(
+        query(collection(db, "products"), where("categoryId", "==", id), limit(1))
+      );
+      if (!productSnap.empty) {
+        setError("Cannot delete — products are still assigned to this category. Reassign them first.");
+        return;
+      }
+    } catch (err) {
+      console.error("Product assignment check failed", err);
+      setError("Could not verify the category is empty — try again.");
+      return;
+    }
+
+    const name = categories.find((c) => c.id === id)?.name ?? "this category";
+    if (!confirm(`Delete "${name}"?`)) return;
+    try {
+      await deleteDoc(doc(db, "categories", id));
+      notifyCategoriesChanged();
+      loadCategories();
+    } catch (err) {
+      console.error("Category delete failed", err);
+      setError("Failed to delete category");
+    }
   };
 
-  const moveUp = async (index: number) => {
-    if (index === 0) return;
+  const reorder = async (index: number, direction: -1 | 1) => {
+    const other = index + direction;
+    if (other < 0 || other >= categories.length) return;
+    setError(null);
     const a = categories[index];
-    const b = categories[index - 1];
-    const batch = writeBatch(db);
-    batch.set(doc(db, "categories", a.id), { ...a, order: index - 1 }, { merge: true });
-    batch.set(doc(db, "categories", b.id), { ...b, order: index }, { merge: true });
-    await batch.commit();
-    loadCategories();
+    const b = categories[other];
+    try {
+      const batch = writeBatch(db);
+      // stripUndefined is critical here: top-level categories carry
+      // parentId: undefined in memory, which the Firestore SDK rejects.
+      batch.set(doc(db, "categories", a.id), stripUndefined({ ...a, order: other }), { merge: true });
+      batch.set(doc(db, "categories", b.id), stripUndefined({ ...b, order: index }), { merge: true });
+      await batch.commit();
+      notifyCategoriesChanged();
+      loadCategories();
+    } catch (err) {
+      console.error("Category reorder failed", err);
+      setError("Failed to reorder categories");
+    }
   };
 
-  const moveDown = async (index: number) => {
-    if (index >= categories.length - 1) return;
-    const a = categories[index];
-    const b = categories[index + 1];
-    const batch = writeBatch(db);
-    batch.set(doc(db, "categories", a.id), { ...a, order: index + 1 }, { merge: true });
-    batch.set(doc(db, "categories", b.id), { ...b, order: index }, { merge: true });
-    await batch.commit();
-    loadCategories();
-  };
+  // A category may not be its own descendant (cycle prevention) — exclude the
+  // whole subtree, not just the category itself, from the parent selector.
+  const descendants = new Set<string>();
+  if (editingId) collectDescendants(categories, editingId, descendants);
+  const allowedParents = categories.filter(
+    (c) => c.id !== editingId && !descendants.has(c.id)
+  );
 
   if (loading) {
     return (
@@ -140,6 +226,10 @@ export default function CategoryManager() {
           <p className="text-xs text-foreground/80">Drag-and-drop ordering coming soon</p>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{error}</div>
+      )}
 
       <div className="flex gap-2 mb-4 flex-wrap">
         <input
@@ -185,14 +275,14 @@ export default function CategoryManager() {
             >
               <div className="flex flex-col gap-0.5 shrink-0">
                 <button
-                  onClick={() => moveUp(i)}
+                  onClick={() => reorder(i, -1)}
                   disabled={i === 0}
                   className="text-foreground/50 hover:text-primary disabled:opacity-20 text-xs leading-none"
                 >
                   ▲
                 </button>
                 <button
-                  onClick={() => moveDown(i)}
+                  onClick={() => reorder(i, 1)}
                   disabled={i >= categories.length - 1}
                   className="text-foreground/50 hover:text-primary disabled:opacity-20 text-xs leading-none"
                 >
@@ -216,7 +306,7 @@ export default function CategoryManager() {
                     title="Parent category"
                   >
                     <option value="">Top-level</option>
-                    {categories.filter((c) => c.id !== cat.id).map((c) => (
+                    {allowedParents.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>

@@ -5,6 +5,7 @@ import { CartProvider, useCart } from "@/context/cart-context";
 import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { SiteConfigProvider } from "@/context/site-config-context";
+import { CatalogProvider } from "@/context/catalog-context";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import CartToast from "@/components/cart/cart-toast";
 import type { ReactNode } from "react";
@@ -29,16 +30,18 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <SiteConfigProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <CartProvider>
-            {children}
-            <CartDrawerWrapper />
-            <CartToast />
-          </CartProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </SiteConfigProvider>
+    <CatalogProvider>
+      <SiteConfigProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              {children}
+              <CartDrawerWrapper />
+              <CartToast />
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SiteConfigProvider>
+    </CatalogProvider>
   );
 }

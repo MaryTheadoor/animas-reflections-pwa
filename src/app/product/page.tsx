@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,6 +20,7 @@ function ProductJsonLd({
   price,
   productId,
   sku,
+  availability,
 }: {
   name: string;
   description: string;
@@ -27,6 +28,7 @@ function ProductJsonLd({
   price: number;
   productId: string;
   sku: string;
+  availability: string;
 }) {
   const schema = {
     "@context": "https://schema.org",
@@ -39,7 +41,7 @@ function ProductJsonLd({
       "@type": "Offer",
       price: price.toFixed(2),
       priceCurrency: "USD",
-      availability: "https://schema.org/InStock",
+      availability,
       url: `https://www.animasreflections.com/product?id=${productId}`,
     },
     brand: {
@@ -50,7 +52,7 @@ function ProductJsonLd({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }}
     />
   );
 }
@@ -66,7 +68,7 @@ export default function ProductPage() {
 function ProductContent() {
   const searchParams = useSearchParams();
   const productId = searchParams.get("id");
-  const { products, loading } = useCatalog();
+  const { products, loading, error, refresh } = useCatalog();
   const { addItem } = useCart();
   const siteConfig = useSiteConfig();
 
@@ -76,7 +78,29 @@ function ProductContent() {
   const [descExpanded, setDescExpanded] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>();
 
-  const variant = product?.variants[selectedVariant];
+  // /product?id=A → /product?id=B keeps the same component instance, so all
+  // per-product selection state must reset when the product changes. Without
+  // this, a stale variant index renders a dead $0.00 button and a color or
+  // personalization text picked on product A leaks into product B's cart.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset per-product selections on product change
+    setSelectedVariant(0);
+    setSelectedColor(undefined);
+    setCustomText("");
+  }, [productId]);
+
+  const variants = product?.variants ?? [];
+  const colors = product?.colors ?? [];
+  const variant = variants[selectedVariant] ?? variants[0];
+  const pricedVariantPrices = variants.map((v) => v.price).filter((p) => Number.isFinite(p));
+  const minVariantPrice = pricedVariantPrices.length ? Math.min(...pricedVariantPrices) : 0;
+  // Schema.org availability mirrors the card's stock-badge logic.
+  const hasInventory = variants.some((v) => v.inventory !== undefined);
+  const totalStock = variants.reduce((sum, v) => sum + (v.inventory ?? 0), 0);
+  const availability =
+    hasInventory && totalStock === 0
+      ? "https://schema.org/OutOfStock"
+      : "https://schema.org/InStock";
 
   if (loading) {
     return (
@@ -87,6 +111,18 @@ function ProductContent() {
             <div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:130ms]" />
             <div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:260ms]" />
           </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout>
+        <div className="text-center py-20">
+          <h1 className="text-2xl font-bold font-display mb-4">Something went wrong</h1>
+          <p className="text-foreground mb-4">Couldn&apos;t load the catalog.</p>
+          <button onClick={refresh} className="px-6 py-2.5 rounded-xl btn-tactile btn-primary-tactile">Retry</button>
         </div>
       </PageLayout>
     );
@@ -107,10 +143,10 @@ function ProductContent() {
 
   const price = variant?.price ?? 0;
   // The displayed color falls back to the product's first color until the
-  // customer picks one; a stale pick from a previously viewed product is
-  // ignored (the product id check resets it automatically).
+  // customer picks one. Selections reset on product change (see the effect
+  // above), so a stale color can only survive for a single render.
   const effectiveColor =
-    product && selectedColor && product.colors.includes(selectedColor) ? selectedColor : product?.colors?.[0];
+    product && selectedColor && colors.includes(selectedColor) ? selectedColor : colors[0];
   // Dynamic image: when a color is selected, show its per-color image if one
   // is configured. Falls back to the front mockup, then the primary gallery image.
   const colorImage = effectiveColor
@@ -137,6 +173,7 @@ function ProductContent() {
           price={price}
           productId={product.id}
           sku={variant?.sku || product.id}
+          availability={availability}
         />
         {/* Breadcrumb structured data — mirrors the visible Shop / product trail below */}
         <BreadcrumbJsonLd
@@ -236,19 +273,19 @@ function ProductContent() {
             {/* Price */}
             <p className="text-3xl font-bold text-gold mb-6">
               ${price.toFixed(2)}
-              {product.variants.length > 1 && (
+              {variants.length > 1 && minVariantPrice > 0 && (
                 <span className="text-sm font-normal text-foreground ml-2">
-                  Starting at ${Math.min(...product.variants.map((v) => v.price)).toFixed(2)}
+                  Starting at ${minVariantPrice.toFixed(2)}
                 </span>
               )}
             </p>
 
             {/* Variant Picker */}
-            {product.variants.length > 1 && (
+            {variants.length > 1 && (
               <div className="mb-6">
                 <span className="text-xs font-medium text-primary block mb-2">Style / Size</span>
                 <div className="flex flex-wrap gap-2">
-                  {product.variants.map((v, i) => (
+                  {variants.map((v, i) => (
                     <button
                       key={v.id}
                       onClick={() => setSelectedVariant(i)}
@@ -267,11 +304,11 @@ function ProductContent() {
             )}
 
             {/* Color — shown when the product has garment colors configured */}
-            {product.colors.length > 0 && (
+            {colors.length > 0 && (
               <div className="mb-6">
                 <span className="text-xs font-medium text-primary block mb-2">Color</span>
                 <div className="flex flex-wrap gap-2">
-                  {product.colors.map((color) => {
+                  {colors.map((color) => {
                     const tint = product.colorTints?.[color];
                     const swatch = tint || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
                     const isActive = effectiveColor === color;

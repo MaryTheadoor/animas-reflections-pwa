@@ -55,15 +55,17 @@ export default function CheckoutPage() {
   const [customer, setCustomer] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ orderId: string; paymentId: string; paymentStatus: string } | null>(null);
+  const [result, setResult] = useState<{ orderId: string; paymentId: string; paymentStatus: string; mirrored?: boolean } | null>(null);
   const [cardReady, setCardReady] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const squareCardRef = useRef<unknown>(null);
   // Held for the lifetime of a single purchase intent. Retrying after an ambiguous
   // failure (e.g. a network timeout where the server may already have charged the
   // card) must reuse the SAME idempotency key so Square returns the cached result
-  // instead of charging again. Regenerated only when the order total changes.
-  const idempotencyRef = useRef<{ key: string; total: number } | null>(null);
+  // instead of charging again. Regenerated only when the cart contents change —
+  // keying on the total alone meant two different carts with the same sum shared
+  // a key.
+  const idempotencyRef = useRef<{ key: string; signature: string } | null>(null);
 
   const initSquare = useCallback(async () => {
     if (squareInitialized || !cardRef.current) return;
@@ -182,11 +184,13 @@ export default function CheckoutPage() {
 
       // Payment provider: Square
       const createOrder = httpsCallable(functions, "createSquareOrderAndPay");
-      // Reuse one idempotency key across retries of this same purchase (keyed by
-      // its total). The previous behavior generated a fresh key per attempt, which
-      // meant Square could not dedupe a retried request — risking a double charge.
-      if (!idempotencyRef.current || idempotencyRef.current.total !== total) {
-        idempotencyRef.current = { key: `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`, total };
+      const cartSignature = cart.items
+        .map((item) =>
+          `${item.id}:${item.quantity}:${item.base_price.toFixed(2)}:${item.addons.map((a) => resolveAddonPrice(a, item.base_price).toFixed(2)).join(",")}`
+        )
+        .join("|");
+      if (!idempotencyRef.current || idempotencyRef.current.signature !== cartSignature) {
+        idempotencyRef.current = { key: `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`, signature: cartSignature };
       }
       const orderResult = await createOrder({
         lineItems,
@@ -198,7 +202,7 @@ export default function CheckoutPage() {
         customer: buildCustomerPayload(),
       });
 
-      const data = orderResult.data as { success: boolean; orderId: string; paymentId: string; paymentStatus: string };
+      const data = orderResult.data as { success: boolean; orderId: string; paymentId: string; paymentStatus: string; mirrored?: boolean };
       if (data.success) {
         idempotencyRef.current = null; // purchase complete — next purchase gets a fresh key
         setResult(data);
@@ -218,7 +222,8 @@ export default function CheckoutPage() {
     if (result && !redirected.current) {
       redirected.current = true;
       clearCart();
-      router.replace(`/order-confirmation?orderId=${encodeURIComponent(result.orderId)}&status=${encodeURIComponent(result.paymentStatus)}`);
+      const mirrorParam = result.mirrored === false ? "&mirrored=0" : "";
+      router.replace(`/order-confirmation?orderId=${encodeURIComponent(result.orderId)}&status=${encodeURIComponent(result.paymentStatus)}${mirrorParam}`);
     }
   }, [result, clearCart, router]);
 

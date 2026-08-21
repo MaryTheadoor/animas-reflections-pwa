@@ -19,7 +19,9 @@ export default function JsonLd({ type, data }: JsonLdProps) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      // Escape "<" so admin-authored names/descriptions can't break out of the
+      // script block into live DOM (Next.js docs prescribe exactly this).
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }}
     />
   );
 }

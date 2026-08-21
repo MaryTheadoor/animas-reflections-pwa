@@ -8,14 +8,13 @@ import { resolveAddonPrice } from "@/types";
 
 // --- Inline the reducer for pure-function testing ---
 
-type CartState = { items: CartItem[]; shippingTier: "stickers" | "apparel" | "free" };
+type CartState = { items: CartItem[] };
 
 type CartAction =
   | { type: "ADD_ITEM"; item: CartItem }
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
   | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; modifierId?: string; addonPrice: number; addonLabel?: string; priceType?: AddonPriceType }
-  | { type: "SET_SHIPPING_TIER"; tier: "stickers" | "apparel" | "free" }
   | { type: "CLEAR_CART" };
 
 function cartReducer(state: CartState, action: CartAction): CartState {
@@ -53,8 +52,6 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
     case "CLEAR_CART":
       return { ...state, items: [] };
-    case "SET_SHIPPING_TIER":
-      return { ...state, shippingTier: action.tier };
     default:
       return state;
   }
@@ -74,7 +71,7 @@ const makeItem = (id: string, price: number, name = "Test Product"): CartItem =>
   addons: [],
 });
 
-const emptyCart: CartState = { items: [], shippingTier: "apparel" };
+const emptyCart: CartState = { items: [] };
 
 describe("cartReducer", () => {
   it("adds an item to empty cart", () => {
@@ -138,11 +135,6 @@ describe("cartReducer", () => {
     state = cartReducer(state, { type: "ADD_ITEM", item: makeItem("2", 45) });
     state = cartReducer(state, { type: "CLEAR_CART" });
     expect(state.items).toHaveLength(0);
-  });
-
-  it("sets shipping tier", () => {
-    const state = cartReducer(emptyCart, { type: "SET_SHIPPING_TIER", tier: "stickers" });
-    expect(state.shippingTier).toBe("stickers");
   });
 
   it("does not modify other items when toggling addon", () => {

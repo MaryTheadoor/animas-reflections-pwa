@@ -294,6 +294,7 @@ export const createSquareOrderAndPay = onCall(
       let mirrored = false;
       try {
         const customerEmail = data.customer?.email?.trim() || "";
+        const customerEmailLower = customerEmail.toLowerCase();
         const customerName = data.customer
           ? [data.customer.firstName, data.customer.lastName].filter(Boolean).join(" ").trim()
           : "";
@@ -317,6 +318,8 @@ export const createSquareOrderAndPay = onCall(
         const firestoreOrder = {
           squareOrderId: order.id as string,
           customerEmail,
+          // Normalized lookup key — email matching is case-insensitive end to end.
+          customerEmailLower,
           customerName,
           status: "PENDING",
           items: orderItems,
@@ -628,19 +631,25 @@ export const fetchCustomerOrders = onCall(
 
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(auth.uid).get();
-    const userEmail = (userDoc.data()?.email as string) || "";
+    const userEmail = ((userDoc.data()?.email as string) || "").toLowerCase().trim();
 
-    const ordersSnap = await db
-      .collection("orders")
-      .where("customerEmail", "==", userEmail)
-      .orderBy("createdAt", "desc")
-      .limit(50)
-      .get();
+    // Match on the normalized key (post-batch-1 orders) AND on the legacy
+    // exact-case field so older orders don't disappear. Merged by doc id and
+    // sorted client-side (where-only queries avoid extra composite indexes).
+    const [lowerSnap, legacySnap] = await Promise.all([
+      db.collection("orders").where("customerEmailLower", "==", userEmail).limit(50).get(),
+      db.collection("orders").where("customerEmail", "==", userEmail).limit(50).get(),
+    ]);
 
-    const orders: Array<Record<string, unknown>> = [];
-    ordersSnap.forEach((doc) => {
-      orders.push({ id: doc.id, ...doc.data() });
-    });
+    const byId = new Map<string, Record<string, unknown>>();
+    for (const snap of [lowerSnap, legacySnap]) {
+      snap.forEach((doc) => {
+        if (!byId.has(doc.id)) byId.set(doc.id, { id: doc.id, ...doc.data() });
+      });
+    }
+    const orders = [...byId.values()]
+      .sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")))
+      .slice(0, 50);
 
     return { orders };
   }

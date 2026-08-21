@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCatalog } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
@@ -19,14 +20,39 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "name-asc", label: "Name: A to Z" },
 ];
 
-export default function ShopPage() {
+function ShopContent() {
   const { products, categories, loading, error, refresh } = useCatalog();
-  const [activeCategory, setActiveCategory] = useState<string>("All");
-  const [activeType, setActiveType] = useState<string>("All");
-  const [search, setSearch] = useState("");
-  const [sortMode, setSortMode] = useState<SortMode>("default");
-  const [browseMode, setBrowseMode] = useState<BrowseMode>("design");
-  const [density, setDensity] = useState<Density>(3);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Filter state is initialized from the URL so deep links (e.g. a shared
+  // filtered view) restore, and synced back so filtered views are shareable.
+  const densityParam = Number(searchParams.get("density"));
+  const [activeCategory, setActiveCategory] = useState<string>(searchParams.get("category") ?? "All");
+  const [activeType, setActiveType] = useState<string>(searchParams.get("type") ?? "All");
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [sortMode, setSortMode] = useState<SortMode>((searchParams.get("sort") as SortMode) || "default");
+  const [browseMode, setBrowseMode] = useState<BrowseMode>(searchParams.get("mode") === "type" ? "type" : "design");
+  const [density, setDensity] = useState<Density>(
+    densityParam >= 2 && densityParam <= 5 ? (densityParam as Density) : 3,
+  );
+
+  // Keep the URL in sync with the filter state (debounced so typing doesn't
+  // spam history entries). The UI updates immediately from state.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (browseMode !== "design") params.set("mode", browseMode);
+      if (browseMode === "design" && activeCategory !== "All") params.set("category", activeCategory);
+      if (browseMode === "type" && activeType !== "All") params.set("type", activeType);
+      if (search.trim()) params.set("q", search.trim());
+      if (sortMode !== "default") params.set("sort", sortMode);
+      if (density !== 3) params.set("density", String(density));
+      const qs = params.toString();
+      router.replace(qs ? `/shop?${qs}` : "/shop", { scroll: false });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [browseMode, activeCategory, activeType, search, sortMode, density, router]);
 
   const filteredProducts = useMemo(() => {
     let result = products;
@@ -254,5 +280,23 @@ export default function ShopPage() {
         )}
       </main>
     </PageLayout>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={
+      <PageLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="flex gap-3">
+            <div className="w-3 h-3 bg-gold rounded-full animate-bounce" />
+            <div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:130ms]" />
+            <div className="w-3 h-3 bg-gold rounded-full animate-bounce [animation-delay:260ms]" />
+          </div>
+        </div>
+      </PageLayout>
+    }>
+      <ShopContent />
+    </Suspense>
   );
 }
