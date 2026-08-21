@@ -1377,12 +1377,12 @@ export default function ProductManager({ categories }: Props) {
             )}
           </div>
 
-          {/* Color Tints — pick the tint that best matches each garment color */}
+          {/* Color Images — assign gallery images to colors + swatch hex */}
           {form.colors.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <AdminTooltip content="Pick the tint that best matches each garment color. This tints the single base mockup in the customizer so customers see the product in their chosen color. Use a light/white base mockup for the most accurate result." dismissKey="color-tints">
-                  <label className="text-xs font-medium text-primary">Color Tints (mockup preview)</label>
+                <AdminTooltip content="Assign a gallery image to each color so the product page shows the right photo when a customer selects a color. The hex input sets the swatch dot color shown in the picker." dismissKey="color-images">
+                  <label className="text-xs font-medium text-primary">Color Images</label>
                 </AdminTooltip>
               </div>
               <div className="space-y-2">
@@ -1391,7 +1391,7 @@ export default function ProductManager({ categories }: Props) {
                   const perColor = form.mockupImagesByColor?.[color] ?? {};
                   return (
                     <div key={color} className="bg-warm-sand/30 rounded-lg px-3 py-2 space-y-2">
-                      {/* Tint row */}
+                      {/* Swatch hex + clear */}
                       <div className="flex items-center gap-3">
                         <span className="w-20 capitalize text-xs font-medium shrink-0">{color}</span>
                         <input
@@ -1399,7 +1399,7 @@ export default function ProductManager({ categories }: Props) {
                           value={tint || "#cccccc"}
                           onChange={(e) => setColorTint(color, e.target.value)}
                           className="w-9 h-9 rounded-lg border-2 border-primary/20 cursor-pointer hover:border-gold transition-colors shrink-0"
-                          title={`Tint for ${color}`}
+                          title={`Swatch color for ${color}`}
                         />
                         <input
                           type="text"
@@ -1408,82 +1408,13 @@ export default function ProductManager({ categories }: Props) {
                           placeholder="#000000"
                           className="w-24 px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs font-mono"
                         />
-                        {/* Live tint preview on the front mockup */}
-                        <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-warm-sand shrink-0 border border-primary/10 ml-auto">
-                          {form.mockupImages?.front ? (
-                            <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={form.mockupImages.front} alt={color} className="w-full h-full object-cover" />
-                              {tint && (
-                                <div className="absolute inset-0" style={{ backgroundColor: tint, mixBlendMode: "multiply" }} />
-                              )}
-                            </>
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[9px] text-foreground/70 text-center px-1">
-                              set front mockup
-                            </div>
-                          )}
-                        </div>
                         {tint && (
-                          <button onClick={() => clearColorTint(color)} className="text-red-400 hover:text-red-600 text-xs shrink-0" title="Clear tint">✕</button>
+                          <button onClick={() => clearColorTint(color)} className="text-red-400 hover:text-red-600 text-xs shrink-0" title="Clear swatch color">✕</button>
                         )}
                       </div>
-                      {/* Color thumbnail for product page display */}
-                      <div className="flex items-center gap-2">
-                        <span className="w-20 text-[10px] text-foreground/80 shrink-0">Thumbnail</span>
-                        <div className="flex items-center gap-2">
-                          {form.colorThumbnails?.[color] ? (
-                            <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={form.colorThumbnails[color]} alt={`${color} thumbnail`} className="w-10 h-10 rounded-lg object-cover border border-primary/10" />
-                              <button
-                                onClick={() => {
-                                  const thumbnails = { ...(form.colorThumbnails ?? {}) };
-                                  delete thumbnails[color];
-                                  updateField("colorThumbnails", Object.keys(thumbnails).length > 0 ? thumbnails : undefined);
-                                }}
-                                className="text-red-400 hover:text-red-600 text-xs"
-                                title="Remove thumbnail"
-                              >
-                                ✕
-                              </button>
-                            </>
-                          ) : (
-                            <label className="text-[10px] text-gold hover:text-gold-light cursor-pointer">
-                              Upload
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  setUploading(true);
-                                  setUploadError(null);
-                                  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-                                  const refId = form.id || crypto.randomUUID();
-                                  const path = `products/${refId}/color-thumb-${color}_${Date.now()}_${safeName}`;
-                                  const fileRef = ref(storage, path);
-                                  const task = uploadBytesResumable(fileRef, file);
-                                  task.on("state_changed",
-                                    () => {},
-                                    (err) => { setUploading(false); setUploadError(err.message || "Upload failed"); },
-                                    async () => {
-                                      const url = await getDownloadURL(task.snapshot.ref);
-                                      updateField("colorThumbnails", { ...(form.colorThumbnails ?? {}), [color]: url });
-                                      setUploading(false);
-                                    }
-                                  );
-                                }}
-                              />
-                            </label>
-                          )}
-                          <span className="text-[9px] text-foreground/70">Display thumbnail on product page</span>
-                        </div>
-                      </div>
-                      {/* Per-color photo row — real photos take precedence over the tint */}
+                      {/* Per-color photo row — assign gallery images to colors */}
                       <div className="flex items-start gap-2 flex-wrap">
-                        <span className="w-20 text-[10px] text-foreground/80 shrink-0 pt-0.5">Photos</span>
+                        <span className="w-20 text-[10px] text-foreground/80 shrink-0 pt-0.5">Images</span>
                         {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => {
                           const photo = perColor[view];
                           return (
@@ -1531,7 +1462,7 @@ export default function ProductManager({ categories }: Props) {
                           );
                         })}
                         <p className="text-[9px] text-foreground/70 w-full">
-                          A real photo replaces the tint in the customizer. Upload photos in the Image Manager, then click a thumbnail to assign it.
+                          Click a thumbnail to assign it to this color. The front image is shown on the product page when this color is selected. Upload photos in the Image Manager first.
                         </p>
                       </div>
                     </div>

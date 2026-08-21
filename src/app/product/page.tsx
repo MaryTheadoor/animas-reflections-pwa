@@ -72,7 +72,6 @@ function ProductContent() {
   const [customText, setCustomText] = useState("");
   const [descExpanded, setDescExpanded] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>();
-  const [colorDisplayMode, setColorDisplayMode] = useState<"swatch" | "thumbnail">("swatch");
 
   const variant = product?.variants[selectedVariant];
 
@@ -104,12 +103,17 @@ function ProductContent() {
   }
 
   const price = variant?.price ?? 0;
-  const imageUrl = getProductImageUrl(product);
   // The displayed color falls back to the product's first color until the
   // customer picks one; a stale pick from a previously viewed product is
   // ignored (the product id check resets it automatically).
   const effectiveColor =
     product && selectedColor && product.colors.includes(selectedColor) ? selectedColor : product?.colors?.[0];
+  // Dynamic image: when a color is selected, show its per-color image if one
+  // is configured. Falls back to the product's primary gallery image.
+  const colorImage = effectiveColor
+    ? product?.mockupImagesByColor?.[effectiveColor]?.front ?? product?.colorThumbnails?.[effectiveColor]
+    : undefined;
+  const imageUrl = colorImage ?? getProductImageUrl(product);
   // Gated by modifiers (Phase 3) or productAddons so the Name/Number field only
   // shows when a personalization/text input is enabled per product (undefined = site defaults).
   const showPersonalization =
@@ -262,40 +266,12 @@ function ProductContent() {
             {/* Color — shown when the product has garment colors configured */}
             {product.colors.length > 0 && (
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-primary">Color</span>
-                  {product.colorThumbnails && Object.keys(product.colorThumbnails).length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setColorDisplayMode("swatch")}
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                          colorDisplayMode === "swatch"
-                            ? "bg-primary text-white"
-                            : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
-                        }`}
-                      >
-                        Swatch
-                      </button>
-                      <button
-                        onClick={() => setColorDisplayMode("thumbnail")}
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                          colorDisplayMode === "thumbnail"
-                            ? "bg-primary text-white"
-                            : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
-                        }`}
-                      >
-                        Image
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <span className="text-xs font-medium text-primary block mb-2">Color</span>
                 <div className="flex flex-wrap gap-2">
                   {product.colors.map((color) => {
                     const tint = product.colorTints?.[color];
-                    const thumbnail = product.colorThumbnails?.[color];
                     const swatch = tint || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
                     const isActive = effectiveColor === color;
-                    const showThumbnail = colorDisplayMode === "thumbnail" && thumbnail;
                     return (
                       <button
                         key={color}
@@ -306,12 +282,7 @@ function ProductContent() {
                             : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                         }`}
                       >
-                        {showThumbnail ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={thumbnail} alt={color} className="w-6 h-6 rounded-full object-cover border border-black/10 shrink-0" />
-                        ) : (
-                          <span className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0" style={{ backgroundColor: swatch }} />
-                        )}
+                        <span className="w-3 h-3 rounded-full border border-black/10 inline-block shrink-0" style={{ backgroundColor: swatch }} />
                         {color}
                       </button>
                     );
