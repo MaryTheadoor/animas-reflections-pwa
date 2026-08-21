@@ -1005,6 +1005,51 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 21 — 2026-08-21 | Color-image rework + full product data-linkage audit
+
+### Context Restored From
+- Cindy feedback: product page wasn't showing the matching image when selecting colors; the tint overlay on admin thumbnails was unwanted complexity
+- Requested: tag gallery images to colors, show the matching image when a color is selected
+
+### Actions Taken
+1. **Color-image rework:**
+   - Product page: main image now responds to color selection — `mockupImagesByColor[color].front` → `colorThumbnails[color]` → `mockupImages.front` → `images[0]`
+   - Admin: removed the tint overlay preview (multiply blend) and the redundant separate `colorThumbnails` upload; renamed "Color Tints" → "Color Images"; per-color image picker now drives the product page directly
+2. **Full product data-linkage audit** (admin write path × customer read path):
+   - **Dead code removed:** Square fallback in `useCatalog` (called the deleted `fetchSquareCatalog`); `baseProductId` type field (pipeline-only, pipeline deleted in Phase 1)
+   - **Fields wired to UI:** `seoTitle`/`seoDescription` (new admin inputs; drive h1 + Product JSON-LD), `weightOz` (new admin input)
+   - **Broken UI fixed:** `variant.customFields` "+Attrs" added empty entries with no way to type key/value — now proper key/value inputs with remove
+   - **Consistency:** description stripping unified on `stripTags` (product page, JSON-LD, product-detail modal); product page image priority aligned with the customizer (`mockupImages.front` honored)
+3. **Verification:** lint 0 (live files), tests 89/89, build 22 routes, deployed to hosting
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/app/product/page.tsx | color-specific image; seoTitle/seoDescription in h1 + JSON-LD; stripTags; image priority chain |
+| src/components/admin/product-manager.tsx | removed tint overlay + colorThumbnails upload; renamed section; SEO/weight inputs; variant customFields key/value editor |
+| src/components/product/product-detail.tsx | stripTags for description |
+| src/hooks/useCatalog.ts | removed dead Square fallback; clean empty-catalog handling |
+| src/types/index.ts | removed dead baseProductId |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `6ccdc16` | fix: product page shows color-specific image; remove tint overlay from admin |
+| `acf6aab` | fix: full product data-linkage audit — wire all fields to UI, remove dead code |
+
+### Current State at Session End
+- Lint 0 | Tests 89/89 (9 suites) | Build 22 routes
+- `development` pushed to origin; deployed live (hosting)
+- USE_SYNTHETIC = false
+
+### Pending / Next Session
+- [ ] Split product-manager.tsx into smaller components (deferred refactor)
+- [ ] Brand collection / taxonomy (needs Cindy's answer on "Biscuit Hockey")
+- [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
+- [ ] Carry-over: G2 live checkout test, G15 Lighthouse, G20 DNS cutover, G21 analytics
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 
