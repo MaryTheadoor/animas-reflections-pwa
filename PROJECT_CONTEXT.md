@@ -167,6 +167,7 @@
 26. **Branch state:** `master` is 17 commits behind `development` (as of 2026-08-21) — merge only when the user explicitly approves (see §11.6).
 27. **WebBridge verification:** the checkout page requires a cart item to render customer fields — cart state is in React memory only, lost on navigation. To verify checkout, add a product to cart first in the same tab.
 28. **Session-log discipline:** DEVLOG.md is the session record (Sessions 1–21). PROJECT_CONTEXT.md is the recovery blueprint — update both at session end, commit + push, and run `npm run backup:snapshot` before closing a session.
+29. **Batch 1 security (2026-08-21):** `requireAdmin()` guards all 5 admin callables (functions/src/index.ts); `createSquareOrderAndPay` re-derives ALL prices/add-ons/shipping from Firestore via `functions/src/pricing.ts` and rejects orders whose client `expectedTotal` diverges >2¢ — client amounts are never charged. Checkout must send `product_id`/`addon_id`/`priceType`/`expectedTotal`. `config/admin` is private-read in firestore.rules; storage.rules restricts product/design writes to admins and uploads reads to owner/admin. `saveAdminEmails` normalizes emails to lowercase. Deploy with `firebase deploy --only functions,firestore,storage` after any changes to these.
 
 ---
 
@@ -211,6 +212,7 @@ Full plan: `docs/PRODUCT_MODIFIER_AUDIT.md`. Session log: `docs/DEVLOG.md` Sessi
 - **Phase 6 — Admin polish** (print zone editor; visual per-color photo picker; category hierarchy with `parentId`)
 - **Color-image rework (2026-08-21)** — product page shows `mockupImagesByColor[color].front` when a color is selected; admin tint overlay preview removed
 - **Data-linkage audit (2026-08-21)** — seoTitle/seoDescription/weightOz wired to admin UI; baseProductId removed; variant customFields key/value editor fixed; description stripping unified on stripTags; dead Square fallback removed from useCatalog
+- **Security batch 1 (2026-08-21)** — server-side price/add-on/shipping derivation in createSquareOrderAndPay (client totals verified, never trusted); requireAdmin on all admin callables; config/admin + storage rules hardened; add-ons now actually charged and mirrored with real subtotal
 
 **Open questions for Cindy:** "Biscuit Hockey" — brand or category? (blocks brand/taxonomy work)
 
@@ -218,13 +220,13 @@ Full plan: `docs/PRODUCT_MODIFIER_AUDIT.md`. Session log: `docs/DEVLOG.md` Sessi
 
 ## 11. NEXT INSTANCE — START HERE
 
-1. Read `docs/DEVLOG.md` for last session state + pending items (latest: Session 21, 2026-08-21)
+1. Read `docs/DEVLOG.md` for last session state + pending items (latest: Session 23, 2026-08-21)
 2. Read this file §10 "Catalog Architecture Overhaul" for the architecture summary
 3. Check `USE_SYNTHETIC` flag in `src/hooks/useCatalog.ts` (false = real Firestore)
 4. Run `npm run dev` to test locally
 5. Run `npm run build && firebase deploy` to deploy (retry once if the functions-analysis step times out)
 6. **Branching:** work on `development`; merge to `master` only when verified + user-approved (master is 17 commits behind as of 2026-08-21)
-7. Every deploy MUST pass: lint (0 errors), build (22 routes), tests (89/89), visual check
+7. Every deploy MUST pass: lint (0 errors), build (22 routes), tests (112/112), visual check
 8. Do NOT modify nav-dock position — it's inside a fixed wrapper
 9. Do NOT add bottom navigation bars — only top dock
 10. Use backup framework: `backup:file` before edits, `backup:snapshot` at session end (backup-commit.ps1 is unreliable — use plain git)

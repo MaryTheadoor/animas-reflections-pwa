@@ -1078,6 +1078,58 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 23 — 2026-08-21 17:15 EDT | Security batch 1: server-side pricing + admin auth
+
+### Context Restored From
+- Consolidated 3-area code analysis (admin product management, public display, checkout) — 40+ findings in 4 batches
+- Batch plan: B1 security → B2 customer-facing bugs → B3 admin UX/data → B4 efficiency
+
+### Actions Taken
+1. **C1 — Admin callables authenticated** (`functions/src/index.ts`): new `requireAdmin()` helper (config/admin doc + @animasreflections.com domain + `BOOTSTRAP_ADMIN_EMAIL` param) applied to saveSiteConfig, saveAdminEmails, fetchRecentOrders, createSquareProduct, updateOrderTracking (was logged-in-only). `saveAdminEmails` normalizes emails to lowercase so every admin check compares the same shape.
+2. **C1 — firestore.rules**: split `config/{document=**}` into `config/site` (public read), `config/admin` (admin-only read+write), catch-all; `isAdmin()` now case-insensitive with legacy-doc tolerance.
+3. **C2 — Server-side price derivation**: new pure module `functions/src/pricing.ts` (`deriveOrder`, integer-cents math). `createSquareOrderAndPay` re-derives every price, add-on, and the shipping amount from Firestore (products + config/site), compares the client's `expectedTotal` (±2¢, reject on divergence), and charges the server-computed amount. Client-sent prices/shipping are never trusted.
+4. **C3 — Add-ons actually charged**: the client's `addons` array is now accepted; each add-on becomes an ad-hoc Square line item at server-resolved cents (modifiers → legacy productAddons → site standardAddons). The Firestore mirror now includes add-on line items and a real `subtotal` (was hardcoded 0).
+5. **C3 client**: checkout sends `product_id`, `addon_id`, `priceType`, `expectedTotal`. Product page attaches the personalization add-on to the cart line when a name/number is entered (was free — revenue leak).
+6. **C4 — storage.rules**: `products/**` + `designs/**` writes admin-only (was any authenticated user); `uploads/{uid}/**` reads restricted to owner + admin.
+7. **M5 folded in**: backend tolerates customer payloads without address fields instead of throwing on every submission.
+8. **Tests**: +23 → 112/112 (10 suites). New `server-pricing.test.ts` covers derivation, tamper rejection, legacy/standard add-ons, and shipping tiers; line-items tests updated to the new payload shape.
+
+### Decisions Made
+- Catalog-linked variants (squareVariationId) keep Square's catalog path; drift vs Firestore prices is logged, not blocked (existing behavior — tracked as M10).
+- Zero-priced variants accept the client's $20 fallback (mirrors the customizer's BASE_PRICE_FALLBACK); nothing is gained by tampering.
+- All validation failures throw `HttpsError` so the client gets proper codes.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| functions/src/pricing.ts | NEW — pure deriveOrder (catalog-derived prices/add-ons/shipping, cents math) |
+| functions/src/index.ts | requireAdmin on 5 admin callables; createSquareOrderAndPay rewritten around deriveOrder; real subtotal + add-on items in mirror; email normalization |
+| firestore.rules | config/admin private read; case-insensitive isAdmin |
+| storage.rules | admin-only product/design writes; owner-scoped uploads reads |
+| src/app/checkout/page.tsx | payload: product_id, addon_id, priceType, expectedTotal |
+| src/app/product/page.tsx | personalization add-on attached to cart line when text entered |
+| src/app/checkout/__tests__/line-items.test.ts | updated to new payload shape |
+| src/app/checkout/__tests__/server-pricing.test.ts | NEW — 23 derivation/tamper/shipping tests |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `8acfb93` | feat: batch 1 security — server-side pricing derivation, admin auth guards, hardened rules |
+
+### Current State at Session End
+- Lint 0 errors (live files) | Tests 112/112 (10 suites) | Functions tsc clean | Build 22 routes
+- Deployed: NOT YET — functions + rules changes pending deploy
+- Branch: `development` @ 8acfb93
+- USE_SYNTHETIC = false
+
+### Pending / Next Session
+- [ ] Deploy batch 1 (`firebase deploy --only functions,firestore,storage`) + G2 live checkout smoke test
+- [ ] Batch 2: product-page state reset on productId change; field-access guards (product-card/product page); customizer per-add cart UUID; email normalization (customerEmailLower); mirror-failure surfacing; JSON-LD `<` escaping + real availability; shop/search filters in URL; sanitizeHTML hardening; AND→OR color filter; shared CatalogProvider
+- [ ] Batch 3: category reorder stripUndefined fix; admin tab unmount data loss; 3+ dimension variant matrix; dead Square sync buttons; duplicate-product Storage sharing; category cycles/orphans
+- [ ] Batch 4: catalog caching, image optimization, product-manager component split, full-collection re-read cleanup
+
+---
+
 ```
 ## Session N — YYYY-MM-DD | HH:MM MST
 
