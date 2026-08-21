@@ -1115,18 +1115,31 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 | Hash | Message |
 |------|---------|
 | `8acfb93` | feat: batch 1 security — server-side pricing derivation, admin auth guards, hardened rules |
+| `669a7c1` | feat: batches 2-4 — customer-facing fixes, admin data safety, efficiency |
+
+### Batches 2–4 (continued in the same session)
+9. **B2 display path:** product page resets selection state on `productId` change (dead $0.00 button + color/text leak); `variants`/`colors` access guarded on the product page and cards ($NaN guard); customizer generates a fresh cart-item UUID per add; JSON-LD escapes `<` everywhere and derives `availability` from variant inventory; search color filter is OR not AND; `/search?q=` seeds the search form.
+10. **B2 filters in URL:** shop/search now read initial filter state from the query string and write it back (debounced) — filtered views are shareable and the `WebSite` SearchAction target finally works.
+11. **B2 sanitizer:** `sanitizeHTML` uses DOMPurify in the browser (real sanitization), with a hardened regex fallback for prerender/tests. New dependency: `dompurify@^3.4.14`.
+12. **B2 catalog provider:** new `src/context/catalog-context.tsx` (mounted in client-layout) — one Firestore read per session, shared loading/error/refresh; `useCatalog` re-exports from it with the same signature. Error + retry states wired on search, product, and home featured sections.
+13. **B2 orders:** `customerEmailLower` stored on new orders; `fetchCustomerOrders` matches the normalized key plus a legacy exact-case query (merged, sorted client-side); orders read rule accepts the lowercase match; checkout surfaces mirror-write failures on the confirmation page; idempotency key now fingerprints cart contents (was total-only); empty-cart shipping is 0.
+14. **B3 category manager:** reorder/save wrapped in `stripUndefined` (top-level categories no longer crash); error banner; unique slugs; parent selectors exclude the whole descendant subtree (no cycles); delete blocked while subcategories or products remain.
+15. **B3 admin dashboard:** product/category editors stay mounted (hidden) across tab switches — no more silent loss of in-progress edits; `admin-categories-changed` event keeps all three category consumers in sync; admin email add/remove awaits the server and alerts on failure.
+16. **B3 product manager:** dead "Sync from Square"/"Sync Inventory" controls removed (backing functions deleted in Phase 1); delete/bulk-delete skip Storage files still referenced by another product (duplicated products share files safely); bulk delete continues on error with a summary.
+17. **B3 variant matrix:** extra dimensions (3+) get value dropdowns — the 2-D grid shows one combination at a time instead of baking empty strings into the variant options map.
+18. **B4:** admin Orders tab bounds the mirror read (orderBy createdAt desc, limit 200); removed dead `shippingTier` reducer state and the unused `product-detail.tsx`.
 
 ### Current State at Session End
-- Lint 0 errors (live files) | Tests 112/112 (10 suites) | Functions tsc clean | Build 22 routes
-- Deployed: NOT YET — functions + rules changes pending deploy
-- Branch: `development` @ 8acfb93
+- Lint 0 errors (live files) | Tests 113/113 (10 suites) | Functions tsc clean | Build 22 routes
+- Deployed live: hosting + all 14 functions + firestore rules (batches 1–4)
+- Branch: `development` @ 669a7c1
 - USE_SYNTHETIC = false
+- New client dependency: dompurify (sanitizer)
 
 ### Pending / Next Session
-- [ ] Deploy batch 1 (`firebase deploy --only functions,firestore,storage`) + G2 live checkout smoke test
-- [ ] Batch 2: product-page state reset on productId change; field-access guards (product-card/product page); customizer per-add cart UUID; email normalization (customerEmailLower); mirror-failure surfacing; JSON-LD `<` escaping + real availability; shop/search filters in URL; sanitizeHTML hardening; AND→OR color filter; shared CatalogProvider
-- [ ] Batch 3: category reorder stripUndefined fix; admin tab unmount data loss; 3+ dimension variant matrix; dead Square sync buttons; duplicate-product Storage sharing; category cycles/orphans
-- [ ] Batch 4: catalog caching, image optimization, product-manager component split, full-collection re-read cleanup
+- [ ] G2 live checkout smoke test (add-ons as line items, total matches UI)
+- [ ] Backlog: Square webhooks/refunds (M11), tax handling, promo codes, guest→account `customerUid` linking, image resizing pipeline, product-manager component split, admin full-collection re-reads, `createSquareProduct` mapping-gap guard, legacy `colorThumbnails` admin UI, "Heather Grey" default tint
+- [ ] Ask Cindy: "Biscuit Hockey" — brand or category?
 
 ---
 

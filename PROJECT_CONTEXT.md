@@ -168,6 +168,7 @@
 27. **WebBridge verification:** the checkout page requires a cart item to render customer fields — cart state is in React memory only, lost on navigation. To verify checkout, add a product to cart first in the same tab.
 28. **Session-log discipline:** DEVLOG.md is the session record (Sessions 1–21). PROJECT_CONTEXT.md is the recovery blueprint — update both at session end, commit + push, and run `npm run backup:snapshot` before closing a session.
 29. **Batch 1 security (2026-08-21):** `requireAdmin()` guards all 5 admin callables (functions/src/index.ts); `createSquareOrderAndPay` re-derives ALL prices/add-ons/shipping from Firestore via `functions/src/pricing.ts` and rejects orders whose client `expectedTotal` diverges >2¢ — client amounts are never charged. Checkout must send `product_id`/`addon_id`/`priceType`/`expectedTotal`. `config/admin` is private-read in firestore.rules; storage.rules restricts product/design writes to admins and uploads reads to owner/admin. `saveAdminEmails` normalizes emails to lowercase. Deploy with `firebase deploy --only functions,firestore,storage` after any changes to these.
+30. **Batches 2–4 conventions (2026-08-21):** the catalog loads ONCE per session via `CatalogProvider` (`src/context/catalog-context.tsx`) — `useCatalog` is a context hook now; don't add independent Firestore catalog reads. Shop/search filter state lives in the URL (`?category=&type=&q=&sort=&density=`, `mode=` on shop) — any new filter state must read/write the query string. `sanitizeHTML` = DOMPurify in the browser, regex fallback elsewhere; never bypass it. New orders store `customerEmailLower` — order lookups must match on it (legacy exact-case query is the fallback). Category delete is blocked while subcategories/products remain; category parent selectors must exclude the whole descendant subtree. Admin editors stay MOUNTED across tab switches (hidden via CSS) — never conditionally unmount them. Product deletes must skip Storage files still referenced by another product (`deleteProductStorage`). Deploy order after checkout/function changes: hosting BEFORE functions.
 
 ---
 
@@ -213,6 +214,7 @@ Full plan: `docs/PRODUCT_MODIFIER_AUDIT.md`. Session log: `docs/DEVLOG.md` Sessi
 - **Color-image rework (2026-08-21)** — product page shows `mockupImagesByColor[color].front` when a color is selected; admin tint overlay preview removed
 - **Data-linkage audit (2026-08-21)** — seoTitle/seoDescription/weightOz wired to admin UI; baseProductId removed; variant customFields key/value editor fixed; description stripping unified on stripTags; dead Square fallback removed from useCatalog
 - **Security batch 1 (2026-08-21)** — server-side price/add-on/shipping derivation in createSquareOrderAndPay (client totals verified, never trusted); requireAdmin on all admin callables; config/admin + storage rules hardened; add-ons now actually charged and mirrored with real subtotal
+- **Batches 2–4 (2026-08-21)** — URL-synced shop/search filters; CatalogProvider single-read; DOMPurify sanitization; order email normalization; admin data-safety fixes (keep-mounted editors, category cycle/orphan guards, variant matrix 3+ dims, safe duplicate deletes); bounded admin Orders read
 
 **Open questions for Cindy:** "Biscuit Hockey" — brand or category? (blocks brand/taxonomy work)
 
@@ -226,7 +228,7 @@ Full plan: `docs/PRODUCT_MODIFIER_AUDIT.md`. Session log: `docs/DEVLOG.md` Sessi
 4. Run `npm run dev` to test locally
 5. Run `npm run build && firebase deploy` to deploy (retry once if the functions-analysis step times out)
 6. **Branching:** work on `development`; merge to `master` only when verified + user-approved (master is 17 commits behind as of 2026-08-21)
-7. Every deploy MUST pass: lint (0 errors), build (22 routes), tests (112/112), visual check
+7. Every deploy MUST pass: lint (0 errors), build (22 routes), tests (113/113), visual check
 8. Do NOT modify nav-dock position — it's inside a fixed wrapper
 9. Do NOT add bottom navigation bars — only top dock
 10. Use backup framework: `backup:file` before edits, `backup:snapshot` at session end (backup-commit.ps1 is unreliable — use plain git)
