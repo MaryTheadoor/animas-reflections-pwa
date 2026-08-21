@@ -3,6 +3,7 @@
  * Verifies cart items map correctly to the payload sent to createSquareOrderAndPay.
  */
 import { describe, it, expect } from "@jest/globals";
+import { resolveAddonPrice } from "@/types";
 import type { CartItem, CartAddon } from "@/types";
 
 function buildLineItem(item: CartItem) {
@@ -17,17 +18,21 @@ function buildLineItem(item: CartItem) {
   ].filter(Boolean).join(" | ");
 
   const addons = item.addons.map((a) => ({
+    addon_id: a.addon_id,
     squareModifierId: a.squareModifierId,
     label: a.label,
-    price: a.price,
+    price: resolveAddonPrice(a, item.base_price),
+    priceType: a.priceType ?? "fixed",
   }));
 
   return {
+    product_id: item.product_id,
     variant_id: item.variant_id,
     squareVariationId: item.squareVariationId,
     name: `${item.name} — ${item.variant_name}`,
     price: item.base_price,
     quantity: item.quantity,
+    designUrl: item.design_url,
     note: noteParts,
     addons,
   };
@@ -53,6 +58,7 @@ function makeBaseItem(overrides: Partial<CartItem> = {}): CartItem {
 describe("buildLineItem", () => {
   it("maps basic item fields correctly", () => {
     const result = buildLineItem(makeBaseItem());
+    expect(result.product_id).toBe("prod_1");
     expect(result.variant_id).toBe("var_1");
     expect(result.squareVariationId).toBe("sq_var_1");
     expect(result.name).toBe("Test Tee — Large / Black");
@@ -109,14 +115,27 @@ describe("buildLineItem", () => {
 
   it("includes addons in note and in addons array", () => {
     const addons: CartAddon[] = [
-      { type: "back_print", label: "Back Print", price: 5, squareModifierId: "mod_1" },
-      { type: "sleeve_print", label: "Sleeve Print", price: 5 },
+      { type: "back_print", label: "Back Print", price: 5, addon_id: "back_print", squareModifierId: "mod_1" },
+      { type: "sleeve_print", label: "Sleeve Print", price: 5, addon_id: "sleeve_print" },
     ];
     const result = buildLineItem(makeBaseItem({ addons }));
     expect(result.note).toContain("Add-ons: Back Print, Sleeve Print");
     expect(result.addons).toHaveLength(2);
     expect(result.addons[0].squareModifierId).toBe("mod_1");
+    expect(result.addons[0].addon_id).toBe("back_print");
+    expect(result.addons[0].priceType).toBe("fixed");
+    expect(result.addons[0].price).toBe(5);
     expect(result.addons[1].squareModifierId).toBeUndefined();
+  });
+
+  it("resolves percentage add-ons against the base price and keeps their id", () => {
+    const addons: CartAddon[] = [
+      { type: "personalization", label: "Name/Number", price: 10, priceType: "percentage", addon_id: "name_number" },
+    ];
+    const result = buildLineItem(makeBaseItem({ addons }));
+    expect(result.addons[0].price).toBeCloseTo(2.5, 5); // 10% of $25
+    expect(result.addons[0].priceType).toBe("percentage");
+    expect(result.addons[0].addon_id).toBe("name_number");
   });
 
   it("combines all note parts with pipe separators", () => {

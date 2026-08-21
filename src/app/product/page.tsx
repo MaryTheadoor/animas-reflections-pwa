@@ -6,8 +6,10 @@ import Image from "next/image";
 import Link from "next/link";
 import PlaceholderImage from "@/components/ui/placeholder-image";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { sanitizeHTML, stripTags } from "@/lib/html-utils";
 import { useCart } from "@/context/cart-context";
+import type { CartAddon } from "@/types";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
 
@@ -66,6 +68,7 @@ function ProductContent() {
   const productId = searchParams.get("id");
   const { products, loading } = useCatalog();
   const { addItem } = useCart();
+  const siteConfig = useSiteConfig();
 
   const product = productId ? products.find((p) => p.id === productId) ?? null : null;
   const [selectedVariant, setSelectedVariant] = useState(0);
@@ -326,6 +329,40 @@ function ProductContent() {
                     textModifier && showPersonalization && customText
                       ? [{ modifierId: textModifier.id, modifierName: textModifier.name, value: customText }]
                       : undefined;
+                  // The personalization add-on price must ride on the cart line —
+                  // the text alone is fulfillment data. Resolve the definition the
+                  // same way the customizer does: product modifier → legacy
+                  // productAddons → site-standard add-on.
+                  const addons: CartAddon[] = [];
+                  if (customText.trim()) {
+                    const standardAddons = siteConfig.addon_defaults?.standardAddons ?? [];
+                    const legacy = product.productAddons?.find((a) => a.id === "personalization");
+                    const std = standardAddons.find((a) => a.id === "personalization");
+                    if (textModifier) {
+                      addons.push({
+                        type: "personalization",
+                        label: textModifier.name,
+                        price: textModifier.price,
+                        priceType: textModifier.priceType,
+                        addon_id: textModifier.id,
+                      });
+                    } else if (legacy) {
+                      addons.push({
+                        type: "personalization",
+                        label: legacy.name,
+                        price: legacy.price,
+                        addon_id: legacy.id,
+                      });
+                    } else if (std) {
+                      addons.push({
+                        type: "personalization",
+                        label: std.name,
+                        price: std.price,
+                        priceType: std.priceType,
+                        addon_id: std.id,
+                      });
+                    }
+                  }
                   addItem({
                     id: crypto.randomUUID(),
                     product_id: product.id,
@@ -340,7 +377,7 @@ function ProductContent() {
                     design_text: showPersonalization ? (customText || undefined) : undefined,
                     selected_color: effectiveColor,
                     shipping_rate: product.shippingRate,
-                    addons: [],
+                    addons,
                     selectedOptions,
                     modifierInputs,
                   });

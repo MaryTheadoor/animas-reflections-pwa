@@ -11,10 +11,24 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/config/admin)
-        && request.auth.token.email in get(/databases/$(database)/documents/config/admin).data.emails;
+        && (request.auth.token.email.lower() in get(/databases/$(database)/documents/config/admin).data.emails
+            // Tolerate legacy docs whose emails were stored un-normalized.
+            || request.auth.token.email in get(/databases/$(database)/documents/config/admin).data.emails);
     }
 
     // Site config - public read, admin-only write
+    match /config/site {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin email list - admin-only (it grants admin powers; keep it private)
+    match /config/admin {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Any other config doc - public read, admin-only write
     match /config/{document=**} {
       allow read: if true;
       allow write: if isAdmin();

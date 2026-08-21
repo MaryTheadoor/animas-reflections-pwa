@@ -3,23 +3,40 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Design catalog assets - public read, authenticated write
-    match /designs/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // User-uploaded custom logos for orders - write allowed for authenticated
-    match /uploads/{userId}/{allPaths=**} {
+    // Mirrors the Firestore isAdmin() check: an email present in config/admin.
+    // Both the normalized (lowercase) and the stored form are accepted so
+    // legacy config docs keep working until re-saved via the Admin UI.
+    function isAdmin() {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/config/admin)
+        && firestore.get(/databases/(default)/documents/config/admin).data.emails.hasAny([
+          request.auth.token.email.lower(),
+          request.auth.token.email
+        ]);
+    }
+
+    // Design catalog assets - public read, admin-only write
+    match /designs/{allPaths=**} {
       allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow write: if isAdmin();
+    }
+
+    // Customer-uploaded designs for orders. Only the uploader may create or
+    // view them; admins may view them for fulfillment.
+    match /uploads/{userId}/{allPaths=**} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow create: if isSignedIn() && request.auth.uid == userId;
       allow delete: if false;
     }
 
-    // Product images - public read, authenticated write (admin-only in practice via UI auth guard)
+    // Product images - public read, admin-only write
     match /products/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     // Deny everything else

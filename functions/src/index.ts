@@ -1,9 +1,20 @@
 import * as logger from "firebase-functions/logger";
-import { onCall, onRequest } from "firebase-functions/v2/https";
+import {
+  HttpsError,
+  onCall,
+  onRequest,
+  type CallableRequest,
+} from "firebase-functions/v2/https";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { SquareClient, SquareEnvironment, SquareError } from "square";
 import { defineString } from "firebase-functions/params";
+import {
+  deriveOrder,
+  type ClientLineItem,
+  type PricingProduct,
+  type SitePricingConfig,
+} from "./pricing.js";
 
 initializeApp();
 
@@ -21,40 +32,64 @@ function getSquareClient(): SquareClient {
   });
 }
 
-// ─── Create Square Order & Process Payment ─────────────────────────
+// ─── Admin Authorization ──────────────────────────────────────────
+// The client-side RequireAdmin gate only hides UI. Every admin Cloud Function
+// MUST call requireAdmin() — otherwise any signed-in user (or anonymous caller)
+// could invoke it directly. Mirrors the client's three-tier admin detection:
+// config/admin doc, @animasreflections.com domain, and a bootstrap email.
 
-interface OrderLineItem {
-  /** Managed variant ID (provider-agnostic) */
-  variant_id: string;
-  /** Square variation ID — used for Square checkout when available */
-  squareVariationId?: string;
-  /** Ad-hoc: item name for non-catalog orders */
-  name?: string;
-  /** Ad-hoc: item price in dollars for non-catalog orders */
-  price?: number;
-  quantity?: number;
-  modifiers?: { squareModifierId?: string; catalogObjectId?: string }[];
-  note?: string;
-  /** Customer-uploaded design image URL (Firebase Storage). Needed by the admin
-   *  for printing — must be persisted in the Firestore order. */
-  designUrl?: string;
+const bootstrapAdminEmail = defineString("BOOTSTRAP_ADMIN_EMAIL", {
+  default: "mary.theadoor.doctor@gmail.com",
+});
+
+async function getAdminEmails(): Promise<string[]> {
+  const db = getFirestore();
+  const snap = await db.collection("config").doc("admin").get();
+  const raw = snap.data()?.emails;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((e): e is string => typeof e === "string")
+    .map((e) => e.toLowerCase().trim())
+    .filter(Boolean);
 }
 
+async function requireAdmin(request: CallableRequest): Promise<void> {
+  const email = request.auth?.token?.email;
+  if (!request.auth?.uid || !email) {
+    throw new HttpsError("permission-denied", "Authentication required");
+  }
+  const lowered = email.toLowerCase().trim();
+  const allowed =
+    lowered === bootstrapAdminEmail.value().toLowerCase().trim() ||
+    lowered.endsWith("@animasreflections.com") ||
+    (await getAdminEmails()).includes(lowered);
+  if (!allowed) {
+    logger.warn("Admin call denied", { uid: request.auth.uid, email });
+    throw new HttpsError("permission-denied", "Admin access required");
+  }
+}
+
+// ─── Create Square Order & Process Payment ─────────────────────────
+
 interface CreateOrderRequest {
-  lineItems: OrderLineItem[];
-  shippingRate?: number;
+  /** Client cart lines. Prices inside are VERIFIED against the Firestore
+   *  catalog by deriveOrder() — they are never charged directly. */
+  lineItems: ClientLineItem[];
+  /** Client-computed grand total shown to the customer (dollars). The server
+   *  re-derives the total and rejects the order if they diverge. */
+  expectedTotal?: number;
   sourceId: string;
   idempotencyKey: string;
   customer?: {
-    firstName: string;
-    lastName: string;
-    email: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
     phone?: string;
-    address: {
-      addressLine1: string;
-      locality: string;
-      administrativeDistrictLevel1: string;
-      postalCode: string;
+    address?: {
+      addressLine1?: string;
+      locality?: string;
+      administrativeDistrictLevel1?: string;
+      postalCode?: string;
     };
   };
 }
@@ -62,16 +97,19 @@ interface CreateOrderRequest {
 export const createSquareOrderAndPay = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
-    const data = request.data as CreateOrderRequest;
+    const data = (request.data ?? {}) as CreateOrderRequest;
     logger.info("createSquareOrderAndPay invoked", {
-      items: data.lineItems.length,
+      items: data.lineItems?.length ?? 0,
     });
 
-    if (!data.lineItems.length) {
-      throw new Error("Order must contain at least one line item");
+    if (!Array.isArray(data.lineItems) || !data.lineItems.length) {
+      throw new HttpsError("invalid-argument", "Order must contain at least one line item");
     }
     if (!data.sourceId) {
-      throw new Error("Payment source ID is required");
+      throw new HttpsError("invalid-argument", "Payment source ID is required");
+    }
+    if (!data.idempotencyKey) {
+      throw new HttpsError("invalid-argument", "Idempotency key is required");
     }
 
     try {
@@ -81,75 +119,121 @@ export const createSquareOrderAndPay = onCall(
         throw new Error("SQUARE_LOCATION_ID is not configured");
       }
 
-      const shippingRate = data.shippingRate ?? 0;
+      const db = getFirestore();
 
-      const lineItems = data.lineItems.map((item, index) => {
-        const catalogObjectId = item.squareVariationId || undefined;
-        const li: Record<string, unknown> = {
-          quantity: String(item.quantity ?? 1),
-        };
-
-        // Two paths: catalog-based (product has a squareVariationId from a
-        // createSquareProduct push) vs ad-hoc (product was created manually in
-        // admin, no Square catalog ID — we pass name + explicit price instead).
-        if (catalogObjectId) {
-          li.catalogObjectId = catalogObjectId;
-        } else {
-          li.name = item.name ?? `Item ${index + 1}`;
-          li.basePriceMoney = {
-            amount: BigInt(Math.round((item.price ?? 0) * 100)),
-            currency: "USD",
-          };
-        }
-
-        if (item.modifiers?.length) {
-          li.modifiers = item.modifiers.map((m) => ({
-            catalogObjectId: m.catalogObjectId ?? m.squareModifierId ?? "",
-          }));
-        }
-        if (item.note) {
-          li.note = item.note;
-        }
-        return li;
+      // Load the catalog once. Every price, add-on, and the shipping amount are
+      // re-derived from Firestore by deriveOrder() — the client payload only
+      // describes WHICH items are in the cart, never what they cost.
+      const productIds = [
+        ...new Set(data.lineItems.map((li) => li.product_id).filter(Boolean)),
+      ];
+      const productSnaps = await Promise.all(
+        productIds.map((id) => db.collection("products").doc(id).get()),
+      );
+      const products = new Map<string, PricingProduct>();
+      productSnaps.forEach((snap) => {
+        if (snap.exists) products.set(snap.id, snap.data() as PricingProduct);
       });
 
-      // Build order with customer and fulfillment data
+      const siteSnap = await db.collection("config").doc("site").get();
+      const siteConfig = (siteSnap.data() ?? {}) as SitePricingConfig;
+
+      const derived = deriveOrder(products, siteConfig, data.lineItems);
+      if (!derived.ok) {
+        throw new HttpsError("failed-precondition", derived.error);
+      }
+      const totals = derived.order;
+
+      // Refuse to charge a different amount than the customer was shown.
+      if (data.expectedTotal !== undefined && Number.isFinite(data.expectedTotal)) {
+        const expectedCents = Math.round(data.expectedTotal * 100);
+        if (Math.abs(expectedCents - totals.totalCents) > 2) {
+          logger.warn("Expected total diverged from catalog derivation", {
+            expectedCents,
+            derivedCents: totals.totalCents,
+          });
+          throw new HttpsError(
+            "failed-precondition",
+            "Your order total has changed — please review your cart and try again",
+          );
+        }
+      }
+
+      // Build Square line items. Catalog-linked variants keep the catalog path
+      // (Square prices them); everything else is ad-hoc with server-computed
+      // prices. Each add-on becomes its own ad-hoc line item.
+      const squareLineItems: Record<string, unknown>[] = [];
+      let allAdHoc = true;
+      for (const line of totals.lines) {
+        if (line.catalogPath && line.squareVariationId) {
+          allAdHoc = false;
+          squareLineItems.push({
+            quantity: String(line.quantity),
+            catalogObjectId: line.squareVariationId,
+            ...(line.note ? { note: line.note } : {}),
+          });
+        } else {
+          squareLineItems.push({
+            quantity: String(line.quantity),
+            name: line.name,
+            basePriceMoney: { amount: BigInt(line.baseCents), currency: "USD" },
+            ...(line.note ? { note: line.note } : {}),
+          });
+        }
+        for (const addon of line.addons) {
+          squareLineItems.push({
+            quantity: String(line.quantity),
+            name: `Add-on: ${addon.label}`,
+            note: line.name,
+            basePriceMoney: { amount: BigInt(addon.perUnitCents), currency: "USD" },
+          });
+        }
+      }
+
       const orderData: Record<string, unknown> = {
         locationId,
-        lineItems: lineItems as never,
+        lineItems: squareLineItems as never,
       };
 
       if (data.customer) {
         const c = data.customer;
+        const addr = c.address;
+        const hasAddress = !!addr?.addressLine1;
         const customerNote = [
-          `Customer: ${c.firstName} ${c.lastName}`,
-          `Email: ${c.email}`,
+          c.firstName || c.lastName
+            ? `Customer: ${[c.firstName, c.lastName].filter(Boolean).join(" ")}`
+            : "",
+          c.email ? `Email: ${c.email}` : "",
           c.phone ? `Phone: ${c.phone}` : "",
-          `Ship to: ${c.address.addressLine1}, ${c.address.locality}, ${c.address.administrativeDistrictLevel1} ${c.address.postalCode}`,
+          hasAddress
+            ? `Ship to: ${[addr?.addressLine1, addr?.locality, addr?.administrativeDistrictLevel1, addr?.postalCode].filter(Boolean).join(", ")}`
+            : "",
         ].filter(Boolean).join(" | ");
 
-        if (lineItems.length > 0 && !(lineItems[0] as Record<string, unknown>).note) {
-          (lineItems[0] as Record<string, unknown>).note = customerNote;
+        if (customerNote && squareLineItems.length > 0 && !squareLineItems[0].note) {
+          squareLineItems[0].note = customerNote;
         }
 
-        orderData.fulfillments = [{
-          type: "SHIPMENT",
-          state: "PROPOSED",
-          shipmentDetails: {
-            recipient: {
-              displayName: `${c.firstName} ${c.lastName}`.trim(),
-              emailAddress: c.email,
-              phoneNumber: c.phone || undefined,
-              address: {
-                addressLine1: c.address.addressLine1,
-                locality: c.address.locality,
-                administrativeDistrictLevel1: c.address.administrativeDistrictLevel1,
-                postalCode: c.address.postalCode,
-                country: "US",
+        if (addr?.addressLine1) {
+          orderData.fulfillments = [{
+            type: "SHIPMENT",
+            state: "PROPOSED",
+            shipmentDetails: {
+              recipient: {
+                displayName: [c.firstName, c.lastName].filter(Boolean).join(" ").trim(),
+                emailAddress: c.email,
+                phoneNumber: c.phone || undefined,
+                address: {
+                  addressLine1: addr.addressLine1,
+                  locality: addr.locality,
+                  administrativeDistrictLevel1: addr.administrativeDistrictLevel1,
+                  postalCode: addr.postalCode,
+                  country: "US",
+                },
               },
             },
-          },
-        }];
+          }];
+        }
       }
 
       const orderResponse = await client.orders.create({
@@ -164,20 +248,38 @@ export const createSquareOrderAndPay = onCall(
 
       logger.info("Order created", { orderId: order.id });
 
-      const totalMoney = order.totalMoney as { amount: bigint } | undefined;
-      const orderAmount = totalMoney?.amount ?? BigInt(0);
-      const shipAmount = BigInt(Math.round(shippingRate * 100));
-      const totalWithShipping = shipAmount > 0
-        ? BigInt(Number(orderAmount) + Number(shipAmount))
-        : orderAmount;
+      const totalMoney = order.totalMoney as { amount?: bigint } | undefined;
+      const squareOrderCents = Number(totalMoney?.amount ?? BigInt(0));
+      const itemsCents = totals.subtotalCents + totals.addonsCents;
+
+      // For fully ad-hoc orders Square's computed total must equal ours exactly
+      // (every price came from this server). Catalog-path orders may drift from
+      // Firestore prices after a manual edit — warn instead of blocking.
+      if (allAdHoc && Math.abs(squareOrderCents - itemsCents) > 2) {
+        logger.error("Square order total diverged from server derivation", {
+          squareOrderCents,
+          itemsCents,
+        });
+        throw new Error("Order total verification failed");
+      }
+      if (!allAdHoc && Math.abs(squareOrderCents - itemsCents) > 2) {
+        logger.warn("Square catalog prices differ from Firestore prices", {
+          squareOrderCents,
+          itemsCents,
+        });
+      }
+
+      const chargeCents = squareOrderCents + totals.shippingCents;
 
       const paymentResponse = await client.payments.create({
         sourceId: data.sourceId,
         idempotencyKey: `${data.idempotencyKey}-payment`,
-        amountMoney: { amount: totalWithShipping, currency: "USD" },
+        amountMoney: { amount: BigInt(chargeCents), currency: "USD" },
         orderId: order.id as string,
         locationId,
-        note: shippingRate > 0 ? `Includes $${shippingRate.toFixed(2)} shipping` : undefined,
+        note: totals.shippingCents > 0
+          ? `Includes $${(totals.shippingCents / 100).toFixed(2)} shipping`
+          : undefined,
       });
 
       const payment = paymentResponse.payment as Record<string, unknown> | undefined;
@@ -186,21 +288,31 @@ export const createSquareOrderAndPay = onCall(
         status: payment?.status,
       });
 
-      // Mirror order to Firestore so customers can view their orders in /account.
+      // Mirror the order to Firestore so customers see it in /account and the
+      // admin Orders tab. Uses the server-derived figures (real subtotal, add-on
+      // line items, actual charged total), not the client payload.
+      let mirrored = false;
       try {
-        const db = getFirestore();
-        const customerEmail = data.customer?.email || "";
+        const customerEmail = data.customer?.email?.trim() || "";
         const customerName = data.customer
-          ? (data.customer.firstName + " " + data.customer.lastName).trim()
+          ? [data.customer.firstName, data.customer.lastName].filter(Boolean).join(" ").trim()
           : "";
 
-        const orderItems = data.lineItems.map((li) => ({
-          name: li.name || li.note?.split(" | ")[0]?.replace("Customer: ", "") || "Item",
-          quantity: parseInt(String(li.quantity ?? 1), 10),
-          price: li.price ?? 0,
-          designUrl: li.designUrl,
-          note: li.note,
-        }));
+        const orderItems: Record<string, unknown>[] = totals.lines.flatMap((line) => {
+          const base: Record<string, unknown> = {
+            name: line.name,
+            quantity: line.quantity,
+            price: line.baseCents / 100,
+            ...(line.designUrl ? { designUrl: line.designUrl } : {}),
+            ...(line.note ? { note: line.note } : {}),
+          };
+          const addons = line.addons.map((a) => ({
+            name: `Add-on: ${a.label}`,
+            quantity: line.quantity,
+            price: a.perUnitCents / 100,
+          }));
+          return [base, ...addons];
+        });
 
         const firestoreOrder = {
           squareOrderId: order.id as string,
@@ -208,7 +320,7 @@ export const createSquareOrderAndPay = onCall(
           customerName,
           status: "PENDING",
           items: orderItems,
-          shipping: data.customer?.address ? {
+          shipping: data.customer?.address?.addressLine1 ? {
             name: customerName,
             line1: data.customer.address.addressLine1,
             city: data.customer.address.locality,
@@ -216,10 +328,10 @@ export const createSquareOrderAndPay = onCall(
             zip: data.customer.address.postalCode,
           } : null,
           totals: {
-            subtotal: 0,
-            shipping: shippingRate,
+            subtotal: totals.subtotalCents / 100,
+            shipping: totals.shippingCents / 100,
             tax: 0,
-            grandTotal: Number(totalWithShipping) / 100,
+            grandTotal: chargeCents / 100,
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -227,6 +339,7 @@ export const createSquareOrderAndPay = onCall(
 
         const orderDocId = "order_" + (order.id as string);
         await db.collection("orders").doc(orderDocId).set(firestoreOrder);
+        mirrored = true;
         logger.info("Order mirrored to Firestore", { orderDocId });
       } catch (mirrorErr) {
         logger.error("Failed to mirror order to Firestore", mirrorErr);
@@ -237,8 +350,10 @@ export const createSquareOrderAndPay = onCall(
         orderId: order.id,
         paymentId: payment?.id,
         paymentStatus: payment?.status,
+        mirrored,
       };
     } catch (err) {
+      if (err instanceof HttpsError) throw err;
       if (err instanceof SquareError) {
         logger.error("Square API error", err);
         throw new Error(`Payment failed: ${err.message}`);
@@ -294,6 +409,7 @@ export const fetchSiteConfig = onCall(
 export const saveSiteConfig = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
+    await requireAdmin(request);
     const data = request.data as Record<string, unknown>;
     logger.info("saveSiteConfig invoked");
     try {
@@ -310,11 +426,21 @@ export const saveSiteConfig = onCall(
 export const saveAdminEmails = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
+    await requireAdmin(request);
     const data = request.data as { emails: string[] };
-    logger.info("saveAdminEmails invoked");
+    if (!Array.isArray(data.emails)) {
+      throw new HttpsError("invalid-argument", "emails must be an array");
+    }
+    // Normalize to lowercase so every admin check (functions, firestore.rules,
+    // storage.rules, client) compares the same shape.
+    const emails = data.emails
+      .filter((e): e is string => typeof e === "string")
+      .map((e) => e.toLowerCase().trim())
+      .filter(Boolean);
+    logger.info("saveAdminEmails invoked", { count: emails.length });
     try {
       const db = getFirestore();
-      await db.collection("config").doc("admin").set({ emails: data.emails }, { merge: true });
+      await db.collection("config").doc("admin").set({ emails }, { merge: true });
       return { success: true };
     } catch (err) {
       logger.error("Failed to save admin emails", err);
@@ -327,7 +453,8 @@ export const saveAdminEmails = onCall(
 
 export const fetchRecentOrders = onCall(
   { cors: true, region: "us-central1" },
-  async () => {
+  async (request) => {
+    await requireAdmin(request);
     logger.info("fetchRecentOrders invoked");
     try {
       const client = getSquareClient();
@@ -378,6 +505,7 @@ export const fetchRecentOrders = onCall(
 export const createSquareProduct = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
+    await requireAdmin(request);
     const { productId } = request.data as { productId: string };
     if (!productId) throw new Error("productId is required");
 
@@ -668,8 +796,7 @@ export const saveCustomerProfile = onCall(
 export const updateOrderTracking = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
-    const auth = request.auth;
-    if (!auth?.uid) throw new Error("Authentication required");
+    await requireAdmin(request);
 
     const { orderId, trackingUrl, trackingNumber } = request.data as {
       orderId: string;

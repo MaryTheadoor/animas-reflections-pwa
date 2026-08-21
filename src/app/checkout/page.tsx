@@ -145,6 +145,7 @@ export default function CheckoutPage() {
       }
 
       const lineItems = cart.items.map((item) => ({
+        product_id: item.product_id,
         variant_id: item.variant_id,
         squareVariationId: item.squareVariationId,
         name: `${item.name} — ${item.variant_name}`,
@@ -168,10 +169,14 @@ export default function CheckoutPage() {
           item.addons.length ? `Add-ons: ${item.addons.map((a) => a.label).join(", ")}` : "",
         ].filter(Boolean).join(" | "),
         addons: item.addons.map((a) => ({
+          addon_id: a.addon_id,
           squareModifierId: a.squareModifierId,
           label: a.label,
-          // Resolve percentage add-ons to a dollar amount — Square requires fixed cents.
+          // Resolve percentage add-ons to a dollar amount — Square requires fixed
+          // cents. The backend re-derives this from the catalog; it is sent only
+          // for verification.
           price: resolveAddonPrice(a, item.base_price),
+          priceType: a.priceType ?? "fixed",
         })),
       }));
 
@@ -185,6 +190,8 @@ export default function CheckoutPage() {
       }
       const orderResult = await createOrder({
         lineItems,
+        // Verified server-side against the catalog before any charge happens.
+        expectedTotal: total,
         shippingRate: shipping,
         sourceId: tokenResult.token,
         idempotencyKey: idempotencyRef.current.key,
