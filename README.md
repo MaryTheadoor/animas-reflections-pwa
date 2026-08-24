@@ -49,7 +49,7 @@ Functions get their own `.env` at `functions/.env` with Square credentials.
 
 ```
 src/
-  app/                 # Next.js App Router pages (19 routes)
+  app/                 # Next.js App Router pages (20 routes)
     admin/             # CMS dashboard (products, categories, designs, images, settings, orders, users, admins)
     checkout/          # Cart + Square payment form
     customizer/        # Interactive design customizer (colors, mockups, designs, add-ons)
@@ -69,9 +69,8 @@ src/
   types/               # All TypeScript interfaces
 functions/
   src/
-    index.ts           # 23 Cloud Functions (catalog, orders, sync, checkout, customer, config)
-    sync.ts            # Square→Firestore sync with brand detection
-    product-pipeline.ts # Alternative product grouping pipeline
+    index.ts           # 14 Cloud Functions (checkout, orders, customer, config, admin)
+    pricing.ts         # Server-side order pricing (pure, integer-cents math)
 public/                # Static assets (logo, manifest, sw.js)
 ```
 
@@ -79,12 +78,12 @@ public/                # Static assets (logo, manifest, sw.js)
 
 ## Key Architecture Decisions
 
-- **Firestore is source of truth** for products. Square is used for payment processing.
-- **`syncProducts`** pulls from Square catalog, groups items by brand, writes `ManagedProduct` docs to Firestore.
-- **`createSquareProduct`** pushes admin-created products back to Square for valid payment IDs.
-- **Static export** (`output: "export"` in next.config.ts) — no SSR, deployed as 213 static files.
-- **All writes authenticated** — Firestore and Storage rules require `request.auth != null`.
-- **AI search removed** — Genkit was replaced with programmatic `fuzzyScore` matching (same algorithm in frontend `useSearch.ts` and backend `aiSearch` function).
+- **Firestore is the master catalog** — Square is payment-only (catalog sync removed in Phase 1, 2026-08). Products are edited in the admin dashboard.
+- **Server-side pricing** — `createSquareOrderAndPay` re-derives every price, add-on, and shipping amount from Firestore (`functions/src/pricing.ts`) and rejects orders whose client total diverges >2¢. Client-sent amounts are never charged.
+- **`createSquareProduct`** is an optional one-way push to Square for POS linkage.
+- **Static export** (`output: "export"` in next.config.ts) — no SSR; 20 routes emit 22 static HTML files to Firebase Hosting.
+- **Admin-only catalog writes** — Firestore and Storage rules restrict product/design/category/config writes to admins; public content stays readable.
+- **Fuzzy search** — programmatic `fuzzyScore` matching in `src/hooks/useSearch.ts` (Genkit/AI search removed).
 - **Firestore `undefined` safety** — all client writes pass through `stripUndefined()` (src/lib/firestore-utils.ts); the SDK rejects `undefined` values.
 - **Branching** — `master` = stable/deployed, `development` = working branch. See DEVELOPMENT.md.
 
