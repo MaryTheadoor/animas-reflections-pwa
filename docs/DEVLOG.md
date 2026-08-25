@@ -1285,6 +1285,24 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - Lint 0 | Tests 109/109 (9 suites) | Build 22/22 | Functions tsc clean
 - Square: PRODUCTION (G2 deferred); createSquareProduct fix still pending deploy
 
+---
+
+## Session 29 — 2026-08-25 12:19 -04:00 | Backup-script bug fixes (Known Issues #17/#18)
+
+### Actions Taken
+1. **backup-commit.ps1 (Known Issue #17):** `$ErrorActionPreference = "Stop"` combined with `git … 2>&1` turned git's CRLF stderr warnings into terminating errors. Changed to `"Continue"` (the script already checks `$LASTEXITCODE` after every git call).
+2. **backup-file.ps1 (Known Issue #18):** file args were space-separated only, so a comma-separated list silently skipped files. Added comma-splitting + trimming so both `a b` and `a,b` work; corrected the misleading doc example.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| scripts/backup-commit.ps1 | ErrorActionPreference Stop → Continue |
+| scripts/backup-file.ps1 | comma-separated file args + doc example |
+
+### Current State at Session End
+- Lint 0 | Tests 109/109 (9 suites) | Build 22/22 | Functions tsc clean
+- Backup scripts: syntax-checked + functionally verified (comma-split, no stderr abort)
+
 ```
 
 ## Session N — YYYY-MM-DD | HH:MM MST

@@ -11,7 +11,7 @@
 .EXAMPLE
     .\scripts\backup-file.ps1 src/hooks/useCatalog.ts
 .EXAMPLE
-    .\scripts\backup-file.ps1 src/app/layout.tsx,src/app/page.tsx
+    .\scripts\backup-file.ps1 src/app/layout.tsx src/app/page.tsx
 #>
 param(
     [Parameter(Mandatory=$true, ValueFromRemainingArguments=$true)]
@@ -19,6 +19,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# Accept comma- or space-separated file lists so "," never silently drops files.
+$Files = @($Files | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $ProjectRoot = $PSScriptRoot | Split-Path -Parent
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $RedundantRoot = "C:\Users\AmosA\Backups\animas-reflections-pwa\file-snapshots"

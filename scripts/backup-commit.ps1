@@ -28,7 +28,10 @@ param(
     [switch]$SkipPush
 )
 
-$ErrorActionPreference = "Stop"
+# "Stop" made git's CRLF stderr warnings fatal (2>&1 redirected them into
+# the error stream and the script aborted). The script already checks
+# $LASTEXITCODE after every git call, so run in "Continue" mode.
+$ErrorActionPreference = "Continue"
 $ProjectRoot = $PSScriptRoot | Split-Path -Parent
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $RedundantRoot = "C:\Users\AmosA\Backups\animas-reflections-pwa"
