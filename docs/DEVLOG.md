@@ -1189,6 +1189,44 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 25 — 2026-08-25 11:54 -04:00 | Dead-code cleanup + dependency audit fix
+
+### Context Restored From
+- Active goal: address all current known issues (fixing bugs + implementation)
+- Prior sweep surfaced dead code (`getCatalogItemImageUrl`, `managedToCatalogItem` + `catalog.test.ts`) and npm audit findings (8 frontend / 15 functions vulns)
+
+### Actions Taken
+1. **Dead-code cleanup:** removed `managedToCatalogItem` and `getCatalogItemImageUrl` from `src/hooks/useCatalog.ts` (deprecated `SquareCatalogItem` bridge — nothing imports either; the converter direction became obsolete once Firestore became the master catalog). Kept `getProductImageUrl` (still used by product-card/product/customizer). Deleted `src/hooks/__tests__/catalog.test.ts` (it tested an inline copy of the removed converter).
+2. **Dependency audit fix (non-breaking):** `npm audit fix` in root + functions. Frontend 8 → 3 vulns (the 3 remaining all require the blocked `next@16.3.x` upgrade); functions 15 → 9 (8 moderate + 1 high, all gated on the blocked `firebase-admin@14` upgrade). The critical `websocket-driver` was resolved in both. `next` stayed pinned at 16.2.7 and `firebase-admin` at 13.10.0 (verified).
+3. **Created `animas-reflections-dev` skill** at `~/.agents/skills/` (deploy runbook + do-not-repeat gotchas) — auto-discovered live by the harness skill watcher.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/hooks/useCatalog.ts | removed dead `managedToCatalogItem` + `getCatalogItemImageUrl` |
+| src/hooks/__tests__/catalog.test.ts | DELETED (tested the removed converter's inline copy) |
+| package-lock.json | non-breaking audit fix |
+| functions/package-lock.json | non-breaking audit fix |
+| PROJECT_CONTEXT.md | test gate 113/113 → 107/107 |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| — | (this session) |
+
+### Current State at Session End
+- Lint 0 errors | Tests 107/107 (9 suites) | Build 22/22 | Functions tsc clean
+- Branch: `development` (this session's changes pending commit)
+- USE_SYNTHETIC = false
+- npm audit: frontend 3 high (gated on next upgrade), functions 9 (gated on firebase-admin upgrade)
+
+### Pending / Next Session
+- [ ] G2 live checkout smoke test
+- [ ] `next@16.3.x` upgrade (unblocks 3 frontend vulns) — blocked by Session 24 build-location investigation
+- [ ] `firebase-admin@14` upgrade (unblocks functions uuid chain)
+- [ ] `master` merge (24 commits behind)
+- [ ] Root-cause `C:\Users\AmosA\projects\` build failure
+
 ```
 
 ## Session N — YYYY-MM-DD | HH:MM MST
