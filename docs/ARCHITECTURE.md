@@ -23,7 +23,7 @@
 │  ┌──────────────────────┼──────────────────────────────┐     │
 │  │            Cloud Firestore (NoSQL)                    │     │
 │  │  products/    categories/    config/    designs/     │     │
-│  │  users/       orders/        import_status/         │     │
+│  │  users/       orders/                                │     │
 │  └──────────────────────┼──────────────────────────────┘     │
 │                         │                                      │
 │  ┌──────────────────────┼──────────────────────────────┐     │
@@ -32,20 +32,22 @@
 │  └──────────────────────┼──────────────────────────────┘     │
 │                         │                                      │
 │  ┌──────────────────────┼──────────────────────────────┐     │
-│  │     Cloud Functions (23 functions, Node 22, Gen 2)     │     │
+│  │     Cloud Functions (14 functions, Node 22, Gen 2)     │     │
 │  │                                                       │     │
-│  │  fetchSquareCatalog   ← pulls items from Square       │     │
-│  │  syncProducts         ← Square → Firestore sync      │     │
-│  │  importProducts       ← alt sync by category         │     │
-│  │  createSquareProduct  ← Firestore → Square push      │     │
 │  │  createSquareOrderAndPay ← checkout + payment        │     │
-│  │  fetchRecentOrders    ← order history                │     │
+│  │  health               ← status check                 │     │
 │  │  fetchSiteConfig      ← site settings read           │     │
 │  │  saveSiteConfig       ← site settings write          │     │
 │  │  saveAdminEmails      ← admin management             │     │
-│  │  aiSearch             ← programmatic text search     │     │
-│  │  health               ← status check                 │     │
-│  │  + pipeline/sync helpers                              │     │
+│  │  fetchRecentOrders    ← order history                │     │
+│  │  createSquareProduct  ← Firestore → Square push      │     │
+│  │  fetchCustomerOrders  ← customer order history       │     │
+│  │  getCustomerAddresses ← address book read            │     │
+│  │  saveCustomerAddress  ← address book write           │     │
+│  │  deleteCustomerAddress ← address book delete         │     │
+│  │  getCustomerProfile   ← profile read                 │     │
+│  │  saveCustomerProfile  ← profile write                │     │
+│  │  updateOrderTracking  ← tracking info write          │     │
 │  └──────────────────────┼──────────────────────────────┘     │
 └────────────────────────┼──────────────────────────────────────┘
                          │
@@ -55,24 +57,20 @@
 └──────────────────────────────────────────────────────────────┘
 ```
 
-## Data Flow: Product Sync
+## Data Flow: Catalog (Admin-Managed)
+
+The old Square → Firestore catalog sync was removed in Phase 1 (2026-08).
+Firestore products/ is now the master catalog; Square is payment-only.
 
 ```
-Square Catalog (405 items, ecom_visibility=VISIBLE)
-    │
+Admin dashboard (ProductManager)
+    │  └─ Admin creates/edits products directly
     ▼
-syncProducts Cloud Function
-    │  ┌─ Fetches all ITEM + ITEM_VARIATION objects
-    │  ├─ Groups by detected brand name
-    │  ├─ detectProductType() classifies as apparel/sticker/sign/etc
-    │  ├─ buildManagedProduct() creates ManagedProduct doc
-    │  └─ Writes to Firestore products/{id}
-    ▼
-Firestore products/ collection (ManagedProduct[])
+Firestore products/ collection (ManagedProduct[]) — master catalog
     │
     ▼
 useCatalog() hook
-    │  ┌─ Reads Firestore products/ collection
+    │  ┌─ Reads Firestore products/ collection (no Square API fallback)
     │  ├─ managedToCatalogItem() converts to SquareCatalogItem
     │  └─ Returns { items, categories, loading, error }
     ▼
@@ -92,7 +90,8 @@ Checkout page
     │  └─ calls createSquareOrderAndPay({ lineItems, sourceId, customer })
     ▼
 createSquareOrderAndPay Cloud Function
-    │  ┌─ Builds Square Order with line items
+    │  ┌─ Re-derives all prices server-side from Firestore (integer cents)
+    │  ├─ Builds Square Order with line items
     │  ├─ Attaches customer/shipping info
     │  ├─ Creates payment with sourceId token
     │  └─ Returns { orderId, paymentId, paymentStatus }
@@ -144,7 +143,7 @@ RootLayout (layout.tsx)
         │       └── FileUpload
         ├── /checkout → CheckoutPage (shipping, Square card, order summary)
         ├── /admin → AdminDashboard
-        │   ├── ProductManager (+ "Push → Square", "Sync from Square")
+        │   ├── ProductManager (+ "Push → Square")
         │   ├── CategoryManager
         │   ├── ImageManager (bulk upload, mockup assignment)
         │   ├── SiteConfig form
@@ -154,7 +153,7 @@ RootLayout (layout.tsx)
         └── /search → SearchPage (fuzzy text search)
 ```
 
-## Route Map (19 routes, all static)
+## Route Map (20 route dirs → 22 static HTML files)
 
 | Route | File | Auth |
 |-------|------|------|
@@ -164,6 +163,7 @@ RootLayout (layout.tsx)
 | `/customizer` | `customizer/page.tsx` | Public |
 | `/checkout` | `checkout/page.tsx` | Public |
 | `/order-confirmation` | `order-confirmation/page.tsx` | Public |
+| `/privacy` | `privacy/page.tsx` | Public |
 | `/search` | `search/page.tsx` | Public |
 | `/about` | `about/page.tsx` | Public |
 | `/account` | `account/page.tsx` | Auth required |

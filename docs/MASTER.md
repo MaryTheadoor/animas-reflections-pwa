@@ -1,6 +1,6 @@
 # Animas Reflections PWA — Master Technical Document
 
-**Date:** 2026-07-09 | **Version:** 3.0 | **Status:** Active Development
+**Date:** 2026-08-24 | **Version:** 3.1 | **Status:** Active Development
 
 ---
 
@@ -30,7 +30,7 @@
 |-------------|-----|--------|
 | Production | https://animas-reflections-pwa.web.app | Live |
 | Local Dev | `http://localhost:3000` | `npm run dev` |
-| Functions | 23 deployed, us-central1 | Live |
+| Functions | 14 deployed, us-central1 | Live |
 | Firebase Project | animas-reflections-pwa (ID: 508402195460) | Active |
 | GitHub | https://github.com/MaryTheadoor/animas-reflections-pwa | master branch |
 
@@ -41,13 +41,13 @@
 ```
 animas-reflections-pwa/
 ├── src/
-│   ├── app/                  # 18 routes (Next.js App Router)
+│   ├── app/                  # 20 routes (Next.js App Router)
 │   │   ├── layout.tsx        # Root layout (providers, metadata, JSON-LD)
 │   │   ├── page.tsx          # Home page
 │   │   ├── globals.css       # Brand theme, Tailwind v4 @theme
 │   │   ├── about/
 │   │   ├── account/          # Auth-gated: orders, addresses, settings
-│   │   ├── admin/            # CMS dashboard (8 tabs)
+│   │   ├── admin/            # CMS dashboard
 │   │   ├── biscuit-hockey/
 │   │   ├── checkout/         # Square payment + customer info
 │   │   ├── contact/
@@ -69,16 +69,15 @@ animas-reflections-pwa/
 │   │   ├── layout/           # ClientLayout, HeaderBar, NavAuth, JsonLd, PageLayout
 │   │   ├── product/          # ProductCard, ProductDetail
 │   │   ├── search/           # SearchBar
-│   │   └── ui/               # PlaceholderImage, DebugPanel
+│   │   └── ui/               # PlaceholderImage, AdminTooltip
 │   ├── context/              # AuthProvider, CartProvider, ThemeProvider, SiteConfigProvider
 │   ├── hooks/                # useCatalog, useSearch, useSiteConfig
 │   ├── lib/                  # firebase, constants, content, synthetic-data
 │   └── types/                # 26+ TypeScript interfaces
 ├── functions/
 │   └── src/
-│       ├── index.ts          # 23 Cloud Functions (1,061 lines)
-│       ├── sync.ts           # Square → Firestore sync (745 lines)
-│       └── product-pipeline.ts # Product classification (361 lines)
+│       ├── index.ts          # 14 Cloud Functions (828 lines)
+│       └── pricing.ts        # Server-side order pricing, integer-cents math (294 lines)
 ├── public/                   # Static assets (manifest, sw.js, icons, images)
 ├── docs/                     # Documentation
 ├── scripts/                  # Backup framework (PowerShell)
@@ -98,7 +97,6 @@ animas-reflections-pwa/
 | `designs/` | `{designId}` | Public read, Auth write | Individual DesignAsset docs |
 | `config/site` | `site` | Public read, Auth write | Site-wide config (colors, banner, rates) |
 | `config/admin` | `admin` | Auth read/write | Admin email list |
-| `config/sync_status` | `sync_status` | Auth read/write | Last sync timestamp/counts |
 | `users/` | `{uid}` | Auth read/write (own) | User profile data |
 | `orders/` | `order_{squareOrderId}` | Auth read, no write | Mirrored Square orders |
 | `customers/{uid}/addresses/` | `{addressId}` | Auth read/write/delete (own) | Saved shipping addresses |
@@ -128,29 +126,24 @@ animas-reflections-pwa/
 
 ---
 
-## 5. CLOUD FUNCTIONS (23 deployed)
+## 5. CLOUD FUNCTIONS (14 deployed)
+
+Firestore is the master catalog; Square is payment-only. Catalog reads come from Firestore `products/` / `categories/` via the `useCatalog` hook — there is no Square API fallback on the client. Server-side order pricing lives in `functions/src/pricing.ts` (pure integer-cents math).
 
 | Function | Type | Purpose |
 |----------|------|---------|
-| `fetchSquareCatalog` | Callable | Fetches Square catalog (ecom_visibility=VISIBLE) |
-| `syncProducts` | Callable (300s) | Square → Firestore full sync |
-| `importProducts` | Callable (600s) | Alternative import path |
-| `createSquareProduct` | Callable | Push Firestore product → Square (`batchUpsert`) |
-| `createSquareOrderAndPay` | Callable | Order creation + payment (catalog or ad-hoc) |
-| `fetchRecentOrders` | Callable | Last 50 Square orders |
-| `fetchCustomerOrders` | Callable | Orders matching user email |
-| `fetchInventoryCounts` | Callable (300s) | Batch inventory fetch |
+| `createSquareOrderAndPay` | Callable | Order creation + payment; re-derives all prices server-side from Firestore, never trusts client amounts |
+| `health` | HTTP | Status endpoint |
 | `fetchSiteConfig` / `saveSiteConfig` | Callable | Site config CRUD |
 | `saveAdminEmails` | Callable | Admin email management |
-| `fetchSyncStatus` | Callable | Read sync status doc |
-| `runPipeline` | Callable (600s) | Product classification pipeline |
-| `fetchPipelineStatus` | Callable | Pipeline status |
-| `clearProducts` | Callable | Batch delete all products/categories |
-| `scheduledSync` | PubSub | Daily 4 AM auto-sync |
-| `health` | HTTP | Status endpoint |
-| `updateOrderTracking` | Callable | Set tracking URL/number |
+| `fetchRecentOrders` | Callable | Last 50 Square orders |
+| `createSquareProduct` | Callable | Optional one-way push of an admin product → Square (POS linkage) |
+| `fetchCustomerOrders` | Callable | Orders matching user email |
 | `getCustomerAddresses` / `saveCustomerAddress` / `deleteCustomerAddress` | Callable | Address CRUD |
 | `getCustomerProfile` / `saveCustomerProfile` | Callable | Profile CRUD |
+| `updateOrderTracking` | Callable | Set tracking URL/number |
+
+**Removed in Phase 1 cleanup (2026-08):** the Square→Firestore catalog-sync architecture — `functions/src/sync.ts` and `functions/src/product-pipeline.ts` (entire files), the `fetchSquareCatalog`, `syncProducts`, `importProducts`, `runPipeline`, `scheduledSync`, `fetchSyncStatus`, `fetchPipelineStatus`, `fetchInventoryCounts`, and `clearProducts` functions, the `aiSearch`/Genkit function (search is now programmatic fuzzy scoring via `fuzzyScore` in `src/hooks/useSearch.ts`), and the admin "Catalog Sync" UI.
 
 ---
 
@@ -162,9 +155,9 @@ animas-reflections-pwa/
 - Config files, project docs, backup framework
 
 ### Phase 2: Square API Gateway — ✅ 100%
-- 23 Cloud Functions deployed
-- Catalog fetch + sync pipeline
-- Order creation + payment processing
+- 14 Cloud Functions deployed
+- Firestore master catalog (Square→Firestore sync pipeline removed 2026-08)
+- Order creation + payment processing (server-side pricing from Firestore)
 - Square Web Payments SDK checkout integration
 
 ### Phase 3: Customizer — ✅ 95%
@@ -200,7 +193,7 @@ animas-reflections-pwa/
 - ✅ Categories tab (CRUD + reorder)
 - ✅ Images tab (upload queue, mockup assignment, 5 views)
 - ✅ Designs tab (individual DB objects, name/description/tags)
-- ✅ Settings tab (site config, sync controls)
+- ✅ Settings tab (site config)
 - ✅ Orders tab (tracking URL + number, pagination, design files, Storage-cleanup on delete)
 - ✅ Users tab (order counts, names, dates)
 - ✅ Admins tab
@@ -209,7 +202,7 @@ animas-reflections-pwa/
 ### Phase 6: PWA & Launch — ⚠️ 60%
 - ✅ Web app manifest with icons
 - ✅ Service worker (cache-first)
-- ✅ robots.txt + sitemap (19 routes)
+- ✅ robots.txt + sitemap (20 routes)
 - ✅ JSON-LD (Organization, WebSite, FAQPage, Breadcrumb, Product)
 - ✅ OpenGraph + Twitter Cards
 - ✅ Brand colors unified (teal #1E4D4F)
@@ -226,7 +219,7 @@ animas-reflections-pwa/
 |-------|--------|
 | `npm run lint` | 0 errors |
 | `npm test` | 78/78 pass (8 suites) |
-| `npm run build` | 19 routes, 21 static pages |
+| `npm run build` | 20 routes, 22 static pages |
 | `cd functions && npm run build` | Compile clean |
 
 ---
@@ -260,4 +253,4 @@ animas-reflections-pwa/
 
 ---
 
-*Updated 2026-07-09. Version 3.0 supersedes SCOPE.md v1.0.*
+*Updated 2026-08-24. Version 3.1 supersedes SCOPE.md v1.0.*

@@ -89,7 +89,7 @@ The project's current schema conflates **options**, **modifiers**, and **custom 
 6. **Matrix editor limitations.** Only size/color, one price for all new cells, collision-prone SKUs, no custom options (e.g., wood type, grommet count).
 7. **Per-color photo workflow.** Dropdowns without thumbnails; two UIs (`product-manager` and `image-manager`) edit the same `mockupImagesByColor` field.
 8. **Custom fields not surfaced.** `ManagedVariant.customFields` and `ProductAttributes.customFields` are stored but not shown on product pages or captured in order mirroring.
-9. **Square sync overwrites manual work.** `syncProductsFromSquare` and `importFromSquare` regenerate products from Square and discard admin edits.
+9. **Square sync overwrites manual work.** ~~`syncProductsFromSquare` and `importFromSquare` regenerate products from Square and discard admin edits.~~ **RESOLVED (2026-08):** the Square→Firestore catalog sync was removed in Phase 1 — Firestore `products/` is now the master catalog and Square is payment-only.
 
 ### Medium (polish / correctness)
 
@@ -180,7 +180,7 @@ The project's current schema conflates **options**, **modifiers**, and **custom 
 - `src/app/product/page.tsx` — product detail page
 - `src/app/customizer/page.tsx` — customizer flow
 - `src/app/shop/page.tsx`, `src/app/search/page.tsx` — filtering
-- `functions/src/index.ts`, `functions/src/sync.ts`, `functions/src/product-pipeline.ts` — backend sync/push
+- `functions/src/index.ts` — backend payment/admin (14 functions); `functions/src/pricing.ts` — server-side order pricing. (`sync.ts` / `product-pipeline.ts` removed in Phase 1, 2026-08)
 - `firestore.rules` — security rules
 
 ---

@@ -51,7 +51,7 @@
 
 ### 2.4 Pricing Model
 
-- Base product prices from Square catalog (ranging ~$0.54 stickers to $65+ jewelry)
+- Base product prices from Firestore catalog (ranging ~$0.54 stickers to $65+ jewelry)
 - Custom add-ons: $5 each (Back Print, Sleeve Print, Name/Number Personalization)
 - Flat-rate shipping: $3.00 stickers/envelopes, $7.50 apparel/parcels, free over $100
 
@@ -121,11 +121,9 @@
 | Product CRUD with variant matrix editor | Critical | Full product management |
 | Category CRUD with reorder | Critical | Organize product categories |
 | Image upload gallery with mockup assignment | Critical | Product photos + blank product shots per view (front/back/sleeve/sideL/sideR) |
-| Sync from Square (catalog import) | Critical | Pull Square catalog → Firestore managed products |
-| Push to Square (product export) | High | Push Firestore products → Square catalog |
+| Push to Square (product export) | High | Optional one-way push of an admin product to Square for POS linkage (createSquareProduct) |
 | Design catalog management (individual DB objects) | Critical | Upload/manage design assets with name, description, photo, tags |
 | Site configuration (colors, banner, shipping rates) | High | Real-time style overrides |
-| Inventory sync with Square | High | Batch fetch stock counts |
 | Order tracking URL update | High | Set carrier tracking on orders |
 | Admin email management | Medium | Add/remove admin accounts |
 | User browser | Low | View registered users |
@@ -149,8 +147,8 @@
 | Firebase Hosting (CDN) | Critical | Static export deployment |
 | Cloud Firestore (NoSQL database) | Critical | Products, categories, designs, users, orders, config |
 | Firebase Storage (file storage) | Critical | Product images, design assets, user uploads |
-| Cloud Functions (serverless backend) | Critical | Square API integration, sync, payments, admin operations |
-| Square API integration (v42) | Critical | Catalog, orders, payments, inventory |
+| Cloud Functions (serverless backend) | Critical | Square payments, server-side order pricing, admin operations (14 functions) |
+| Square API integration (v42) | Critical | Payments and orders only — catalog sync removed in Phase 1 (2026-08) |
 | Service worker with offline caching | Medium | Cache-first strategy for static routes |
 | JSON-LD structured data | Medium | SEO optimization |
 | Sitemap + robots.txt | Low | Crawler configuration |
@@ -181,13 +179,15 @@ Customer browses → Selects product → Customizes design (customizer) → Adds
 
 ### 5.2 Catalog Management
 ```
-Square Catalog (405 items) ←→ syncProducts / createSquareProduct
+Admin CMS (create/edit products, upload images/designs)
          ↓
-Firestore products/ (ManagedProduct)
+Firestore products/ + categories/ (master catalog — ManagedProduct)
          ↓
-Admin CMS (edit, manage, upload images/designs)
-         ↓
-Public Storefront (shop, product, customizer)
+Public Storefront (shop, product, customizer — catalog reads via useCatalog, Firestore only)
+
+Square is payment-only (createSquareOrderAndPay). The Square catalog sync
+was removed in Phase 1 (2026-08); createSquareProduct remains as an optional
+one-way push of an admin product to Square for POS linkage.
 ```
 
 ### 5.3 Design Management

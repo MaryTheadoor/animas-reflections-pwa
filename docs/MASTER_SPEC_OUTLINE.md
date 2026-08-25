@@ -95,7 +95,7 @@ This document is a function-by-function specification of the entire PWA. It is i
 - **Purpose:** Browse catalog with filters, sort, search.
 - **Files:** `src/app/shop/page.tsx`, `src/components/product/product-card.tsx`
 - **Checks:**
-  - [ ] Products load from `useCatalog` (Firestore first, Square fallback).
+  - [ ] Products load from `useCatalog` (Firestore only — no Square fallback; Square is payment-only).
   - [ ] Category filter pills work.
   - [ ] Search input filters by name/description.
   - [ ] Sort modes (price/name) work.
@@ -209,15 +209,13 @@ This document is a function-by-function specification of the entire PWA. It is i
   - [ ] Tabs render and switch correctly.
 
 ### 5.2 Products Tab
-- **Purpose:** Full product CRUD, sync, push to Square.
+- **Purpose:** Full product CRUD, optional one-way push to Square for POS linkage.
 - **Files:** `src/components/admin/product-manager.tsx`, `src/components/admin/variant-matrix-editor.tsx`
 - **Checks:**
   - [ ] Product list loads from Firestore.
   - [ ] Create/edit form validates name, category, variants.
   - [ ] Variant matrix editor generates size/color combos.
   - [ ] Colors, tags, images, mockups, add-ons, designAssets editable.
-  - [ ] "Sync from Square" calls `syncProducts`.
-  - [ ] "Sync Inventory" calls `fetchInventoryCounts`.
   - [ ] "Push → Square" calls `createSquareProduct` and updates Square IDs.
   - [ ] Bulk activate/deactivate/delete work.
   - [ ] Duplicate product clears Square IDs.
@@ -251,13 +249,12 @@ This document is a function-by-function specification of the entire PWA. It is i
   - [ ] List displays thumbnail, name, category, description, tags.
 
 ### 5.6 Settings Tab
-- **Purpose:** Site config, theming, catalog sync controls.
+- **Purpose:** Site config and theming.
 - **Files:** `src/app/admin/page.tsx` (Settings tab)
 - **Checks:**
   - [ ] Loads `config/site`.
   - [ ] Color/font/copy/shipping/add-on fields bind to state.
   - [ ] Save calls `saveSiteConfig`.
-  - [ ] Sync/Import/Pipeline/Clear buttons invoke correct functions.
 
 ### 5.7 Orders Tab
 - **Purpose:** View recent Square orders and set tracking URLs.
@@ -292,8 +289,8 @@ This document is a function-by-function specification of the entire PWA. It is i
   - [ ] `USE_SYNTHETIC` toggle is `false` for production.
   - [ ] Reads Firestore `products/` and `categories/`.
   - [ ] Filters inactive products.
-  - [ ] Falls back to Square API via `fetchSquareCatalog` if Firestore empty.
-  - [ ] Converts SquareCatalogItem to ManagedProduct consistently.
+  - [ ] Reads Firestore only; there is no Square API fallback (Square catalog sync was removed in Phase 1).
+  - [ ] Maps Firestore documents to ManagedProduct consistently.
 
 ### 6.2 Search Hook
 - **Purpose:** Fuzzy text search over catalog.
@@ -329,65 +326,45 @@ This document is a function-by-function specification of the entire PWA. It is i
 
 ## 8. Backend Cloud Functions
 
-### 8.1 Square Catalog Functions
-- **Functions:** `fetchSquareCatalog`, `syncProducts`, `importProducts`, `fetchSyncStatus`
-- **Files:** `functions/src/index.ts`, `functions/src/sync.ts`
-- **Checks:**
-  - [ ] Filters `ecom_visibility === "VISIBLE"`.
-  - [ ] Handles BigInt price amounts with `Number()`.
-  - [ ] Groups items into ManagedProducts.
-  - [ ] Writes `products/` and `categories/` docs.
-  - [ ] Updates `config/sync_status`.
+The backend is 14 Cloud Functions, all exported from `functions/src/index.ts` (828 lines), plus `functions/src/pricing.ts` (294 lines, server-side order pricing with pure integer-cents math). Firestore is the master catalog; Square is payment-only. The Square catalog-sync architecture — `functions/src/sync.ts` and `functions/src/product-pipeline.ts`, the `fetchSquareCatalog`, `syncProducts`, `importProducts`, `runPipeline`, `scheduledSync`, `fetchSyncStatus`, `fetchPipelineStatus`, `fetchInventoryCounts`, and `clearProducts` functions, and the admin "Catalog Sync" UI — was removed in Phase 1 (2026-08).
 
-### 8.2 Square Product Push
+### 8.1 Square Product Push
 - **Function:** `createSquareProduct`
 - **Checks:**
+  - [ ] Optional one-way push of an admin product to Square for POS linkage.
   - [ ] Builds ITEM + ITEM_VARIATION objects.
   - [ ] Uses temp IDs prefixed with `#`.
   - [ ] Calls `batchUpsert`.
   - [ ] Maps returned IDs back to Firestore variants.
 
-### 8.3 Checkout Payment
+### 8.2 Checkout Payment
 - **Function:** `createSquareOrderAndPay`
 - **Checks:**
   - [ ] Validates line items and source ID.
-  - [ ] Builds Square order with catalog or ad-hoc line items.
+  - [ ] Re-derives all prices server-side from Firestore via `pricing.ts` (integer-cents math); never trusts client amounts.
   - [ ] Adds shipment fulfillment with customer address.
   - [ ] Charges payment including shipping.
   - [ ] Mirrors order to Firestore `orders/`.
 
-### 8.4 Orders
+### 8.3 Orders
 - **Functions:** `fetchRecentOrders`, `fetchCustomerOrders`, `updateOrderTracking`
 - **Checks:**
   - [ ] `fetchRecentOrders` searches Square orders by location.
   - [ ] `fetchCustomerOrders` requires auth and filters by email.
   - [ ] `updateOrderTracking` requires auth and updates Firestore.
 
-### 8.5 Inventory
-- **Function:** `fetchInventoryCounts`
-- **Checks:**
-  - [ ] Batches variation IDs (100 per call).
-  - [ ] Updates Firestore variant inventory.
-
-### 8.6 Customer Data
+### 8.4 Customer Data
 - **Functions:** `get/saveCustomerProfile`, `get/save/deleteCustomerAddress`
 - **Checks:**
   - [ ] All require authenticated user.
   - [ ] Addresses scoped to `customers/{uid}/addresses`.
 
-### 8.7 Site Config & Admin
+### 8.5 Site Config & Admin
 - **Functions:** `fetchSiteConfig`, `saveSiteConfig`, `saveAdminEmails`
 - **Checks:**
   - [ ] Read/write correct `config/` docs.
 
-### 8.8 Pipeline & Cleanup
-- **Functions:** `runPipeline`, `fetchPipelineStatus`, `clearProducts`, `scheduledSync`
-- **Checks:**
-  - [ ] Pipeline runs advanced product classification.
-  - [ ] Clear deletes products, categories, baseProducts, designs, productInstances.
-  - [ ] Scheduled sync runs daily at 4 AM.
-
-### 8.9 Health
+### 8.6 Health
 - **Function:** `health`
 - **Checks:**
   - [ ] Returns status and Square configuration flag.

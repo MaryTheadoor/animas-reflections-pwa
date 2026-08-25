@@ -1143,7 +1143,54 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 
 ---
 
+## Session 24 — 2026-08-24 01:15 EDT | Docs refresh finish + build-environment investigation
+
+### Context Restored From
+- Parallel instance crashed mid-session; recovered from `git status` + commits `3bb1e4a`/`85b7fbc` (docs refresh for Firestore-master catalog + 14 functions)
+- Uncommitted: docs edits (.env.example, README, ARCHITECTURE, BUSINESS_MODEL, MASTER, MASTER_SPEC_OUTLINE, PROJECT_STATUS_REPORT, SCOPE) + `src/components/ui/debug-panel.tsx` deletion
+- DEVLOG Sessions 1–23, PROJECT_CONTEXT.md
+
+### Actions Taken
+1. **Finished the docs refresh:** fixed `docs/MASTER.md` tree line (`DebugPanel` → `AdminTooltip` — component deleted); updated `docs/PRODUCT_MODIFIER_AUDIT.md` (item 9 resolved by Phase 1 removal; backend files list). Verified all remaining mentions of removed functions across docs are intentional "removed in Phase 1" notes.
+2. **Killed orphaned dev server** left by the crashed instance (npm→next chain PIDs 19312/16404/5028 holding port 3000 and `.next`).
+3. **Build failure investigation:** `next build` (output: "export") died prerendering `/_global-error` with `Invariant: Expected workStore to be initialized` (E1068 — metadata resolution reads the request store). Proved it is **not a code problem**: an identical minimal Next app builds green in Temp / `next-min-home` / `projects2` / `sub\projects`, but fails deterministically in ANY subdir of `C:\Users\AmosA\projects\` — including the real repo stripped to a stub page. Ruled out: src changes (none since 669a7c1), lockfile drift (`npm ci` from committed lockfiles), Next 16.2.7 vs 16.3.2, a custom `global-error.tsx`, the extra `S-1-4-221205482-876100782` ACE on `projects\` (unremovable without elevation; clean-ACL dir still fails), NTFS compression, per-dir case sensitivity, Controlled Folder Access (off), sync clients, zombie processes, shell (cmd vs bash).
+4. **Workaround (in use): mirror build.** Project copied to `C:\Users\AmosA\build\animas-mirror` (excludes node_modules/.next/.git/out/_backups); `npm ci && npm run build` there → **22/22 static pages, exit 0**; `out/` copied back. Functions `tsc` build also green.
+5. Reverted a trial upgrade `next@16.3.2` → back to pinned 16.2.7 (upgrade did not fix the build).
+
+### Decisions Made
+- Keep `next` pinned at 16.2.7 (matches lockfile).
+- Keep the diff scoped to the docs refresh; dropped the experimental custom `global-error.tsx`.
+- Production verification runs via the mirror build until the `projects\` location failure is root-caused.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| docs/MASTER.md | DebugPanel → AdminTooltip in tree; (session) Firestore-master + 14-function refresh |
+| docs/PRODUCT_MODIFIER_AUDIT.md | Item 9 resolved-by-Phase-1 note; backend files list |
+| docs/ARCHITECTURE.md, BUSINESS_MODEL.md, MASTER_SPEC_OUTLINE.md, PROJECT_STATUS_REPORT.md, SCOPE.md, README.md, .env.example | Phase 1 catalog-sync removal refresh (from crashed instance) |
+| src/components/ui/debug-panel.tsx | DELETED (dead code, backing functions removed in Phase 1) |
+| out/ | Regenerated via mirror build — 22 static pages |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| — | (pending user confirmation) |
+
+### Current State at Session End
+- Lint 0 errors | Tests 113/113 (10 suites) | Mirror build 22/22 | Functions tsc clean
+- Branch: `development` @ 3bb1e4a; working tree = docs refresh (dirty)
+- USE_SYNTHETIC = false
+- Live deploy: unchanged from session 23 (Phases 1–6)
+
+### Pending / Next Session
+- [ ] Commit the docs-refresh session (needs user confirmation)
+- [ ] Root-cause the `C:\Users\AmosA\projects\` build failure (suspects: Windows update/Defender behavior, the unremovable `S-1-4-…` ACE, or move the repo out of `projects\`)
+- [ ] Carry-over: G2 live checkout smoke test, Square webhooks (M11), "Biscuit Hockey" question for Cindy
+
+---
+
 ```
+
 ## Session N — YYYY-MM-DD | HH:MM MST
 
 ### Context Restored From

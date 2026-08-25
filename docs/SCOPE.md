@@ -4,7 +4,7 @@
 **Client:** Cindy, Owner-Operator — Animas Reflections (Durango, CO)  
 **Business:** Custom screen printing, embroidery, sublimation, direct-to-film printing — apparel, merchandise, jewelry, signs, glassware, metal panels, pet/auto products  
 **Document Type:** Working master scope — updated incrementally as development progresses  
-**Last Updated:** 2026-06-16  
+**Last Updated:** 2026-08-24  
 **Live (Current Site):** https://www.animasreflections.com (Square Online template)  
 **Live (New PWA):** https://animas-reflections-pwa.web.app (Firebase Hosting)  
 **GitHub:** https://github.com/MaryTheadoor/animas-reflections-pwa  
@@ -18,7 +18,7 @@ Completely overhaul the existing e-commerce storefront, transitioning from a res
 
 ### 1.2 Strategic Goals
 - **Decouple** frontend presentation from transactional backend
-- **Maintain Square** as the definitive single source of truth for product catalogs, inventory, and payment processing
+- **Maintain Square** for payment processing only; **Firestore** is the master product catalog (Square catalog sync removed 2026-08)
 - **Eliminate** Shopify monthly overhead fees entirely
 - **Introduce** a flagship Pseudo-3D Product Customizer Canvas Engine for local bands, sports teams, school clubs, and retail consumers to preview, modify, and build custom merchandise
 - **Deliver** a full-featured on-site product management system (CMS) for the business owner
@@ -47,7 +47,7 @@ Completely overhaul the existing e-commerce storefront, transitioning from a res
 | File Storage | Firebase Storage | — |
 | Authentication | Firebase Auth (Email/Password + Google) | — |
 | Payment Processing | Square Web Payments SDK + Square API | v42 |
-| AI/ML (optional) | Genkit + Gemini SDK | v1 |
+| AI/ML (removed) | Genkit + Gemini SDK — removed 2026-08 | — |
 | PWA | Service Worker + Web App Manifest | — |
 | Deployment Mode | Static Export (`output: "export"`) | — |
 
@@ -93,7 +93,7 @@ Combines the efficiency of clean web apps with the approachable warmth of a loca
 
 ---
 
-### 4.1 PUBLIC STOREFRONT (18 Routes)
+### 4.1 PUBLIC STOREFRONT (20 Route Dirs → 22 Static Pages)
 
 | Route | Page | Key Features |
 |-------|------|-------------|
@@ -103,7 +103,7 @@ Combines the efficiency of clean web apps with the approachable warmth of a loca
 | `/customizer?product=` | Customizer | Pseudo-3D mockup canvas, product selector, design upload, design library browser (Firestore), view tabs (front/back/sleeve), add-on toggles ($5 each), price summary, drag/resize design overlay |
 | `/checkout` | Checkout | Square Web Payments SDK card input, customer/shipping form, order summary, cart line items display, shipping tier calculation, card tokenization, `createSquareOrderAndPay` callable |
 | `/order-confirmation` | Confirmation | Order ID display, success state, continue shopping/home links |
-| `/search` | Search | AI-powered search bar (programmatic fuzzyScore), category filter pills, color filter toggles, sort dropdown, results grid |
+| `/search` | Search | Fuzzy search bar (programmatic `fuzzyScore` in `src/hooks/useSearch.ts`), category filter pills, color filter toggles, sort dropdown, results grid |
 | `/account` | Account (auth-gated) | Orders tab (expandable details, carrier tracking URL), Addresses tab (CRUD), Settings tab (profile edit) |
 | `/about` | About | Our Story content, contact info, glass card |
 | `/contact` | Contact | Phone/email links, privacy note |
@@ -206,7 +206,7 @@ Instead of expensive WebGL/Three.js rendering (which degrades mobile battery and
 
 | Tab | Component | Functionality |
 |-----|-----------|--------------|
-| **Products** | `ProductManager` (781 lines) | Full CRUD: name, category, description, active/featured toggle, variants, colors, tags, images. Matrix editor for bulk variant creation. "Sync from Square" → runs `syncProducts` function. "Push to Square" → runs `createSquareProduct` function. Bulk actions: activate/deactivate/delete, duplicate |
+| **Products** | `ProductManager` (781 lines) | Full CRUD: name, category, description, active/featured toggle, variants, colors, tags, images. Matrix editor for bulk variant creation. "Push to Square" → runs `createSquareProduct` function (optional one-way push for POS linkage). Bulk actions: activate/deactivate/delete, duplicate |
 | **Categories** | `CategoryManager` (229 lines) | Full CRUD: inline rename, reorder (move up/down), add/delete |
 | **Images** | `ImageManager` (378 lines) | Gallery viewer, drag-and-drop upload to Firebase Storage (`products/{id}/`), mockup image assignment (front/back/sleeve), delete |
 | **Settings** | SiteConfig form | Visual color pickers for CSS variables, sitewide announcement banner text, shipping rates. Reads/writes `config/site` Firestore doc |
@@ -218,7 +218,7 @@ Instead of expensive WebGL/Three.js rendering (which degrades mobile battery and
 #### Current Status
 - All CMS tabs built with components
 - Product Manager is the most complete (781 lines)
-- **REMAINING:** Wire "Push to Square" end-to-end, wire "Sync from Square" with progress feedback, add inventory count display, add order tracking update capability, add pagination/filtering to Orders/Users
+- **REMAINING:** Wire "Push to Square" end-to-end, add inventory count display, add order tracking update capability, add pagination/filtering to Orders/Users
 
 ---
 
@@ -226,40 +226,35 @@ Instead of expensive WebGL/Three.js rendering (which degrades mobile battery and
 
 #### Data Flow
 ```
-Square Catalog (405 items)
-    ↓ syncProducts() Cloud Function
-Firestore products/ (ManagedProduct docs)
+Admin Dashboard (Products tab — ProductManager CRUD)
+    ↓ writes ManagedProduct docs
+Firestore products/ (master catalog)
     ↓ useCatalog() hook → managedToCatalogItem()
 Client Components (Shop, Product, Customizer, Fundraising)
     ↓ CartContext reducer
 Checkout Page → Card Tokenization (Square Web Payments SDK)
     ↓ createSquareOrderAndPay() Cloud Function
-Square Orders API → Payment Processing
+    (re-derives all prices server-side from Firestore — never trusts client amounts)
+Square Orders API → Payment Processing (Square is payment-only)
     ↓ returns orderId, paymentId, status
 Order Confirmation Page
 ```
 
-#### Functions Deployed
+#### Functions Deployed (14 total)
 | Function | Trigger | Purpose |
 |----------|---------|---------|
-| `fetchSquareCatalog` | Callable | Returns items + categories from Square (ecom_visibility=VISIBLE) |
-| `syncProducts` | Callable/HTTPS | Groups Square items by brand → writes ManagedProduct to Firestore |
-| `importProducts` | Callable | Alt sync by category filters |
-| `createSquareProduct` | Callable | Pushes admin-created product from Firestore → Square |
-| `createSquareOrderAndPay` | Callable | Builds Square order + processes payment |
-| `fetchRecentOrders` | Callable | Returns last 50 Square orders |
-| `fetchCustomerOrders` | Callable | Returns orders for authenticated user |
-| `fetchInventoryCounts` | Callable | Returns Square inventory counts per variant |
-| `fetchSyncStatus` | Callable | Returns last sync status |
-| `fetchPipelineStatus` | Callable | Returns product pipeline processing status |
-| `runPipeline` | Callable | Runs product classification pipeline |
-| `scheduledSync` | PubSub | Scheduled automatic catalog sync |
+| `createSquareOrderAndPay` | Callable | Builds Square order + processes payment; re-derives all prices server-side from Firestore, never trusts client amounts |
 | `health` | HTTPS | Status check endpoint |
 | `fetchSiteConfig` / `saveSiteConfig` | Callable | Site config CRUD |
 | `saveAdminEmails` | Callable | Admin email management |
+| `fetchRecentOrders` | Callable | Returns last 50 Square orders |
+| `createSquareProduct` | Callable | Optional one-way push of an admin product from Firestore → Square for POS linkage |
+| `fetchCustomerOrders` | Callable | Returns orders for authenticated user |
 | `getCustomerAddresses` / `saveCustomerAddress` / `deleteCustomerAddress` | Callable | Address CRUD |
 | `getCustomerProfile` / `saveCustomerProfile` | Callable | Profile CRUD |
 | `updateOrderTracking` | Callable | Update carrier tracking URL on order |
+
+Removed 2026-08 with the Square→Firestore catalog-sync architecture: `fetchSquareCatalog`, `syncProducts`, `importProducts`, `runPipeline`, `scheduledSync`, `fetchSyncStatus`, `fetchPipelineStatus`, `fetchInventoryCounts`, `clearProducts` (along with `functions/src/sync.ts`, `functions/src/product-pipeline.ts`, and the admin "Catalog Sync" UI).
 
 #### Known Issues (DO NOT REPEAT)
 1. Square SDK v42 BigInt: `priceMoney.amount` is BigInt, must `Number()` before arithmetic
@@ -268,7 +263,7 @@ Order Confirmation Page
 4. `batchUpsert` method on `client.catalog`, not `batchUpsertCatalogObjects`
 
 #### Current Status
-- All 16+ functions deployed and tested
+- All 14 functions deployed and tested
 - Square checkout flow end-to-end stubbed but not yet tested with live sandbox card
 - **REMAINING:** End-to-end checkout test with Square sandbox, verify tracking URL propagation, inventory count display in admin
 
@@ -300,7 +295,7 @@ Order Confirmation Page
 - **JSON-LD Structured Data:** `Organization`, `WebSite` (with SearchAction), `Product` per detail page
 - **Heading Progression:** `<h1>` per page, `<h2>` for sections
 - **Alt Text:** Auto-generated from product name/description
-- **Sitemap.xml:** All 18 routes listed
+- **Sitemap.xml:** All routes listed (20 route dirs)
 - **Robots.txt:** Crawl allowed, admin/checkout disallowed
 - **Service Worker:** Cache-first strategy with offline fallback for static routes
 
@@ -329,11 +324,11 @@ Order Confirmation Page
 
 | Collection | Document | Access | Purpose |
 |-----------|----------|--------|---------|
-| `products/` | `{productId}` | Public read, Auth write | ManagedProduct docs (synced from Square) |
+| `products/` | `{productId}` | Public read, Auth write | ManagedProduct docs (master catalog, edited via admin dashboard) |
 | `categories/` | `{categoryId}` | Public read, Auth write | ManagedCategory docs |
 | `config/site` | `site` | Public read, Auth write | Global site config (colors, banner, rates) |
 | `config/admin` | `admin` | Auth read/write | Admin email addresses |
-| `config/sync_status` | `sync_status` | Auth read/write | Last catalog sync timestamp/results |
+| `config/sync_status` | `sync_status` | Auth read/write | Last catalog sync timestamp/results — removed 2026-08 with catalog sync |
 | `designs/` | `{designId}` | Public read, Auth write | Design assets for customizer library |
 | `users/` | `{uid}` | Auth read/write (own only) | User profile data |
 | `orders/` | `{orderId}` | Auth read, no write | Order records |
@@ -362,9 +357,9 @@ See `docs/SCHEMA.md` for full schema reference.
 - [x] Core config files (next.config.ts, tsconfig.json, firebase.json, etc.)
 
 ### Phase 2: Square API Gateway & Serverless Layer — COMPLETE
-- [x] All 16+ Cloud Functions deployed and tested
-- [x] Square catalog fetch + sync pipeline
-- [x] Product pipeline (brand detection, type classification, color/size extraction)
+- [x] Cloud Functions deployed and tested (now 14 total)
+- [x] Square catalog fetch + sync pipeline *(removed 2026-08 — Firestore is now the master catalog)*
+- [x] Product pipeline (brand detection, type classification, color/size extraction) *(removed 2026-08)*
 - [x] Order creation + payment processing
 - [x] Square Web Payments SDK integrated on checkout
 
@@ -400,7 +395,6 @@ See `docs/SCHEMA.md` for full schema reference.
 - [x] Site config form with color pickers
 - [x] Admin auth gating
 - [ ] **Wire "Push to Square"** end-to-end with progress/error feedback
-- [ ] **Wire "Sync from Square"** with status display
 - [ ] **Inventory count display** per variant
 - [ ] **Order tracking update** capability
 - [ ] **Pagination/filtering** on Orders and Users tables
@@ -410,7 +404,7 @@ See `docs/SCHEMA.md` for full schema reference.
 - [x] Service worker (cache-first)
 - [x] robots.txt + sitemap.xml
 - [x] JSON-LD on layout + product page
-- [ ] **Verify JSON-LD on all 18 routes**
+- [ ] **Verify JSON-LD on all routes**
 - [ ] **Per-product structured data** (full Product schema)
 - [ ] **Lighthouse audit** (target 90+ on all categories)
 - [ ] **Cross-browser testing** (Chrome, Firefox, Safari, mobile)
@@ -428,7 +422,7 @@ See `docs/SCHEMA.md` for full schema reference.
 ### Frontend (87+ source files)
 | Category | Files | Status |
 |----------|-------|--------|
-| Pages (18 routes) | 20 files | All built, 16 server, 2 client-hydrated |
+| Pages (20 route dirs) | 22 static HTML files | All built, 16 server, 2 client-hydrated |
 | Components | 17 groups | All built |
 | Context Providers | 4 | Auth, Cart, SiteConfig, Theme — all built |
 | Hooks | 3 | useCatalog, useSearch, useSiteConfig — all built |
@@ -437,22 +431,23 @@ See `docs/SCHEMA.md` for full schema reference.
 | Tests | 4 suites | search, catalog, cart, customizer views — all passing |
 | Styling | 1 file | globals.css — brand theme, dark mode, S.I.T.E.S protocol |
 
-### Backend (3 source modules, ~2,300 LOC)
+### Backend (2 source modules, ~1,120 LOC)
 | Module | Lines | Purpose |
 |--------|-------|---------|
-| `functions/src/index.ts` | 1,160 | All 16+ Cloud Functions |
-| `functions/src/sync.ts` | 745 | Square→Firestore sync logic, brand detection, type classification |
-| `functions/src/product-pipeline.ts` | 361 | Advanced product pipeline: 135+ garment type patterns, known designs |
+| `functions/src/index.ts` | 828 | All 14 Cloud Functions |
+| `functions/src/pricing.ts` | 294 | Server-side order pricing (pure integer-cents math) |
+
+`functions/src/sync.ts` and `functions/src/product-pipeline.ts` were DELETED (2026-08) along with the Square→Firestore catalog-sync architecture.
 
 ### Build Output
-- Static export generates `out/` with 18 routes
+- Static export generates `out/` (20 route dirs → 22 static HTML files)
 - Firebase Hosting serves from `out/`
 - `next.config.ts`: `output: "export"`, `trailingSlash: true`, `images: { unoptimized: true }`
 
 ### Synthetic Data Toggle
 - `src/hooks/useCatalog.ts` line ~6: `const USE_SYNTHETIC = true`
 - `true` = 24 mock products + 21 categories (for UI development)
-- `false` = real Firestore data (synced from Square)
+- `false` = real Firestore data (master catalog in `products/` + `categories/`)
 - **Must switch to `false` before production launch**
 
 ---
@@ -481,8 +476,7 @@ See `docs/SCHEMA.md` for full schema reference.
 ### Short-Term (This Week)
 4. End-to-end checkout test with Square sandbox
 5. Wire "Push to Square" in admin
-6. Wire "Sync from Square" in admin with progress feedback
-7. Account page: test order tracking URL propagation
+6. Account page: test order tracking URL propagation
 8. iOS Safari touch compatibility on customizer canvas
 
 ### Medium-Term (Next 1-2 Weeks)
@@ -536,7 +530,6 @@ NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD
 SQUARE_ACCESS_TOKEN
 SQUARE_ENVIRONMENT
 SQUARE_LOCATION_ID
-GEMINI_API_KEY (optional, for AI search)
 ```
 
 ### Credential Sources (External to Repo)
@@ -590,7 +583,7 @@ npm run backup:commit -- -Message "feat: ..."  # 2. Commit + push + redundant lo
 ### Pre-Deploy Checklist
 1. `npm run lint` — 0 errors required
 2. `npm run test` — all suites pass
-3. `npm run build` — generates 18 routes
+3. `npm run build` — generates 22 static HTML files (20 route dirs)
 4. `cd functions && npm run build` — compiles clean
 5. `firebase deploy` — deploy all
 
@@ -614,4 +607,4 @@ npm run backup:restore      # Restore from backup
 
 ---
 
-*This document is version 1.0 and will be updated incrementally as development progresses. Last updated: 2026-06-16.*
+*This document is version 1.0 and will be updated incrementally as development progresses. Last updated: 2026-08-24.*

@@ -35,13 +35,17 @@ firebase deploy          # Deploy hosting + functions + rules
 
 ### Environment
 
-Copy `.env.example` → `.env.local` and fill in:
-- `SQUARE_ACCESS_TOKEN` — Square production token
-- `SQUARE_LOCATION_ID` — Square location
+Copy `.env.example` → `.env.local` and fill in the **client** values:
+- `NEXT_PUBLIC_SQUARE_APP_ID` / `NEXT_PUBLIC_SQUARE_ENVIRONMENT` / `NEXT_PUBLIC_SQUARE_LOCATION_ID` — Square Web Payments SDK (public identifiers, not secrets)
 - `NEXT_PUBLIC_FIREBASE_*` — Firebase config (already committed)
 - `NEXT_PUBLIC_ADMIN_EMAIL` — CMS access email
+- `NEXT_PUBLIC_SHIPPING_TIER_*` / `NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD` — shipping rates (defaults provided)
 
-Functions get their own `.env` at `functions/.env` with Square credentials.
+Cloud Functions keep their **server-side secrets** in `functions/.env` (never in the client):
+- `SQUARE_ACCESS_TOKEN` — Square API token (payment + optional product push)
+- `SQUARE_ENVIRONMENT` — `sandbox` or `production`
+- `SQUARE_LOCATION_ID` — Square location
+- `BOOTSTRAP_ADMIN_EMAIL` — optional first-run admin bootstrap
 
 ---
 
