@@ -1227,6 +1227,29 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] `master` merge (24 commits behind)
 - [ ] Root-cause `C:\Users\AmosA\projects\` build failure
 
+---
+
+## Session 26 — 2026-08-25 12:05 -04:00 | Remove deprecated SquareCatalogItem + fix stale customizer test
+
+### Actions Taken
+1. **Removed `SquareCatalogItem` + `SquareVariation`** from `src/types/index.ts` (deprecated bridge types — Square is payment-only since Phase 1; nothing consumed them after the round-1 converter removal).
+2. **Migrated `src/lib/synthetic-data.ts`** from `SquareCatalogItem[]` to `ManagedProduct[]` (24 products; inferred `productType` — 18 apparel / sticker / jewelry / sign / 3 accessory; added required `active`/`featured`/`createdAt`/`updatedAt`/`images`/`colors`/`tags`).
+3. **Simplified `catalog-context.tsx`** synthetic branch — SYNTHETIC_PRODUCTS is now consumed directly (inline conversion deleted).
+4. **Fixed `views.test.ts`** — its inline `getProductViews`/`getPrintZone` copies had drifted from `customizer/page.tsx` (still `SquareCatalogItem`, used `image_url`, missed the `sideL`/`sideR` views + the "sleeve for apparel" rule). Rewrote to mirror production `ManagedProduct` logic; updated expectations (null product now yields only the front view).
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/types/index.ts | removed SquareCatalogItem + SquareVariation |
+| src/lib/synthetic-data.ts | migrated to ManagedProduct[] |
+| src/context/catalog-context.tsx | synthetic branch uses data directly |
+| src/app/customizer/__tests__/views.test.ts | fixed stale inline copies to match production |
+
+### Current State at Session End
+- Lint 0 errors | Tests 109/109 (9 suites) | Build 22/22 | Functions tsc clean (unchanged this round)
+- Branch: `development` (this round's changes pending commit)
+- USE_SYNTHETIC = false
+
 ```
 
 ## Session N — YYYY-MM-DD | HH:MM MST

@@ -228,7 +228,7 @@ Full plan: `docs/PRODUCT_MODIFIER_AUDIT.md`. Session log: `docs/DEVLOG.md` Sessi
 4. Run `npm run dev` to test locally
 5. Run `npm run build && firebase deploy` to deploy (retry once if the functions-analysis step times out)
 6. **Branching:** work on `development`; merge to `master` only when verified + user-approved (master is 17 commits behind as of 2026-08-21)
-7. Every deploy MUST pass: lint (0 errors), build (22 routes), tests (107/107), visual check
+7. Every deploy MUST pass: lint (0 errors), build (22 routes), tests (109/109), visual check
 8. Do NOT modify nav-dock position — it's inside a fixed wrapper
 9. Do NOT add bottom navigation bars — only top dock
 10. Use backup framework: `backup:file` before edits, `backup:snapshot` at session end (backup-commit.ps1 is unreliable — use plain git)

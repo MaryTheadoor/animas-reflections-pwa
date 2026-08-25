@@ -61,32 +61,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       if (DATA_SOURCE === "synthetic") {
         const { SYNTHETIC_PRODUCTS, SYNTHETIC_CATEGORIES } = await import("@/lib/synthetic-data");
         await new Promise((r) => setTimeout(r, 300));
-        // Synthetic data is in SquareCatalogItem format — convert to ManagedProduct.
-        const managed: ManagedProduct[] = SYNTHETIC_PRODUCTS.map((item) => ({
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          categoryId: item.categoryIds?.[0] ?? "",
-          productType: (item.productType as ManagedProduct["productType"]) ?? "other",
-          colors: item.colors ?? [],
-          tags: item.tags ?? [],
-          images: item.images ?? (item.image_url ? [item.image_url] : []),
-          variants: item.variations.map((v) => ({
-            id: v.id,
-            name: v.name,
-            price: v.price,
-            sku: v.sku ?? "",
-            inventory: v.inventory,
-            inventoryUpdatedAt: v.inventoryUpdatedAt,
-          })),
-          active: true,
-          featured: false,
-          createdAt: "",
-          updatedAt: "",
-          printZones: item.printZones,
-          mockupImages: item.mockupImages,
-        }));
-        setProducts(managed);
+        setProducts(SYNTHETIC_PRODUCTS);
         setCategories(SYNTHETIC_CATEGORIES);
         setLoading(false);
         return;

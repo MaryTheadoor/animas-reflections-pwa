@@ -405,43 +405,6 @@ export interface SiteConfig {
   updated_at: string;
 }
 
-/* ─── API Response Types (Bridge / Internal) ────────────────────── */
-
-/** Bridge type used ONLY for Square API responses and legacy compatibility.
- *  All components consume ManagedProduct directly via useCatalog().
- *  managedToCatalogItem() converts ManagedProduct → SquareCatalogItem when
- *  Square API fallback compatibility is needed (useSearch, square payloads).
- *  @deprecated Prefer ManagedProduct for all new code. */
-export interface SquareCatalogItem {
-  id: string;
-  name: string;
-  description: string;
-  categoryIds: string[];
-  image_url?: string;
-  images?: string[];
-  variations: SquareVariation[];
-  colors?: string[];
-  tags?: string[];
-  productType?: string;
-  printZones?: PrintZoneTemplate;
-  mockupImages?: {
-    front?: string;
-    back?: string;
-    sleeve?: string;
-    sideL?: string;
-    sideR?: string;
-  };
-}
-
-/** Bridge type used ONLY for Square API responses and legacy compatibility. */
-export interface SquareVariation {
-  id: string;
-  name: string;
-  price: number;
-  sku?: string;
-  inventory?: number;
-  inventoryUpdatedAt?: string;
-}
 /* ─── Customer & Account Types ─────────────────────────────────── */
 
 export interface CustomerAddress {
