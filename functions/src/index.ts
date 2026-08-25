@@ -588,7 +588,11 @@ export const createSquareProduct = onCall(
       const updatedVariants = variants.map((v, i) => ({
         ...v,
         squareItemId,
-        squareVariationId: tempToReal.get(`#var_${i}`) ?? String(v.id ?? ""),
+        // A missing Square ID mapping must NOT fall back to the managed variant
+        // id: a bogus squareVariationId makes checkout treat the variant as a
+        // Square catalog item (catalogPath=true) and fail the payment. Empty
+        // string keeps it on the ad-hoc, server-priced path.
+        squareVariationId: tempToReal.get(`#var_${i}`) ?? "",
       }));
 
       await db.collection("products").doc(productId).set(

@@ -1250,6 +1250,24 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - Branch: `development` (this round's changes pending commit)
 - USE_SYNTHETIC = false
 
+---
+
+## Session 27 — 2026-08-25 12:11 -04:00 | Payment-path audit + createSquareProduct mapping-gap fix
+
+### Actions Taken
+1. **G2 blocker identified:** Square is in PRODUCTION mode (`SQUARE_ENVIRONMENT=production` in functions/.env and `NEXT_PUBLIC_SQUARE_ENVIRONMENT=production` in .env.local). A live checkout smoke test would place a real charge — deferred until the client runs it or a sandbox config is approved.
+2. **Shipping/pricing consistency verified (static audit):** compared client (cart-context + site-config FALLBACK) vs server (pricing.ts deriveOrder). Defaults ($3 sticker / $7.5 apparel / $100 free threshold), the all-stickers-vs-apparel tier selection, the per-product shippingRate max, and the free-shipping threshold comparison all MATCH — no expectedTotal-divergence bug found.
+3. **Fixed createSquareProduct mapping-gap guard (bug):** the variation loop wrote `squareVariationId: tempToReal.get(#var_i) ?? String(v.id)`, falling back to the MANAGED variant id when Square returned no mapping. A bogus squareVariationId makes checkout set `catalogPath=true` and charge via a non-existent Square variation. Changed the fallback to "" so unmapped variants stay on the ad-hoc, server-priced path.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| functions/src/index.ts | createSquareProduct: squareVariationId fallback → "" (no managed-id fallback) |
+
+### Current State at Session End
+- Lint 0 | Tests 109/109 (9 suites) | Build 22/22 | Functions tsc clean
+- Square: PRODUCTION — G2 needs a client-driven test or sandbox switch
+
 ```
 
 ## Session N — YYYY-MM-DD | HH:MM MST
