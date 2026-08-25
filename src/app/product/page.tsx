@@ -310,7 +310,13 @@ function ProductContent() {
                 <div className="flex flex-wrap gap-2">
                   {colors.map((color) => {
                     const tint = product.colorTints?.[color];
-                    const swatch = tint || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
+                    // Fall back to the admin-managed catalog color hex so named
+                    // colors (e.g. "Heather Grey") show their real swatch even
+                    // without a per-product colorTints entry.
+                    const catalogHex = siteConfig.catalog_options?.colors?.find(
+                      (c) => c.name.toLowerCase() === color.toLowerCase(),
+                    )?.hex;
+                    const swatch = tint || catalogHex || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
                     const isActive = effectiveColor === color;
                     return (
                       <button

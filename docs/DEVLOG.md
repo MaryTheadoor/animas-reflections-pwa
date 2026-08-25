@@ -1268,6 +1268,23 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - Lint 0 | Tests 109/109 (9 suites) | Build 22/22 | Functions tsc clean
 - Square: PRODUCTION — G2 needs a client-driven test or sandbox switch
 
+---
+
+## Session 28 — 2026-08-25 12:16 -04:00 | Color-swatch catalog-hex fallback + stripUndefined coverage audit
+
+### Actions Taken
+1. **Fixed "Heather Grey default tint" (bug):** the product-page color swatch used `product.colorTints?.[color]` with a fallback to `#cccccc` for named colors. Named colors (e.g. "Heather Grey") whose hex lives in the admin `catalog_options.colors` now fall back to that catalog hex before the generic gray.
+2. **Verified stripUndefined coverage (Known Issue #10):** audited every Firestore write in `src/`. Unwrapped writes (auth-context user doc, category create, image-manager, designs migration) are all safe — they write `null` or clean Firestore-read data, never `undefined`. No remaining undefined-rejection gap found.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/app/product/page.tsx | color swatch falls back to catalog_options.colors hex |
+
+### Current State at Session End
+- Lint 0 | Tests 109/109 (9 suites) | Build 22/22 | Functions tsc clean
+- Square: PRODUCTION (G2 deferred); createSquareProduct fix still pending deploy
+
 ```
 
 ## Session N — YYYY-MM-DD | HH:MM MST
