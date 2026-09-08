@@ -256,4 +256,16 @@ Synthetic data is for UI development only. Production always reads Firestore —
 - Authentication: Enable Email/Password + Google providers
 
 ---
+
+## 14. CONTENT & THEME EDITOR (in progress)
+
+- **Phase 1 (done):** editable **light + dark** theme + fonts. Data-driven via
+  `config/site.theme` (see `docs/THEME_EDITOR.md`). Editor in Admin → **Content & Theme** tab.
+- **Phase 2 (next):** page-by-page **copy editor** for all site text
+  (`config/site.content` overrides over `src/lib/content.ts`), with per-page wireframe
+  diagrams. Requires converting the static content pages to client components
+  (`output:"export"` bakes server components at build time).
+- **Phase 3:** per-field reset, help links, SEO/OG text.
+
+---
 END OF CONTEXT FILE

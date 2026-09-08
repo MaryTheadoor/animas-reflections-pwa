@@ -1339,3 +1339,38 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] ...
 - [ ] ...
 ```
+
+---
+
+## Session 30 — Content & Theme: Phase 1 (editable light + dark theme)
+
+### What was done
+- Added a data-driven theme system so **both light and dark** palettes + fonts are editable from the admin.
+- **`src/lib/site-defaults.ts`** (new): `ThemePalette`/`SiteTheme`, `LIGHT_THEME`/`DARK_THEME` (mirror `globals.css`), `DEFAULT_FONTS`, `mergeTheme()` (folds `config/site.theme` + legacy flat fields over defaults → full palettes), `toThemeConfig()`, `themeToCss()`, `THEME_TOKENS`, `FONT_OPTIONS`.
+- **`src/context/site-config-context.tsx`**: `SiteConfig.theme`; the provider injects a `#dsh-theme` `<style>` (light on `:root`, dark under `html.dark`, plus fonts) so both modes apply live. Replaced the old inline `--color-*` setters.
+- **`src/app/globals.css`**: removed the hardcoded `html.dark body { --color-* }` (now data-driven); `html.dark body::before` uses `var(--color-cream)`. Component overrides (glass-card, nav-dock, announcement-banner) unchanged.
+- **`src/components/admin/theme-editor.tsx`** (new) + admin **Content & Theme** tab: Light/Dark sub-tabs, per-token color pickers + hex input, font dropdowns, **live WYSIWYG preview** (`#dsh-theme-edit`), Reset per mode, Save via `saveSiteConfig`.
+- **Tests**: `src/lib/__tests__/theme.test.ts` (7 cases: defaults, sparse override, dark override, legacy flat, theme>legacy precedence, fonts, themeToCss).
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Files Changed
+| File | New/Edit |
+|------|----------|
+| src/lib/site-defaults.ts | new |
+| src/context/site-config-context.tsx | edit |
+| src/app/globals.css | edit |
+| src/components/admin/theme-editor.tsx | new |
+| src/app/admin/page.tsx | edit |
+| src/lib/__tests__/theme.test.ts | new |
+| docs/THEME_EDITOR.md | new |
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme editor deployed live; copy editor (Phase 2) not yet built.
+
+### Pending / Next Session
+- [ ] Phase 2: page-by-page copy editor for all site text (per-page wireframe diagrams + fields), building on `config/site.content`.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```
