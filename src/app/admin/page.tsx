@@ -12,6 +12,10 @@ import { useAuth, RequireAdmin } from "@/context/auth-context";
 import { SITE } from "@/lib/content";
 import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
+import HelpGuide from "@/components/admin/help-guide";
+import ThemeEditor from "@/components/admin/theme-editor";
+import CopyEditor from "@/components/admin/copy-editor";
+import { useSiteConfigLoading } from "@/hooks/useSiteConfig";
 import ImageManager from "@/components/admin/image-manager";
 import type { ManagedCategory, DesignAsset } from "@/types";
 import PlaceholderImage from "@/components/ui/placeholder-image";
@@ -160,7 +164,8 @@ const DEFAULT_CONFIG: SiteConfigData = {
 
 function DashboardContent() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "images" | "orders" | "users" | "admins">("products");
+  const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "images" | "orders" | "users" | "admins" | "theme" | "help">("products");
+  const siteConfigLoading = useSiteConfigLoading();
   const [config, setConfig] = useState<SiteConfigData>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -410,6 +415,8 @@ function DashboardContent() {
             { key: "orders" as const, label: "Orders" },
             { key: "users" as const, label: "Users" },
             { key: "admins" as const, label: "Admins" },
+            { key: "theme" as const, label: "Content & Theme" },
+            { key: "help" as const, label: "Help" },
           ].map((t) => (
             <button
               key={t.key}
@@ -1155,6 +1162,25 @@ function DashboardContent() {
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h2 className="text-xl font-bold font-display mb-4">User Management</h2>
             <UsersSection />
+          </section>
+        )}
+        {tab === "theme" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            {siteConfigLoading ? (
+              <p className="text-sm text-foreground/70">Loading theme &amp; copy…</p>
+            ) : (
+              <div className="space-y-10">
+                <ThemeEditor />
+                <div className="border-t border-warm-sand pt-8">
+                  <CopyEditor onOpenHelp={() => setTab("help")} />
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+        {tab === "help" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <HelpGuide />
           </section>
         )}
       </main>

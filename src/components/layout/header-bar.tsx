@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import NavAuth from "@/components/layout/nav-auth";
 import { ThemeToggle } from "@/context/theme-context";
 import CartNavButton from "@/components/cart/cart-nav-button";
-import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { useSiteContent } from "@/hooks/useSiteConfig";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", d: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" },
@@ -17,7 +17,7 @@ const NAV_LINKS = [
 export default function HeaderBar() {
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
-  const config = useSiteConfig();
+  const c = useSiteContent();
   const [offline, setOffline] = useState(false);
 
   // Measure the fixed header wrapper height and expose it as a CSS variable
@@ -40,8 +40,8 @@ export default function HeaderBar() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("has-announcement", config.announcement_active);
-  }, [config.announcement_active]);
+    document.documentElement.classList.toggle("has-announcement", c.global.announcementActive);
+  }, [c.global.announcementActive]);
 
   useEffect(() => {
     const goOnline = () => setOffline(false);
@@ -65,34 +65,34 @@ export default function HeaderBar() {
           You&apos;re offline — cached pages still available
         </div>
       )}
-      {config.announcement_active && (
+      {c.global.announcementActive && (
         <div className="announcement-banner bg-gold-deep text-white text-center text-sm py-2 px-4 font-medium">
-          {config.announcement_text}
+          {c.global.announcementText}
         </div>
       )}
       <nav className="nav-dock">
         {/* Home */}
         <Link
-          href="/"
-          className={`nav-dock-link${isActive("/") ? " active" : ""}`}
-          aria-label="Home"
+          href={c.navigation.primary[0]?.href || "/"}
+          className={`nav-dock-link${isActive(c.navigation.primary[0]?.href || "/") ? " active" : ""}`}
+          aria-label={c.navigation.primary[0]?.label || "Home"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[0].d} />
           </svg>
-          <span>Home</span>
+          <span>{c.navigation.primary[0]?.label || "Home"}</span>
         </Link>
 
         {/* Shop */}
         <Link
-          href="/shop"
-          className={`nav-dock-link${isActive("/shop") ? " active" : ""}`}
-          aria-label="Shop"
+          href={c.navigation.primary[1]?.href || "/shop"}
+          className={`nav-dock-link${isActive(c.navigation.primary[1]?.href || "/shop") ? " active" : ""}`}
+          aria-label={c.navigation.primary[1]?.label || "Shop"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[1].d} />
           </svg>
-          <span>Shop</span>
+          <span>{c.navigation.primary[1]?.label || "Shop"}</span>
         </Link>
 
         {/* Cart */}
@@ -100,14 +100,14 @@ export default function HeaderBar() {
 
         {/* About */}
         <Link
-          href="/about"
-          className={`nav-dock-link${isActive("/about") ? " active" : ""}`}
-          aria-label="About"
+          href={c.navigation.primary[2]?.href || "/about"}
+          className={`nav-dock-link${isActive(c.navigation.primary[2]?.href || "/about") ? " active" : ""}`}
+          aria-label={c.navigation.primary[2]?.label || "About"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[2].d} />
           </svg>
-          <span>About</span>
+          <span>{c.navigation.primary[2]?.label || "About"}</span>
         </Link>
 
         {/* Fundraising */}

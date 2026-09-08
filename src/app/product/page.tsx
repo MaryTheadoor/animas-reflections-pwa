@@ -97,6 +97,9 @@ function ProductContent() {
   // Schema.org availability mirrors the card's stock-badge logic.
   const hasInventory = variants.some((v) => v.inventory !== undefined);
   const totalStock = variants.reduce((sum, v) => sum + (v.inventory ?? 0), 0);
+  // Per-variant stock check: inventory undefined = "not tracked" → treat as in stock.
+  // inventory 0 (or less) = out of stock → block add-to-cart.
+  const isOutOfStock = variant != null && variant.inventory !== undefined && variant.inventory <= 0;
   const availability =
     hasInventory && totalStock === 0
       ? "https://schema.org/OutOfStock"
@@ -425,9 +428,14 @@ function ProductContent() {
                     modifierInputs,
                   });
                 }}
-                className="flex-1 px-6 py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
+                disabled={isOutOfStock}
+                className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-colors btn-tactile ${
+                  isOutOfStock
+                    ? "bg-foreground/10 text-foreground/50 cursor-not-allowed"
+                    : "bg-gold text-white hover:bg-gold-light btn-gold-tactile"
+                }`}
               >
-                Add to Cart — ${price.toFixed(2)}
+                {isOutOfStock ? "Out of Stock" : `Add to Cart — ${price.toFixed(2)}`}
               </button>
               {product.customizable !== false && (
                 <Link

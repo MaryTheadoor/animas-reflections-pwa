@@ -105,18 +105,11 @@ body::before {
 
 /* ─── Dark Mode ──────────────────────────────────────────────────── */
 
-html.dark body {
-  --color-cream: #0F172A;
-  --color-warm-sand: #1E293B;
-  --color-primary: #F1F5F9;
-  --color-primary-light: #FFFFFF;
-  --color-foreground: #F1F5F9;
-  --color-white: #1E293B;
-  background: #0F172A;
-}
+/* Dark-mode colors are now data-driven via config/site.theme (injected by the
+   SiteConfigProvider). Only non-token component overrides live here. */
 
 html.dark body::before {
-  background-color: #0F172A;
+  background-color: var(--color-cream);
   background-image: none;
 }
 

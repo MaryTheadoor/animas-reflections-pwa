@@ -4,6 +4,8 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { CatalogOptions, AddonDefaults, CustomerField } from "@/types";
+import { mergeTheme, themeToCss, type SiteTheme, type MergeThemeInput } from "@/lib/site-defaults";
+import { mergeContent, type SiteContent } from "@/lib/content-schema";
 
 export interface SiteConfig {
   // Announcement
@@ -45,6 +47,12 @@ export interface SiteConfig {
   catalog_options: CatalogOptions;
   addon_defaults: AddonDefaults;
   customer_fields: CustomerField[];
+
+  // ── Editable Theme (light + dark + fonts) ──
+  theme: SiteTheme;
+
+  // ── Editable Site Copy (per page/section, overrides over content.ts) ──
+  content: SiteContent;
 }
 
 const FALLBACK: SiteConfig = {
@@ -121,19 +129,26 @@ const FALLBACK: SiteConfig = {
     { id: "state", label: "State", type: "text", required: false, squareMapping: "address.administrativeDistrictLevel1" },
     { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "address.postalCode" },
   ],
+
+  theme: mergeTheme({}),
+  content: mergeContent({}),
 };
 
 const SiteConfigContext = createContext<{
   config: SiteConfig;
   loading: boolean;
+  /** Re-fetches config/site and updates the context. Use after saveSiteConfig. */
+  refresh: () => void;
 }>({
   config: FALLBACK,
   loading: true,
+  refresh: () => {},
 });
 
 export function SiteConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<SiteConfig>(FALLBACK);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     getDoc(doc(db, "config", "site"))
@@ -167,35 +182,33 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
             catalog_options: (data.catalog_options as CatalogOptions) || FALLBACK.catalog_options,
             addon_defaults: (data.addon_defaults as AddonDefaults) || FALLBACK.addon_defaults,
             customer_fields: (data.customer_fields as CustomerField[]) || FALLBACK.customer_fields,
+            theme: mergeTheme(data as unknown as MergeThemeInput),
+            content: mergeContent(data.content as unknown as Partial<SiteContent>),
           };
           setConfig(merged);
         }
         setLoading(false);
       })
       .catch(() => { setLoading(false); });
-  }, []);
+  }, [reloadKey]);
 
-  // Apply CSS variables to :root for all theme settings.
-  // setIfChanged avoids unnecessary style recalculations when the value matches.
+  // Inject data-driven theme CSS: light tokens on :root, dark tokens under
+  // html.dark, plus fonts. Unlayered :root / html.dark rules override Tailwind's
+  // @theme, so edits apply live in BOTH modes without editing globals.css.
   useEffect(() => {
-    const root = document.documentElement;
-    const setIfChanged = (prop: string, value: string) => {
-      if (root.style.getPropertyValue(prop) !== value) root.style.setProperty(prop, value);
-    };
-    setIfChanged("--color-primary", config.primary_color);
-    setIfChanged("--color-accent", config.accent_color);
-    setIfChanged("--color-background", config.background_color);
-    setIfChanged("--color-gold", config.gold_color);
-    setIfChanged("--color-plum", config.plum_color);
-    setIfChanged("--color-cream", config.cream_color);
-    setIfChanged("--color-warm-sand", config.warm_sand_color);
-    setIfChanged("--color-text", config.text_color);
-    setIfChanged("--font-heading", config.heading_font);
-    setIfChanged("--font-body", config.body_font);
-  }, [config]);
+    const css = themeToCss(config.theme);
+
+    let el = document.getElementById("dsh-theme") as HTMLStyleElement | null;
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "dsh-theme";
+      document.head.appendChild(el);
+    }
+    if (el.textContent !== css) el.textContent = css;
+  }, [config.theme]);
 
   return (
-    <SiteConfigContext.Provider value={{ config, loading }}>
+    <SiteConfigContext.Provider value={{ config, loading, refresh: () => setReloadKey((k) => k + 1) }}>
       {children}
     </SiteConfigContext.Provider>
   );
@@ -204,6 +217,16 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
 export function useSiteConfig(): SiteConfig {
   const { config } = useContext(SiteConfigContext);
   return config;
+}
+
+/** Merged site copy (config/site.content overrides over content.ts defaults). */
+export function useSiteContent(): SiteContent {
+  return useContext(SiteConfigContext).config.content;
+}
+
+/** Re-fetches config/site. Call after saveSiteConfig so the UI reflects the change. */
+export function useSiteConfigRefresh(): () => void {
+  return useContext(SiteConfigContext).refresh;
 }
 
 export function useSiteConfigLoading(): boolean {

@@ -208,6 +208,7 @@ describe("getProductViews", () => {
 
     const withSides = getProductViews(makeProduct({
       printZones: {
+        front: DEFAULT_PRINT_ZONE,
         sideL: { x_percent: 5, y_percent: 15, width_percent: 30, height_percent: 40 },
         sideR: { x_percent: 60, y_percent: 15, width_percent: 30, height_percent: 40 },
       },

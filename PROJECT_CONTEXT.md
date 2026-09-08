@@ -256,4 +256,21 @@ Synthetic data is for UI development only. Production always reads Firestore —
 - Authentication: Enable Email/Password + Google providers
 
 ---
+
+## 14. CONTENT & THEME EDITOR (in progress)
+
+- **Phase 1 (done):** editable **light + dark** theme + fonts. Data-driven via
+  `config/site.theme` (see `docs/THEME_EDITOR.md`). Editor in Admin → **Content & Theme** tab.
+- **Phase 2 (done):** page-by-page **copy editor** (`config/site.content` overrides over
+  `src/lib/content.ts`), with per-page wireframe diagrams. Wired to /about, /contact,
+  /custom, /biscuit-hockey, /im-ok-r-u, home hero+about, announcement.
+- **Phase 2b (done):** **structured list content** — FAQ items (q/a), Terms/Privacy
+  sections (title/body), fundraising How-it-works steps editable via repeatable rows;
+  wired /faq, /terms, /privacy, /fundraising.
+- **Phase 3 (done):** per-field Reset, "?" help button (→ Help tab), and editable global
+  SEO fields (`metaTitle`/`metaDescription`/`ogImage`) applied via `<SeoMeta />`.
+- **Known limitations:** top nav dock uses fixed links/icons; fundraising `whoFor`/
+  `products`/`whyUs` + home CTA labels remain static.
+
+---
 END OF CONTEXT FILE

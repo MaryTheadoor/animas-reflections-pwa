@@ -1339,3 +1339,107 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] ...
 - [ ] ...
 ```
+
+---
+
+## Session 30 — Content & Theme: Phase 1 (editable light + dark theme)
+
+### What was done
+- Added a data-driven theme system so **both light and dark** palettes + fonts are editable from the admin.
+- **`src/lib/site-defaults.ts`** (new): `ThemePalette`/`SiteTheme`, `LIGHT_THEME`/`DARK_THEME` (mirror `globals.css`), `DEFAULT_FONTS`, `mergeTheme()` (folds `config/site.theme` + legacy flat fields over defaults → full palettes), `toThemeConfig()`, `themeToCss()`, `THEME_TOKENS`, `FONT_OPTIONS`.
+- **`src/context/site-config-context.tsx`**: `SiteConfig.theme`; the provider injects a `#dsh-theme` `<style>` (light on `:root`, dark under `html.dark`, plus fonts) so both modes apply live. Replaced the old inline `--color-*` setters.
+- **`src/app/globals.css`**: removed the hardcoded `html.dark body { --color-* }` (now data-driven); `html.dark body::before` uses `var(--color-cream)`. Component overrides (glass-card, nav-dock, announcement-banner) unchanged.
+- **`src/components/admin/theme-editor.tsx`** (new) + admin **Content & Theme** tab: Light/Dark sub-tabs, per-token color pickers + hex input, font dropdowns, **live WYSIWYG preview** (`#dsh-theme-edit`), Reset per mode, Save via `saveSiteConfig`.
+- **Tests**: `src/lib/__tests__/theme.test.ts` (7 cases: defaults, sparse override, dark override, legacy flat, theme>legacy precedence, fonts, themeToCss).
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Files Changed
+| File | New/Edit |
+|------|----------|
+| src/lib/site-defaults.ts | new |
+| src/context/site-config-context.tsx | edit |
+| src/app/globals.css | edit |
+| src/components/admin/theme-editor.tsx | new |
+| src/app/admin/page.tsx | edit |
+| src/lib/__tests__/theme.test.ts | new |
+| docs/THEME_EDITOR.md | new |
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme editor deployed live; copy editor (Phase 2) not yet built.
+
+### Pending / Next Session
+- [ ] Phase 2: page-by-page copy editor for all site text (per-page wireframe diagrams + fields), building on `config/site.content`.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```
+
+## Session 31 — Content & Theme: Phase 2 (page-by-page copy editor)
+
+### What was done
+- **`src/lib/content-schema.ts`** (new): `SiteContent` types, `DEFAULT_CONTENT` (sourced from `content.ts`), `mergeContent()` deep-merge, `COPY_PAGES` (page → region diagram + fields), `getContentPath`/`setContentPath`.
+- **`src/context/site-config-context.tsx`**: `SiteConfig.content` + **`useSiteContent()`**.
+- **`src/components/admin/copy-editor.tsx`** (new) in the **Content & Theme** tab: page selector, **wireframe diagram** per page, per-region text/textarea/toggle fields, Save via `saveSiteConfig`.
+- **Wired** `/about`, `/contact`, `/custom`, `/biscuit-hockey`, `/im-ok-r-u`, home hero + Our-Story, and the announcement bar to `useSiteContent()` so edits apply live.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Files Changed (key)
+| File | New/Edit |
+|------|----------|
+| src/lib/content-schema.ts | new |
+| src/context/site-config-context.tsx | edit |
+| src/components/admin/copy-editor.tsx | new |
+| src/app/{about,contact,custom,biscuit-hockey,im-ok-r-u}/page.tsx | edit |
+| src/app/page.tsx · src/components/layout/header-bar.tsx | edit |
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme + Copy editors deployed live.
+
+### Pending / Next Session
+- [ ] Phase 2b: footer/nav links + structured list content (FAQ items, terms/privacy sections, fundraising steps) editable.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```
+
+## Session 32 — Content & Theme: Phase 2b (structured content)
+
+### What was done
+- `content-schema.ts`: `faq.items` (`{q,a}[]`), `terms/privacy.sections` (`{title,body}[]`), navigation defaults; `CopyField` gained a **`list`** type + array helpers (`getContentArray`/`setContentArray`/`addContentItem`/`removeContentItem`).
+- `copy-editor.tsx`: repeatable **list fields** (add/remove rows) for FAQ Q&A and Terms/Privacy sections.
+- Wired `/faq`, `/terms`, `/privacy` to `useSiteContent()` so items/sections are editable live.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme + Copy (incl. FAQ/Terms/Privacy list editing) deployed live.
+
+### Pending / Next Session
+- [ ] Remaining structured content: nav/footer links + fundraising steps.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```
+
+## Session 33 — Content & Theme: Phase 3 polish + fundraising steps
+
+### What was done
+- `content-schema.ts`: `fundraising.howItWorks` (`{title,body}[]`) + global SEO fields
+  (`metaTitle`/`metaDescription`/`ogImage`); COPY_PAGES adds SEO + fundraising steps.
+- `copy-editor.tsx`: per-field **Reset** (to site default) + "?" help button (opens Help tab).
+- `seo-meta.tsx` (new) in `PageLayout`: applies editable SEO title/description/og:image
+  to the document head.
+- Wired `/fundraising` headings/intro/steps to `useSiteContent`.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Phase 1 (theme), 2 (copy editor), 2b (FAQ/terms/privacy/fundraising), 3 (reset/help/SEO) done + deployed.
+
+### Known limitations / Next
+- Nav dock uses fixed links/icons; `whoFor`/`products`/`whyUs` lists + home CTA labels remain static.
+```
