@@ -264,9 +264,9 @@ Synthetic data is for UI development only. Production always reads Firestore —
 - **Phase 2 (done):** page-by-page **copy editor** (`config/site.content` overrides over
   `src/lib/content.ts`), with per-page wireframe diagrams. Wired to /about, /contact,
   /custom, /biscuit-hockey, /im-ok-r-u, home hero+about, announcement.
-- **Phase 2b (next):** footer/nav links + structured list content (FAQ items,
-  terms/privacy sections, fundraising steps) — requires `output:"export"` aware client
-  components (already converted the copy pages).
+- **Phase 2b (done):** **structured list content** — FAQ items (q/a), Terms/Privacy
+  sections (title/body) editable via repeatable rows; wired /faq, /terms, /privacy.
+  Remaining structured: nav/footer links (dock uses fixed links) + fundraising steps.
 - **Phase 3 (next):** per-field reset, help links, SEO/OG text.
 
 ---

@@ -88,7 +88,15 @@ colored region in the wireframe) → **Save copy**.
 
 ## Phase 2 status
 ✅ Page-by-page editor with wireframes · ✅ editable + saved via `saveSiteConfig` ·
-✅ wired to main text pages, home hero/about, announcement. **Next:** footer/nav +
-structured list content (FAQ items, terms/privacy sections, fundraising steps), then
-Phase 3 polish.
+✅ wired to main text pages, home hero/about, announcement.
+
+## Phase 2b — structured content
+- **FAQ items** (`{q,a}[]`), **Terms/Privacy sections** (`{title,body}[]`) now editable via
+  repeatable list rows in the Copy editor; wired `/faq`, `/terms`, `/privacy` live.
+- Nav dock uses fixed links/icons; nav/footer link wiring + fundraising steps are the
+  remaining structured-content items.
+
+## Next
+Phase 3 polish (per-field reset, help links, SEO/OG text), then remaining structured
+items (nav/footer links, fundraising steps).
 

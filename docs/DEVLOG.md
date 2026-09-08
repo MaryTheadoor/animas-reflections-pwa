@@ -1403,3 +1403,22 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] Phase 2b: footer/nav links + structured list content (FAQ items, terms/privacy sections, fundraising steps) editable.
 - [ ] Phase 3: per-field reset, help links, SEO/OG text.
 ```
+
+## Session 32 — Content & Theme: Phase 2b (structured content)
+
+### What was done
+- `content-schema.ts`: `faq.items` (`{q,a}[]`), `terms/privacy.sections` (`{title,body}[]`), navigation defaults; `CopyField` gained a **`list`** type + array helpers (`getContentArray`/`setContentArray`/`addContentItem`/`removeContentItem`).
+- `copy-editor.tsx`: repeatable **list fields** (add/remove rows) for FAQ Q&A and Terms/Privacy sections.
+- Wired `/faq`, `/terms`, `/privacy` to `useSiteContent()` so items/sections are editable live.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme + Copy (incl. FAQ/Terms/Privacy list editing) deployed live.
+
+### Pending / Next Session
+- [ ] Remaining structured content: nav/footer links + fundraising steps.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```
