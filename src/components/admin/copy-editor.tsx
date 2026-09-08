@@ -4,7 +4,7 @@ import { useState } from "react";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
 import { useSiteConfig, useSiteConfigRefresh } from "@/hooks/useSiteConfig";
-import { COPY_PAGES, getContentPath, setContentPath, type SiteContent } from "@/lib/content-schema";
+import { COPY_PAGES, getContentPath, getContentArray, addContentItem, removeContentItem, setContentPath, type SiteContent } from "@/lib/content-schema";
 
 const REGION_COLORS: Record<string, string> = {
   "Top bar": "bg-plum",
@@ -138,13 +138,60 @@ export default function CopyEditor() {
                     rows={3}
                     className={`${common} resize-y`}
                   />
+                ) : f.type === "toggle" ? (
+                  <input type="checkbox" checked={!!val} onChange={(e) => setVal(f.key, e.target.checked)} className="accent-gold w-4 h-4" />
+                ) : f.type === "list" ? (
+                  <div className="space-y-2">
+                    {(getContentArray(draft, f.key) as Record<string, string>[]).map((item, i) => (
+                      <div key={i} className="bg-warm-sand/30 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-foreground/50">{f.itemLabel ?? "item"} {i + 1}</span>
+                          <button
+                            onClick={() => setDraft((c) => removeContentItem(c, f.key, i))}
+                            className="text-red-400 hover:text-red-600 text-xs"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        {(f.itemFields ?? []).map((sf) => (
+                          <div key={sf.key + i}>
+                            <label className="text-[10px] text-foreground/60 block mb-1">{sf.label}</label>
+                            {sf.type === "textarea" ? (
+                              <textarea
+                                value={item[sf.key] ?? ""}
+                                onChange={(e) => setVal(f.key + "." + i + "." + sf.key, e.target.value)}
+                                rows={2}
+                                className={`${common} resize-y`}
+                              />
+                            ) : (
+                              <input
+                                type="text"
+                                value={item[sf.key] ?? ""}
+                                onChange={(e) => setVal(f.key + "." + i + "." + sf.key, e.target.value)}
+                                className={common}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const tpl: Record<string, unknown> = {};
+                        (f.itemFields ?? []).forEach((sf) => { tpl[sf.key] = ""; });
+                        setDraft((c) => addContentItem(c, f.key, tpl));
+                      }}
+                      className="w-full py-1.5 border-2 border-dashed border-primary/20 rounded-lg text-xs text-foreground/70 hover:border-primary/40 transition-colors"
+                    >
+                      + Add {f.itemLabel ?? "item"}
+                    </button>
+                  </div>
                 ) : (
                   <input
-                    type={f.type === "toggle" ? "checkbox" : "text"}
-                    checked={f.type === "toggle" ? !!val : undefined}
-                    value={f.type === "toggle" ? undefined : typeof val === "string" ? val : ""}
-                    onChange={(e) => setVal(f.key, f.type === "toggle" ? e.target.checked : e.target.value)}
-                    className={f.type === "toggle" ? "accent-gold w-4 h-4" : common}
+                    type="text"
+                    value={typeof val === "string" ? val : ""}
+                    onChange={(e) => setVal(f.key, e.target.value)}
+                    className={common}
                   />
                 )}
               </div>

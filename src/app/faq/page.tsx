@@ -1,24 +1,24 @@
+"use client";
+
 import PageLayout from "@/components/layout/page-layout";
 import { FaqJsonLd } from "@/components/layout/json-ld";
-import { FAQ } from "@/lib/content";
+import { useSiteContent } from "@/hooks/useSiteConfig";
 import Link from "next/link";
 
 export default function FaqPage() {
+  const c = useSiteContent();
   return (
     <PageLayout>
       <FaqJsonLd />
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="text-center pt-8 sm:pt-12 mb-12">
-          <h1 className="text-4xl font-bold font-display mb-3">{FAQ.heading}</h1>
-          <p className="text-foreground max-w-xl mx-auto">{FAQ.subheading}</p>
+          <h1 className="text-4xl font-bold font-display mb-3">{c.faq.heading}</h1>
+          <p className="text-foreground max-w-xl mx-auto">{c.faq.subheading}</p>
         </div>
 
         <div className="space-y-4">
-          {FAQ.items.map((item, i) => (
-            <details
-              key={i}
-              className="glass-card group"
-            >
+          {c.faq.items.map((item, i) => (
+            <details key={i} className="glass-card group">
               <summary className="p-5 sm:p-6 cursor-pointer flex items-center justify-between gap-4 font-bold text-primary list-none">
                 <span>{item.q}</span>
                 <svg

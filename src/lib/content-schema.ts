@@ -2,6 +2,7 @@ import {
   SITE,
   HERO,
   ANNOUNCEMENT,
+  NAVIGATION,
   OUR_STORY,
   DESIGN_YOUR_OWN,
   CONTACT,
@@ -66,10 +67,10 @@ export interface SiteContent {
   about: SiteSimpleContent;
   contact: SiteContactContent;
   custom: { heading: string; body: string };
-  faq: { heading: string; subheading: string };
+  faq: { heading: string; subheading: string; items: { q: string; a: string }[] };
   fundraising: { heading: string; subheading: string; intro: string };
-  terms: { heading: string; subheading: string };
-  privacy: { heading: string };
+  terms: { heading: string; subheading: string; sections: { title: string; body: string }[] };
+  privacy: { heading: string; subheading: string; sections: { title: string; body: string }[] };
   biscuitHockey: SiteSimpleContent;
   imOkRU: SiteSimpleContent;
 }
@@ -87,8 +88,8 @@ export const DEFAULT_CONTENT: SiteContent = {
     footerTagline: "Family owned and operated design & print operation based in Durango, CO, creating unique custom designs.",
   },
   navigation: {
-    primary: [],
-    footer: [],
+    primary: NAVIGATION.primary.map((l) => ({ label: l.label, href: l.href })),
+    footer: NAVIGATION.footer.map((l) => ({ label: l.label, href: l.href })),
   },
   home: {
     heroHeading: HERO.heading,
@@ -107,10 +108,18 @@ export const DEFAULT_CONTENT: SiteContent = {
     privacyNote: CONTACT.privacy_note,
   },
   custom: { heading: DESIGN_YOUR_OWN.heading, body: DESIGN_YOUR_OWN.body },
-  faq: { heading: FAQ.heading, subheading: FAQ.subheading },
+  faq: { heading: FAQ.heading, subheading: FAQ.subheading, items: FAQ.items.map((it) => ({ q: it.q, a: it.a })) },
   fundraising: { heading: FUNDRAISING.heading, subheading: FUNDRAISING.subheading, intro: FUNDRAISING.intro },
-  terms: { heading: TERMS_OF_SALE.heading, subheading: TERMS_OF_SALE.subheading },
-  privacy: { heading: PRIVACY_POLICY.heading },
+  terms: {
+    heading: TERMS_OF_SALE.heading,
+    subheading: TERMS_OF_SALE.subheading,
+    sections: TERMS_OF_SALE.sections.map((s) => ({ title: s.title, body: s.body })),
+  },
+  privacy: {
+    heading: PRIVACY_POLICY.heading,
+    subheading: PRIVACY_POLICY.subheading,
+    sections: PRIVACY_POLICY.sections.map((s) => ({ title: s.title, body: s.body })),
+  },
   biscuitHockey: { heading: BISCUIT_HOCKEY.heading, subheading: BISCUIT_HOCKEY.subheading, body: BISCUIT_HOCKEY.body },
   imOkRU: { heading: IM_OK_R_U.heading, subheading: IM_OK_R_U.subheading, body: IM_OK_R_U.body },
 };
@@ -144,8 +153,13 @@ export function mergeContent(input?: Partial<SiteContent> | null): SiteContent {
 export interface CopyField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "toggle";
+  type: "text" | "textarea" | "toggle" | "list";
   region: string; // diagram region this edits
+  /** For "list": the sub-fields of each item (e.g. { q, a }). */
+  itemFields?: { key: string; label: string; type: "text" | "textarea" }[];
+  /** Singular item name shown on add/remove (e.g. "FAQ question"). */
+  itemLabel?: string;
+  maxItems?: number;
 }
 
 export interface CopyPage {
@@ -222,10 +236,11 @@ export const COPY_PAGES: CopyPage[] = [
     id: "faq",
     label: "FAQ",
     route: "/faq",
-    regions: ["Header"],
+    regions: ["Header", "Questions"],
     fields: [
       { key: "faq.heading", label: "Heading", type: "text", region: "Header" },
       { key: "faq.subheading", label: "Subheading", type: "textarea", region: "Header" },
+      { key: "faq.items", label: "Questions & answers", type: "list", region: "Questions", itemLabel: "question", itemFields: [{ key: "q", label: "Question", type: "text" }, { key: "a", label: "Answer", type: "textarea" }] },
     ],
   },
   {
@@ -243,19 +258,22 @@ export const COPY_PAGES: CopyPage[] = [
     id: "terms",
     label: "Terms of Sale",
     route: "/terms",
-    regions: ["Header"],
+    regions: ["Header", "Sections"],
     fields: [
       { key: "terms.heading", label: "Heading", type: "text", region: "Header" },
       { key: "terms.subheading", label: "Subheading", type: "text", region: "Header" },
+      { key: "terms.sections", label: "Sections", type: "list", region: "Sections", itemLabel: "section", itemFields: [{ key: "title", label: "Title", type: "text" }, { key: "body", label: "Body", type: "textarea" }] },
     ],
   },
   {
     id: "privacy",
     label: "Privacy",
     route: "/privacy",
-    regions: ["Header"],
+    regions: ["Header", "Sections"],
     fields: [
       { key: "privacy.heading", label: "Heading", type: "text", region: "Header" },
+      { key: "privacy.subheading", label: "Subheading", type: "text", region: "Header" },
+      { key: "privacy.sections", label: "Sections", type: "list", region: "Sections", itemLabel: "section", itemFields: [{ key: "title", label: "Title", type: "text" }, { key: "body", label: "Body", type: "textarea" }] },
     ],
   },
   {
@@ -304,4 +322,42 @@ export function setContentPath(content: SiteContent, path: string, value: string
   }
   cur[parts[parts.length - 1]] = value;
   return root as unknown as SiteContent;
+}
+
+/** Read an array at a dotted path (e.g. "faq.items"). Returns [] if absent. */
+export function getContentArray(content: SiteContent, path: string): unknown[] {
+  const parts = path.split(".");
+  let cur: unknown = content;
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in (cur as D)) cur = (cur as D)[p];
+    else return [];
+  }
+  return Array.isArray(cur) ? (cur as unknown[]) : [];
+}
+
+/** Replace an array at a dotted path. */
+export function setContentArray(content: SiteContent, path: string, value: unknown[]): SiteContent {
+  const parts = path.split(".");
+  const root = JSON.parse(JSON.stringify(content)) as D;
+  let cur = root;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!cur[parts[i]] || typeof cur[parts[i]] !== "object") cur[parts[i]] = {};
+    cur = cur[parts[i]] as D;
+  }
+  cur[parts[parts.length - 1]] = value;
+  return root as unknown as SiteContent;
+}
+
+/** Append an item to a list at a dotted path. */
+export function addContentItem(content: SiteContent, path: string, template: Record<string, unknown>): SiteContent {
+  const arr = [...getContentArray(content, path)];
+  arr.push(template);
+  return setContentArray(content, path, arr);
+}
+
+/** Remove an item from a list at a dotted path (by index). */
+export function removeContentItem(content: SiteContent, path: string, index: number): SiteContent {
+  const arr = [...getContentArray(content, path)];
+  arr.splice(index, 1);
+  return setContentArray(content, path, arr);
 }
