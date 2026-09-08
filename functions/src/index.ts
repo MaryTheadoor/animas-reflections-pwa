@@ -61,7 +61,6 @@ async function requireAdmin(request: CallableRequest): Promise<void> {
   const lowered = email.toLowerCase().trim();
   const allowed =
     lowered === bootstrapAdminEmail.value().toLowerCase().trim() ||
-    lowered.endsWith("@animasreflections.com") ||
     (await getAdminEmails()).includes(lowered);
   if (!allowed) {
     logger.warn("Admin call denied", { uid: request.auth.uid, email });

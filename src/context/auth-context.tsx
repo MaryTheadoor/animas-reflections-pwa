@@ -37,13 +37,16 @@ async function getAdminEmails(): Promise<string[]> {
   return [];
 }
 
-// Three-tier admin detection: (1) hardcoded env fallback, (2) @animasreflections.com
-// domain, (3) Firestore config/admin doc managed via Admin → Admins tab.
+// Two-tier admin detection: (1) the configured bootstrap admin email (env fallback),
+// (2) the Firestore config/admin allowlist managed via Admin → Admins tab.
+// The old "@animasreflections.com" domain wildcard was removed — it was a
+// privilege-escalation vector since Firebase email/password signup is public and
+// email verification isn't enforced. The allowlist is the single source of truth;
+// keep this in sync with the server's BOOTSTRAP_ADMIN_EMAIL.
 async function isUserAdmin(email: string | null): Promise<boolean> {
   if (!email) return false;
   const lowered = email.toLowerCase().trim();
   if (ADMIN_EMAIL && lowered === ADMIN_EMAIL.toLowerCase().trim()) return true;
-  if (ADMIN_EMAIL && lowered.endsWith("@animasreflections.com")) return true;
   const adminEmails = await getAdminEmails();
   return adminEmails.includes(lowered);
 }

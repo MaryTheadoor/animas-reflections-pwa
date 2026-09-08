@@ -14,7 +14,7 @@ import Image from "next/image";
 import VariantMatrixEditor from "./variant-matrix-editor";
 import { db, storage, functions } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
-import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { useSiteConfig, useSiteConfigRefresh } from "@/hooks/useSiteConfig";
 import { ADDON_PRICE, DEFAULT_COLOR_TINTS } from "@/lib/constants";
 import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, ProductAddon } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
@@ -227,6 +227,34 @@ export default function ProductManager({ categories }: Props) {
     }));
     setNewColor("");
     setNewHex("#1E4D4F");
+  };
+
+  const refreshSiteConfig = useSiteConfigRefresh();
+
+  // Promotes an inline "custom color" to the site-wide Color Library (config/site
+  // catalog_options.colors) so it becomes selectable on every product. Requires
+  // the caller to be an admin (saveSiteConfig is admin-gated).
+  const saveColorToLibrary = async (colorName: string) => {
+    const colors = siteConfig.catalog_options?.colors ?? [];
+    if (colors.some((c) => c.name.toLowerCase() === colorName.toLowerCase())) {
+      alert(`${colorName} is already in the site color library`);
+      return;
+    }
+    const hex = form.colorTints?.[colorName] ?? "#000000";
+    try {
+      const callable = httpsCallable(functions, "saveSiteConfig");
+      await callable({
+        ...siteConfig,
+        catalog_options: {
+          ...siteConfig.catalog_options,
+          colors: [...colors, { name: colorName, hex }],
+        },
+      } as unknown as Record<string, unknown>);
+      refreshSiteConfig();
+      alert(`Saved "${colorName}" to the site color library. It's now available on every product.`);
+    } catch (err) {
+      alert("Failed to save to color library: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
   };
 
   const handleColorPickerImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1332,6 +1360,13 @@ export default function ProductManager({ categories }: Props) {
                   <span key={c} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full text-[10px]">
                     <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: colorSwatch(c) }} />
                     {c}
+                    <button
+                      onClick={() => saveColorToLibrary(c)}
+                      className="text-gold hover:text-gold-light ml-1"
+                      title="Save to the site color library (reusable on all products)"
+                    >
+                      Save
+                    </button>
                     <button onClick={() => toggleColor(c)} className="text-red-400 hover:text-red-600 ml-0.5">&times;</button>
                   </span>
                 ))}

@@ -126,14 +126,18 @@ const FALLBACK: SiteConfig = {
 const SiteConfigContext = createContext<{
   config: SiteConfig;
   loading: boolean;
+  /** Re-fetches config/site and updates the context. Use after saveSiteConfig. */
+  refresh: () => void;
 }>({
   config: FALLBACK,
   loading: true,
+  refresh: () => {},
 });
 
 export function SiteConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<SiteConfig>(FALLBACK);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     getDoc(doc(db, "config", "site"))
@@ -173,7 +177,7 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       })
       .catch(() => { setLoading(false); });
-  }, []);
+  }, [reloadKey]);
 
   // Apply CSS variables to :root for all theme settings.
   // setIfChanged avoids unnecessary style recalculations when the value matches.
@@ -195,7 +199,7 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
   }, [config]);
 
   return (
-    <SiteConfigContext.Provider value={{ config, loading }}>
+    <SiteConfigContext.Provider value={{ config, loading, refresh: () => setReloadKey((k) => k + 1) }}>
       {children}
     </SiteConfigContext.Provider>
   );
@@ -204,6 +208,11 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
 export function useSiteConfig(): SiteConfig {
   const { config } = useContext(SiteConfigContext);
   return config;
+}
+
+/** Re-fetches config/site. Call after saveSiteConfig so the UI reflects the change. */
+export function useSiteConfigRefresh(): () => void {
+  return useContext(SiteConfigContext).refresh;
 }
 
 export function useSiteConfigLoading(): boolean {
