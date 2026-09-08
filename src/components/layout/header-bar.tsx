@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import NavAuth from "@/components/layout/nav-auth";
 import { ThemeToggle } from "@/context/theme-context";
 import CartNavButton from "@/components/cart/cart-nav-button";
-import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { useSiteContent } from "@/hooks/useSiteConfig";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", d: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" },
@@ -17,7 +17,7 @@ const NAV_LINKS = [
 export default function HeaderBar() {
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
-  const config = useSiteConfig();
+  const c = useSiteContent();
   const [offline, setOffline] = useState(false);
 
   // Measure the fixed header wrapper height and expose it as a CSS variable
@@ -40,8 +40,8 @@ export default function HeaderBar() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("has-announcement", config.announcement_active);
-  }, [config.announcement_active]);
+    document.documentElement.classList.toggle("has-announcement", c.global.announcementActive);
+  }, [c.global.announcementActive]);
 
   useEffect(() => {
     const goOnline = () => setOffline(false);
@@ -65,9 +65,9 @@ export default function HeaderBar() {
           You&apos;re offline — cached pages still available
         </div>
       )}
-      {config.announcement_active && (
+      {c.global.announcementActive && (
         <div className="announcement-banner bg-gold-deep text-white text-center text-sm py-2 px-4 font-medium">
-          {config.announcement_text}
+          {c.global.announcementText}
         </div>
       )}
       <nav className="nav-dock">

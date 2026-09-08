@@ -14,6 +14,7 @@ import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
 import HelpGuide from "@/components/admin/help-guide";
 import ThemeEditor from "@/components/admin/theme-editor";
+import CopyEditor from "@/components/admin/copy-editor";
 import { useSiteConfigLoading } from "@/hooks/useSiteConfig";
 import ImageManager from "@/components/admin/image-manager";
 import type { ManagedCategory, DesignAsset } from "@/types";
@@ -1166,13 +1167,15 @@ function DashboardContent() {
         {tab === "theme" && (
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             {siteConfigLoading ? (
-              <p className="text-sm text-foreground/70">Loading theme…</p>
+              <p className="text-sm text-foreground/70">Loading theme &amp; copy…</p>
             ) : (
-              <ThemeEditor />
+              <div className="space-y-10">
+                <ThemeEditor />
+                <div className="border-t border-warm-sand pt-8">
+                  <CopyEditor />
+                </div>
+              </div>
             )}
-            <p className="mt-6 pt-4 text-xs text-foreground/60 border-t border-warm-sand">
-              Next: the page-by-page copy editor for all site text arrives in the following phase.
-            </p>
           </section>
         )}
         {tab === "help" && (

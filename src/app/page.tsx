@@ -10,15 +10,14 @@ import FaqTeaser from "@/components/home/faq-teaser";
 import {
   SITE,
   HERO,
-  OUR_STORY,
   NAVIGATION,
   PAYMENT_METHODS,
   RETURN_POLICY,
 } from "@/lib/content";
-import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { useSiteContent } from "@/hooks/useSiteConfig";
 
 export default function Home() {
-  const siteConfig = useSiteConfig();
+  const c = useSiteContent();
   return (
     <div
       className="flex flex-col flex-1 bg-ambient"
@@ -52,10 +51,10 @@ export default function Home() {
               priority
             />
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight font-display mb-6 animate-fade-in-up animate-delay-100 text-foreground">
-              {siteConfig.hero_heading || HERO.heading}
+              {c.home.heroHeading}
             </h1>
             <p className="text-lg text-foreground mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
-              {siteConfig.hero_subheading || "Design your own t-shirt, hoodie, bag, purse, ornament, coaster, dog scarf, long sleeve tee, print on wood, metal, jewelry and more!"}
+              {c.home.heroSubheading}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animate-delay-300">
               <Link
@@ -98,9 +97,9 @@ export default function Home() {
               />
             </div>
             <div>
-              <h2 className="text-3xl font-bold font-display mb-2">{OUR_STORY.heading}</h2>
-              <p className="text-gold-deep font-semibold mb-4">{OUR_STORY.subheading}</p>
-              <p className="text-foreground leading-relaxed">{siteConfig.about_body || OUR_STORY.body}</p>
+              <h2 className="text-3xl font-bold font-display mb-2">{c.home.aboutHeading}</h2>
+              <p className="text-gold-deep font-semibold mb-4">{c.home.aboutSubheading}</p>
+              <p className="text-foreground leading-relaxed">{c.home.aboutBody}</p>
               <div className="mt-4 text-sm text-foreground">
                 <p>{SITE.phone}</p>
                 <p>{SITE.email}</p>

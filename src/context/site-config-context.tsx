@@ -5,6 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { CatalogOptions, AddonDefaults, CustomerField } from "@/types";
 import { mergeTheme, themeToCss, type SiteTheme, type MergeThemeInput } from "@/lib/site-defaults";
+import { mergeContent, type SiteContent } from "@/lib/content-schema";
 
 export interface SiteConfig {
   // Announcement
@@ -49,6 +50,9 @@ export interface SiteConfig {
 
   // ── Editable Theme (light + dark + fonts) ──
   theme: SiteTheme;
+
+  // ── Editable Site Copy (per page/section, overrides over content.ts) ──
+  content: SiteContent;
 }
 
 const FALLBACK: SiteConfig = {
@@ -127,6 +131,7 @@ const FALLBACK: SiteConfig = {
   ],
 
   theme: mergeTheme({}),
+  content: mergeContent({}),
 };
 
 const SiteConfigContext = createContext<{
@@ -178,6 +183,7 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
             addon_defaults: (data.addon_defaults as AddonDefaults) || FALLBACK.addon_defaults,
             customer_fields: (data.customer_fields as CustomerField[]) || FALLBACK.customer_fields,
             theme: mergeTheme(data as unknown as MergeThemeInput),
+            content: mergeContent(data.content as unknown as Partial<SiteContent>),
           };
           setConfig(merged);
         }
@@ -211,6 +217,11 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
 export function useSiteConfig(): SiteConfig {
   const { config } = useContext(SiteConfigContext);
   return config;
+}
+
+/** Merged site copy (config/site.content overrides over content.ts defaults). */
+export function useSiteContent(): SiteContent {
+  return useContext(SiteConfigContext).config.content;
 }
 
 /** Re-fetches config/site. Call after saveSiteConfig so the UI reflects the change. */
