@@ -133,7 +133,6 @@ const VALID_PRODUCT_TYPES: ProductType[] = ["apparel", "sticker", "sign", "jewel
 export function rowsToProducts(rows: CatalogCsvRow[]) {
   const errors: string[] = [];
   const byKey = new Map<string, ManagedProduct>();
-  let order = 0;
 
   for (const row of rows) {
     const key = row.id || row.name.toLowerCase();
@@ -160,7 +159,6 @@ export function rowsToProducts(rows: CatalogCsvRow[]) {
         seoDescription: row.seoDescription,
       };
       byKey.set(key, product);
-      order++;
     }
 
     product.name = product.name || row.name;
