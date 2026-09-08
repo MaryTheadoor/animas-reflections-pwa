@@ -664,44 +664,64 @@ function CustomizerContent() {
               <h2 className="font-bold font-display text-lg mb-4">Add-ons</h2>
               <div className="space-y-2">
                 {useModifiersForCost
-                  ? effectiveModifiers.map((mod) => (
-                      <div key={mod.id} className="p-2 rounded-xl hover:bg-warm-sand/50 transition-colors">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedAddons.has(mod.id)}
-                            onChange={() => handleToggleAddon(mod.id)}
-                            className="accent-gold w-4 h-4"
-                          />
-                          <span className="text-sm text-primary">{mod.name}</span>
-                          <span className="ml-auto text-sm text-gold font-medium">
-                            {formatModifierPrice(mod)}
-                          </span>
-                        </label>
-                        {/* Text input for text modifiers — shown when the modifier is selected */}
-                        {selectedAddons.has(mod.id) && mod.inputType === "text" && (
-                          <input
-                            type="text"
-                            value={modifierInputs[mod.id] ?? ""}
-                            onChange={(e) => setModifierInputs((prev) => ({ ...prev, [mod.id]: e.target.value }))}
-                            placeholder={mod.inputLabel ?? "Enter text"}
-                            className="mt-2 ml-7 w-[calc(100%-1.75rem)] px-3 py-1.5 rounded-lg border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
-                          />
-                        )}
-                        {/* File upload for file modifiers — shown when the modifier is selected */}
-                        {selectedAddons.has(mod.id) && mod.inputType === "file" && (
-                          <div className="mt-2 ml-7">
-                            <FileUpload
-                              onUploadComplete={(url) => setModifierInputs((prev) => ({ ...prev, [mod.id]: url }))}
-                              onError={(err) => console.error(err)}
-                            />
-                            {modifierInputs[mod.id] && (
-                              <p className="text-xs text-green-600 mt-1">File uploaded</p>
-                            )}
+                  ? (() => {
+                      const groups = new Map<string, (typeof effectiveModifiers)[number][]>();
+                      for (const mod of effectiveModifiers) {
+                        const g = (mod.group || "Add-ons").trim();
+                        if (!groups.has(g)) groups.set(g, []);
+                        groups.get(g)!.push(mod);
+                      }
+                      const showHeaders = groups.size > 1 || !groups.has("Add-ons");
+                      return Array.from(groups.entries()).map(([groupName, mods]) => (
+                        <div key={groupName}>
+                          {showHeaders && (
+                            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground/60 mt-3 mb-1.5 first:mt-0">
+                              {groupName}
+                            </h3>
+                          )}
+                          <div className="space-y-2">
+                            {mods.map((mod) => (
+                              <div key={mod.id} className="p-2 rounded-xl hover:bg-warm-sand/50 transition-colors">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedAddons.has(mod.id)}
+                                    onChange={() => handleToggleAddon(mod.id)}
+                                    className="accent-gold w-4 h-4"
+                                  />
+                                  <span className="text-sm text-primary">{mod.name}</span>
+                                  <span className="ml-auto text-sm text-gold font-medium">
+                                    {formatModifierPrice(mod)}
+                                  </span>
+                                </label>
+                                {/* Text input for text modifiers — shown when the modifier is selected */}
+                                {selectedAddons.has(mod.id) && mod.inputType === "text" && (
+                                  <input
+                                    type="text"
+                                    value={modifierInputs[mod.id] ?? ""}
+                                    onChange={(e) => setModifierInputs((prev) => ({ ...prev, [mod.id]: e.target.value }))}
+                                    placeholder={mod.inputLabel ?? "Enter text"}
+                                    className="mt-2 ml-7 w-[calc(100%-1.75rem)] px-3 py-1.5 rounded-lg border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                                  />
+                                )}
+                                {/* File upload for file modifiers — shown when the modifier is selected */}
+                                {selectedAddons.has(mod.id) && mod.inputType === "file" && (
+                                  <div className="mt-2 ml-7">
+                                    <FileUpload
+                                      onUploadComplete={(url) => setModifierInputs((prev) => ({ ...prev, [mod.id]: url }))}
+                                      onError={(err) => console.error(err)}
+                                    />
+                                    {modifierInputs[mod.id] && (
+                                      <p className="text-xs text-green-600 mt-1">File uploaded</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        )}
-                      </div>
-                    ))
+                        </div>
+                      ));
+                    })()
                   : effectiveAddons.map((addon) => (
                       <label
                         key={addon.id}

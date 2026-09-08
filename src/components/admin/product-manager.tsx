@@ -1720,6 +1720,18 @@ export default function ProductManager({ categories }: Props) {
                       <option value="text">Text input</option>
                       <option value="file">File upload</option>
                     </select>
+                    <input
+                      type="text"
+                      value={mod.group ?? ""}
+                      onChange={(e) => {
+                        const mods = [...(form.modifiers ?? [])];
+                        mods[idx] = { ...mod, group: e.target.value };
+                        updateField("modifiers", mods);
+                      }}
+                      placeholder="Group (e.g. Add-ons)"
+                      className="w-28 px-2 py-1 rounded border border-primary/10 bg-white text-xs focus:border-gold outline-none"
+                      title="Optional group name — modifiers sharing a group render together in the customizer."
+                    />
                     {(mod.inputType === "text" || mod.inputType === "file") && (
                       <input
                         type="text"

@@ -145,6 +145,10 @@ export interface ProductModifier {
   inputType?: "toggle" | "text" | "file";
   /** Label for the text/file input, e.g. "Enter name/number" */
   inputLabel?: string;
+  /** Optional add-on group name, e.g. "Add-ons", "Personalization", "Extras".
+   *  Modifiers with the same group render together (Square ModifierList parity).
+   *  When unset, defaults to "Add-ons". */
+  group?: string;
 }
 
 /** A customer's choice for one product option, captured on the cart line. */
