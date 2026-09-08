@@ -1422,3 +1422,24 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] Remaining structured content: nav/footer links + fundraising steps.
 - [ ] Phase 3: per-field reset, help links, SEO/OG text.
 ```
+
+## Session 33 — Content & Theme: Phase 3 polish + fundraising steps
+
+### What was done
+- `content-schema.ts`: `fundraising.howItWorks` (`{title,body}[]`) + global SEO fields
+  (`metaTitle`/`metaDescription`/`ogImage`); COPY_PAGES adds SEO + fundraising steps.
+- `copy-editor.tsx`: per-field **Reset** (to site default) + "?" help button (opens Help tab).
+- `seo-meta.tsx` (new) in `PageLayout`: applies editable SEO title/description/og:image
+  to the document head.
+- Wired `/fundraising` headings/intro/steps to `useSiteContent`.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Phase 1 (theme), 2 (copy editor), 2b (FAQ/terms/privacy/fundraising), 3 (reset/help/SEO) done + deployed.
+
+### Known limitations / Next
+- Nav dock uses fixed links/icons; `whoFor`/`products`/`whyUs` lists + home CTA labels remain static.
+```

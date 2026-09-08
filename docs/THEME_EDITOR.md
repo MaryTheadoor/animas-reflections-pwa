@@ -93,10 +93,18 @@ colored region in the wireframe) → **Save copy**.
 ## Phase 2b — structured content
 - **FAQ items** (`{q,a}[]`), **Terms/Privacy sections** (`{title,body}[]`) now editable via
   repeatable list rows in the Copy editor; wired `/faq`, `/terms`, `/privacy` live.
-- Nav dock uses fixed links/icons; nav/footer link wiring + fundraising steps are the
-  remaining structured-content items.
+- **Fundraising** heading/subheading/intro + **How-it-works steps** (`{title,body}[]`)
+  editable + wired `/fundraising`.
 
-## Next
-Phase 3 polish (per-field reset, help links, SEO/OG text), then remaining structured
-items (nav/footer links, fundraising steps).
+## Phase 3 — polish
+- **Per-field Reset** in the Copy editor (reverts a field to the site default).
+- **"?" help button** in the editor → opens the Help tab.
+- **Editable SEO fields** (`metaTitle`, `metaDescription`, `ogImage`) under Global →
+  SEO; applied to `document.title` + description/og meta via `<SeoMeta />` in PageLayout.
+  (The app shell's static metadata remains the crawlable fallback.)
+
+## Remaining / known limitations
+- The **top nav dock** uses fixed links + dedicated icons (intentional layout); nav/footer
+  link editing is not wired.
+- Fundraising `whoFor`/`products`/`whyUs` string lists + home CTA labels remain static.
 

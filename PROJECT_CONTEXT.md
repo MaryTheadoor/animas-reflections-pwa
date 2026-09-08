@@ -265,9 +265,12 @@ Synthetic data is for UI development only. Production always reads Firestore —
   `src/lib/content.ts`), with per-page wireframe diagrams. Wired to /about, /contact,
   /custom, /biscuit-hockey, /im-ok-r-u, home hero+about, announcement.
 - **Phase 2b (done):** **structured list content** — FAQ items (q/a), Terms/Privacy
-  sections (title/body) editable via repeatable rows; wired /faq, /terms, /privacy.
-  Remaining structured: nav/footer links (dock uses fixed links) + fundraising steps.
-- **Phase 3 (next):** per-field reset, help links, SEO/OG text.
+  sections (title/body), fundraising How-it-works steps editable via repeatable rows;
+  wired /faq, /terms, /privacy, /fundraising.
+- **Phase 3 (done):** per-field Reset, "?" help button (→ Help tab), and editable global
+  SEO fields (`metaTitle`/`metaDescription`/`ogImage`) applied via `<SeoMeta />`.
+- **Known limitations:** top nav dock uses fixed links/icons; fundraising `whoFor`/
+  `products`/`whyUs` + home CTA labels remain static.
 
 ---
 END OF CONTEXT FILE
