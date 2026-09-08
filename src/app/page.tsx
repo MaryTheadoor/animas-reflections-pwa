@@ -9,7 +9,6 @@ import BandMerchTeaser from "@/components/home/band-merch-teaser";
 import FaqTeaser from "@/components/home/faq-teaser";
 import {
   SITE,
-  HERO,
   NAVIGATION,
   PAYMENT_METHODS,
   RETURN_POLICY,
@@ -58,16 +57,16 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animate-delay-300">
               <Link
-                href={HERO.cta_primary.href}
+                href={c.home.heroCtaHref}
                 className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile text-lg"
               >
-                {HERO.cta_primary.label}
+                {c.home.heroCtaLabel}
               </Link>
               <Link
-                href={HERO.cta_secondary.href}
+                href={c.home.heroCta2Href}
                 className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-primary text-white font-semibold hover:bg-primary-light transition-colors btn-tactile btn-primary-tactile text-lg"
               >
-                {HERO.cta_secondary.label}
+                {c.home.heroCta2Label}
               </Link>
             </div>
           </div>

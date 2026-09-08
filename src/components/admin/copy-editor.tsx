@@ -31,8 +31,8 @@ export default function CopyEditor({ onOpenHelp }: { onOpenHelp?: () => void }) 
 
   const getVal = (path: string) => getContentPath(draft, path) as string | boolean;
   const setVal = (path: string, value: string | boolean) => setDraft((c) => setContentPath(c, path, value));
-  const resetField = (key: string, type: "text" | "textarea" | "toggle" | "list") => {
-    if (type === "list") {
+  const resetField = (key: string, type: "text" | "textarea" | "toggle" | "list" | "stringList") => {
+    if (type === "list" || type === "stringList") {
       setDraft((c) => setContentArray(c, key, [...getContentArray(DEFAULT_CONTENT, key)]));
     } else {
       setVal(key, getContentPath(DEFAULT_CONTENT, key) as string | boolean);
@@ -206,6 +206,31 @@ export default function CopyEditor({ onOpenHelp }: { onOpenHelp?: () => void }) 
                         (f.itemFields ?? []).forEach((sf) => { tpl[sf.key] = ""; });
                         setDraft((c) => addContentItem(c, f.key, tpl));
                       }}
+                      className="w-full py-1.5 border-2 border-dashed border-primary/20 rounded-lg text-xs text-foreground/70 hover:border-primary/40 transition-colors"
+                    >
+                      + Add {f.itemLabel ?? "item"}
+                    </button>
+                  </div>
+                ) : f.type === "stringList" ? (
+                  <div className="space-y-2">
+                    {(getContentArray(draft, f.key) as string[]).map((item, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={item ?? ""}
+                          onChange={(e) => setVal(f.key + "." + i, e.target.value)}
+                          className={common}
+                        />
+                        <button
+                          onClick={() => setDraft((c) => removeContentItem(c, f.key, i))}
+                          className="text-red-400 hover:text-red-600 text-xs shrink-0"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => setDraft((c) => addContentItem(c, f.key, ""))}
                       className="w-full py-1.5 border-2 border-dashed border-primary/20 rounded-lg text-xs text-foreground/70 hover:border-primary/40 transition-colors"
                     >
                       + Add {f.itemLabel ?? "item"}

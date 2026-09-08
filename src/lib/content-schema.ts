@@ -43,6 +43,10 @@ export interface NavLink {
 export interface SiteHomeContent {
   heroHeading: string;
   heroSubheading: string;
+  heroCtaLabel: string;
+  heroCtaHref: string;
+  heroCta2Label: string;
+  heroCta2Href: string;
   aboutHeading: string;
   aboutSubheading: string;
   aboutBody: string;
@@ -71,7 +75,7 @@ export interface SiteContent {
   contact: SiteContactContent;
   custom: { heading: string; body: string };
   faq: { heading: string; subheading: string; items: { q: string; a: string }[] };
-  fundraising: { heading: string; subheading: string; intro: string; howItWorks: { title: string; body: string }[] };
+  fundraising: { heading: string; subheading: string; intro: string; howItWorks: { title: string; body: string }[]; whoFor: string[]; products: string[]; whyUs: string[] };
   terms: { heading: string; subheading: string; sections: { title: string; body: string }[] };
   privacy: { heading: string; subheading: string; sections: { title: string; body: string }[] };
   biscuitHockey: SiteSimpleContent;
@@ -100,6 +104,10 @@ export const DEFAULT_CONTENT: SiteContent = {
   home: {
     heroHeading: HERO.heading,
     heroSubheading: HERO.subheading,
+    heroCtaLabel: HERO.cta_primary.label,
+    heroCtaHref: HERO.cta_primary.href,
+    heroCta2Label: HERO.cta_secondary.label,
+    heroCta2Href: HERO.cta_secondary.href,
     aboutHeading: OUR_STORY.heading,
     aboutSubheading: OUR_STORY.subheading,
     aboutBody: OUR_STORY.body,
@@ -115,7 +123,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   },
   custom: { heading: DESIGN_YOUR_OWN.heading, body: DESIGN_YOUR_OWN.body },
   faq: { heading: FAQ.heading, subheading: FAQ.subheading, items: FAQ.items.map((it) => ({ q: it.q, a: it.a })) },
-  fundraising: { heading: FUNDRAISING.heading, subheading: FUNDRAISING.subheading, intro: FUNDRAISING.intro, howItWorks: FUNDRAISING.howItWorks.map((s) => ({ title: s.title, body: s.body })) },
+  fundraising: { heading: FUNDRAISING.heading, subheading: FUNDRAISING.subheading, intro: FUNDRAISING.intro, howItWorks: FUNDRAISING.howItWorks.map((s) => ({ title: s.title, body: s.body })), whoFor: [...FUNDRAISING.whoFor], products: [...FUNDRAISING.products], whyUs: [...FUNDRAISING.whyUs] },
   terms: {
     heading: TERMS_OF_SALE.heading,
     subheading: TERMS_OF_SALE.subheading,
@@ -159,7 +167,7 @@ export function mergeContent(input?: Partial<SiteContent> | null): SiteContent {
 export interface CopyField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "toggle" | "list";
+  type: "text" | "textarea" | "toggle" | "list" | "stringList";
   region: string; // diagram region this edits
   /** For "list": the sub-fields of each item (e.g. { q, a }). */
   itemFields?: { key: string; label: string; type: "text" | "textarea" }[];
@@ -204,6 +212,10 @@ export const COPY_PAGES: CopyPage[] = [
     fields: [
       { key: "home.heroHeading", label: "Hero heading", type: "text", region: "Hero" },
       { key: "home.heroSubheading", label: "Hero subheading", type: "textarea", region: "Hero" },
+      { key: "home.heroCtaLabel", label: "Primary CTA label", type: "text", region: "Hero" },
+      { key: "home.heroCtaHref", label: "Primary CTA link", type: "text", region: "Hero" },
+      { key: "home.heroCta2Label", label: "Secondary CTA label", type: "text", region: "Hero" },
+      { key: "home.heroCta2Href", label: "Secondary CTA link", type: "text", region: "Hero" },
       { key: "home.aboutHeading", label: "About heading", type: "text", region: "About" },
       { key: "home.aboutSubheading", label: "About subheading", type: "text", region: "About" },
       { key: "home.aboutBody", label: "About body", type: "textarea", region: "About" },
@@ -256,12 +268,15 @@ export const COPY_PAGES: CopyPage[] = [
     id: "fundraising",
     label: "Fundraising",
     route: "/fundraising",
-    regions: ["Header", "Intro", "Steps"],
+    regions: ["Header", "Intro", "Steps", "Who for", "Products", "Why us"],
     fields: [
       { key: "fundraising.heading", label: "Heading", type: "text", region: "Header" },
       { key: "fundraising.subheading", label: "Subheading", type: "text", region: "Header" },
       { key: "fundraising.intro", label: "Intro", type: "textarea", region: "Intro" },
       { key: "fundraising.howItWorks", label: "How it works steps", type: "list", region: "Steps", itemLabel: "step", itemFields: [{ key: "title", label: "Title", type: "text" }, { key: "body", label: "Body", type: "textarea" }] },
+      { key: "fundraising.whoFor", label: "Who it's for", type: "stringList", region: "Who for", itemLabel: "item" },
+      { key: "fundraising.products", label: "Products that sell", type: "stringList", region: "Products", itemLabel: "item" },
+      { key: "fundraising.whyUs", label: "Why fundraise with us", type: "stringList", region: "Why us", itemLabel: "item" },
     ],
   },
   {
@@ -284,6 +299,16 @@ export const COPY_PAGES: CopyPage[] = [
       { key: "privacy.heading", label: "Heading", type: "text", region: "Header" },
       { key: "privacy.subheading", label: "Subheading", type: "text", region: "Header" },
       { key: "privacy.sections", label: "Sections", type: "list", region: "Sections", itemLabel: "section", itemFields: [{ key: "title", label: "Title", type: "text" }, { key: "body", label: "Body", type: "textarea" }] },
+    ],
+  },
+  {
+    id: "navigation",
+    label: "Navigation",
+    route: "Header / Footer",
+    regions: ["Top nav", "Footer nav"],
+    fields: [
+      { key: "navigation.primary", label: "Top navigation links", type: "list", region: "Top nav", itemLabel: "link", itemFields: [{ key: "label", label: "Label", type: "text" }, { key: "href", label: "URL", type: "text" }] },
+      { key: "navigation.footer", label: "Footer links", type: "list", region: "Footer nav", itemLabel: "link", itemFields: [{ key: "label", label: "Label", type: "text" }, { key: "href", label: "URL", type: "text" }] },
     ],
   },
   {
@@ -359,7 +384,7 @@ export function setContentArray(content: SiteContent, path: string, value: unkno
 }
 
 /** Append an item to a list at a dotted path. */
-export function addContentItem(content: SiteContent, path: string, template: Record<string, unknown>): SiteContent {
+export function addContentItem(content: SiteContent, path: string, template: unknown): SiteContent {
   const arr = [...getContentArray(content, path)];
   arr.push(template);
   return setContentArray(content, path, arr);

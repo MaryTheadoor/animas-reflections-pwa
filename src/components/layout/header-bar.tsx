@@ -73,26 +73,26 @@ export default function HeaderBar() {
       <nav className="nav-dock">
         {/* Home */}
         <Link
-          href="/"
-          className={`nav-dock-link${isActive("/") ? " active" : ""}`}
-          aria-label="Home"
+          href={c.navigation.primary[0]?.href || "/"}
+          className={`nav-dock-link${isActive(c.navigation.primary[0]?.href || "/") ? " active" : ""}`}
+          aria-label={c.navigation.primary[0]?.label || "Home"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[0].d} />
           </svg>
-          <span>Home</span>
+          <span>{c.navigation.primary[0]?.label || "Home"}</span>
         </Link>
 
         {/* Shop */}
         <Link
-          href="/shop"
-          className={`nav-dock-link${isActive("/shop") ? " active" : ""}`}
-          aria-label="Shop"
+          href={c.navigation.primary[1]?.href || "/shop"}
+          className={`nav-dock-link${isActive(c.navigation.primary[1]?.href || "/shop") ? " active" : ""}`}
+          aria-label={c.navigation.primary[1]?.label || "Shop"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[1].d} />
           </svg>
-          <span>Shop</span>
+          <span>{c.navigation.primary[1]?.label || "Shop"}</span>
         </Link>
 
         {/* Cart */}
@@ -100,14 +100,14 @@ export default function HeaderBar() {
 
         {/* About */}
         <Link
-          href="/about"
-          className={`nav-dock-link${isActive("/about") ? " active" : ""}`}
-          aria-label="About"
+          href={c.navigation.primary[2]?.href || "/about"}
+          className={`nav-dock-link${isActive(c.navigation.primary[2]?.href || "/about") ? " active" : ""}`}
+          aria-label={c.navigation.primary[2]?.label || "About"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[2].d} />
           </svg>
-          <span>About</span>
+          <span>{c.navigation.primary[2]?.label || "About"}</span>
         </Link>
 
         {/* Fundraising */}
