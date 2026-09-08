@@ -766,13 +766,19 @@ export default function ProductManager({ categories }: Props) {
       {!editing && (
         <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-warm-sand/20 rounded-xl border border-warm-sand">
           <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvFile} />
-          <button
-            onClick={() => csvInputRef.current?.click()}
-            disabled={csvBusy}
-            className="px-3 py-1.5 text-xs font-medium bg-gold text-white rounded-lg hover:bg-gold-light transition-colors disabled:opacity-50"
+          <AdminTooltip
+            content="One row per variant; rows sharing a product name are grouped into one product. Square item-export columns (item_name, variation_name, item_price, item_sku) work too. It upserts and reports created/updated + any row errors."
+            dismissKey="csv-import"
+            side="bottom"
           >
-            {csvBusy ? "Importing…" : "Import CSV"}
-          </button>
+            <button
+              onClick={() => csvInputRef.current?.click()}
+              disabled={csvBusy}
+              className="px-3 py-1.5 text-xs font-medium bg-gold text-white rounded-lg hover:bg-gold-light transition-colors disabled:opacity-50"
+            >
+              {csvBusy ? "Importing…" : "Import CSV"}
+            </button>
+          </AdminTooltip>
           <button
             onClick={downloadCsvTemplate}
             className="px-3 py-1.5 text-xs font-medium text-primary border border-primary/20 rounded-lg hover:border-primary/40 transition-colors"
