@@ -26,6 +26,9 @@ export interface PricingVariant {
   /** Dollars. Zero/negative means "no price configured". */
   price: number;
   squareVariationId?: string;
+  /** Per-variant stock count. undefined = not tracked (treated as in stock);
+   *  a value ≤ 0 means the variant is out of stock and checkout is rejected. */
+  inventory?: number;
 }
 
 export interface PricingProduct {
@@ -208,6 +211,16 @@ export function deriveOrder(
       return {
         ok: false,
         error: `Variant not found for product "${product.name}" (${raw.variant_id})`,
+      };
+    }
+
+    // Server-side inventory enforcement (authority for checkout): a variant with
+    // inventory ≤ 0 is out of stock. undefined = "not tracked" → allowed. Mirrors
+    // the product page's client-side guard.
+    if (variant.inventory !== undefined && variant.inventory <= 0) {
+      return {
+        ok: false,
+        error: `"${variant.name || variant.id}" is out of stock. Please remove it from your cart and try again.`,
       };
     }
 
