@@ -1374,3 +1374,32 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] Phase 2: page-by-page copy editor for all site text (per-page wireframe diagrams + fields), building on `config/site.content`.
 - [ ] Phase 3: per-field reset, help links, SEO/OG text.
 ```
+
+## Session 31 — Content & Theme: Phase 2 (page-by-page copy editor)
+
+### What was done
+- **`src/lib/content-schema.ts`** (new): `SiteContent` types, `DEFAULT_CONTENT` (sourced from `content.ts`), `mergeContent()` deep-merge, `COPY_PAGES` (page → region diagram + fields), `getContentPath`/`setContentPath`.
+- **`src/context/site-config-context.tsx`**: `SiteConfig.content` + **`useSiteContent()`**.
+- **`src/components/admin/copy-editor.tsx`** (new) in the **Content & Theme** tab: page selector, **wireframe diagram** per page, per-region text/textarea/toggle fields, Save via `saveSiteConfig`.
+- **Wired** `/about`, `/contact`, `/custom`, `/biscuit-hockey`, `/im-ok-r-u`, home hero + Our-Story, and the announcement bar to `useSiteContent()` so edits apply live.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Files Changed (key)
+| File | New/Edit |
+|------|----------|
+| src/lib/content-schema.ts | new |
+| src/context/site-config-context.tsx | edit |
+| src/components/admin/copy-editor.tsx | new |
+| src/app/{about,contact,custom,biscuit-hockey,im-ok-r-u}/page.tsx | edit |
+| src/app/page.tsx · src/components/layout/header-bar.tsx | edit |
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme + Copy editors deployed live.
+
+### Pending / Next Session
+- [ ] Phase 2b: footer/nav links + structured list content (FAQ items, terms/privacy sections, fundraising steps) editable.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```

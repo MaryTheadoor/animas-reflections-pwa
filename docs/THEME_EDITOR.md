@@ -57,5 +57,38 @@ same 12 tokens are editable for Dark mode. Fonts are global (both modes).
 ✅ Light + dark palettes editable with live preview · ✅ fonts editable · ✅ saved via
 `saveSiteConfig` · ✅ applied in both modes · ✅ backward compatible.
 
-**Next (Phase 2):** the page-by-page **copy editor** for all site text (per-page
-wireframe diagrams + fields), building on `config/site.content`.
+---
+
+# Content & Theme Editor — Phase 2 (copy editor)
+
+## What changed
+- **`src/lib/content-schema.ts`** (new): `SiteContent` types, `DEFAULT_CONTENT`
+  (sourced from `content.ts`), `mergeContent()` (deep-merge `config/site.content`
+  overrides over defaults), `COPY_PAGES` (page → region diagram + editable fields),
+  `getContentPath`/`setContentPath` (dotted-path read/write).
+- **`src/context/site-config-context.tsx`**: `SiteConfig.content` + **`useSiteContent()`**
+  (returns merged copy).
+- **`src/components/admin/copy-editor.tsx`** (new) in the **Content & Theme** tab: page
+  selector, a **wireframe diagram** per page (regions = blocks), per-region fields
+  (text/textarea/toggle), Save via `saveSiteConfig`.
+- **Wired pages** to `useSiteContent()` so edits apply live:
+  `/about`, `/contact`, `/custom`, `/biscuit-hockey`, `/im-ok-r-u`, the home **hero +
+  Our-Story** sections, and the **announcement bar** (header). Footer/nav/structured
+  list content (FAQ items, terms/privacy sections, fundraising steps) is next.
+
+## Data flow
+```
+config/site.content ──(mergeContent, over content.ts)──▶ config.content (SiteContent)
+                                            useSiteContent() on each page
+```
+
+## Editing
+Admin → **Content & Theme** → **Copy** → pick a page → edit fields (each maps to a
+colored region in the wireframe) → **Save copy**.
+
+## Phase 2 status
+✅ Page-by-page editor with wireframes · ✅ editable + saved via `saveSiteConfig` ·
+✅ wired to main text pages, home hero/about, announcement. **Next:** footer/nav +
+structured list content (FAQ items, terms/privacy sections, fundraising steps), then
+Phase 3 polish.
+

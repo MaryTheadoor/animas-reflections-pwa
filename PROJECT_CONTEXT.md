@@ -261,11 +261,13 @@ Synthetic data is for UI development only. Production always reads Firestore —
 
 - **Phase 1 (done):** editable **light + dark** theme + fonts. Data-driven via
   `config/site.theme` (see `docs/THEME_EDITOR.md`). Editor in Admin → **Content & Theme** tab.
-- **Phase 2 (next):** page-by-page **copy editor** for all site text
-  (`config/site.content` overrides over `src/lib/content.ts`), with per-page wireframe
-  diagrams. Requires converting the static content pages to client components
-  (`output:"export"` bakes server components at build time).
-- **Phase 3:** per-field reset, help links, SEO/OG text.
+- **Phase 2 (done):** page-by-page **copy editor** (`config/site.content` overrides over
+  `src/lib/content.ts`), with per-page wireframe diagrams. Wired to /about, /contact,
+  /custom, /biscuit-hockey, /im-ok-r-u, home hero+about, announcement.
+- **Phase 2b (next):** footer/nav links + structured list content (FAQ items,
+  terms/privacy sections, fundraising steps) — requires `output:"export"` aware client
+  components (already converted the copy pages).
+- **Phase 3 (next):** per-field reset, help links, SEO/OG text.
 
 ---
 END OF CONTEXT FILE
