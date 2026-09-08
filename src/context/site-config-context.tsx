@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { CatalogOptions, AddonDefaults, CustomerField } from "@/types";
+import { mergeTheme, themeToCss, type SiteTheme, type MergeThemeInput } from "@/lib/site-defaults";
 
 export interface SiteConfig {
   // Announcement
@@ -45,6 +46,9 @@ export interface SiteConfig {
   catalog_options: CatalogOptions;
   addon_defaults: AddonDefaults;
   customer_fields: CustomerField[];
+
+  // ── Editable Theme (light + dark + fonts) ──
+  theme: SiteTheme;
 }
 
 const FALLBACK: SiteConfig = {
@@ -121,6 +125,8 @@ const FALLBACK: SiteConfig = {
     { id: "state", label: "State", type: "text", required: false, squareMapping: "address.administrativeDistrictLevel1" },
     { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "address.postalCode" },
   ],
+
+  theme: mergeTheme({}),
 };
 
 const SiteConfigContext = createContext<{
@@ -171,6 +177,7 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
             catalog_options: (data.catalog_options as CatalogOptions) || FALLBACK.catalog_options,
             addon_defaults: (data.addon_defaults as AddonDefaults) || FALLBACK.addon_defaults,
             customer_fields: (data.customer_fields as CustomerField[]) || FALLBACK.customer_fields,
+            theme: mergeTheme(data as unknown as MergeThemeInput),
           };
           setConfig(merged);
         }
@@ -179,24 +186,20 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
       .catch(() => { setLoading(false); });
   }, [reloadKey]);
 
-  // Apply CSS variables to :root for all theme settings.
-  // setIfChanged avoids unnecessary style recalculations when the value matches.
+  // Inject data-driven theme CSS: light tokens on :root, dark tokens under
+  // html.dark, plus fonts. Unlayered :root / html.dark rules override Tailwind's
+  // @theme, so edits apply live in BOTH modes without editing globals.css.
   useEffect(() => {
-    const root = document.documentElement;
-    const setIfChanged = (prop: string, value: string) => {
-      if (root.style.getPropertyValue(prop) !== value) root.style.setProperty(prop, value);
-    };
-    setIfChanged("--color-primary", config.primary_color);
-    setIfChanged("--color-accent", config.accent_color);
-    setIfChanged("--color-background", config.background_color);
-    setIfChanged("--color-gold", config.gold_color);
-    setIfChanged("--color-plum", config.plum_color);
-    setIfChanged("--color-cream", config.cream_color);
-    setIfChanged("--color-warm-sand", config.warm_sand_color);
-    setIfChanged("--color-text", config.text_color);
-    setIfChanged("--font-heading", config.heading_font);
-    setIfChanged("--font-body", config.body_font);
-  }, [config]);
+    const css = themeToCss(config.theme);
+
+    let el = document.getElementById("dsh-theme") as HTMLStyleElement | null;
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "dsh-theme";
+      document.head.appendChild(el);
+    }
+    if (el.textContent !== css) el.textContent = css;
+  }, [config.theme]);
 
   return (
     <SiteConfigContext.Provider value={{ config, loading, refresh: () => setReloadKey((k) => k + 1) }}>

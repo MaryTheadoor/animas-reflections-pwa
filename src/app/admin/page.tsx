@@ -13,6 +13,8 @@ import { SITE } from "@/lib/content";
 import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
 import HelpGuide from "@/components/admin/help-guide";
+import ThemeEditor from "@/components/admin/theme-editor";
+import { useSiteConfigLoading } from "@/hooks/useSiteConfig";
 import ImageManager from "@/components/admin/image-manager";
 import type { ManagedCategory, DesignAsset } from "@/types";
 import PlaceholderImage from "@/components/ui/placeholder-image";
@@ -161,7 +163,8 @@ const DEFAULT_CONFIG: SiteConfigData = {
 
 function DashboardContent() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "images" | "orders" | "users" | "admins" | "help">("products");
+  const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "images" | "orders" | "users" | "admins" | "theme" | "help">("products");
+  const siteConfigLoading = useSiteConfigLoading();
   const [config, setConfig] = useState<SiteConfigData>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -411,6 +414,7 @@ function DashboardContent() {
             { key: "orders" as const, label: "Orders" },
             { key: "users" as const, label: "Users" },
             { key: "admins" as const, label: "Admins" },
+            { key: "theme" as const, label: "Content & Theme" },
             { key: "help" as const, label: "Help" },
           ].map((t) => (
             <button
@@ -1157,6 +1161,18 @@ function DashboardContent() {
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h2 className="text-xl font-bold font-display mb-4">User Management</h2>
             <UsersSection />
+          </section>
+        )}
+        {tab === "theme" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            {siteConfigLoading ? (
+              <p className="text-sm text-foreground/70">Loading theme…</p>
+            ) : (
+              <ThemeEditor />
+            )}
+            <p className="mt-6 pt-4 text-xs text-foreground/60 border-t border-warm-sand">
+              Next: the page-by-page copy editor for all site text arrives in the following phase.
+            </p>
           </section>
         )}
         {tab === "help" && (
