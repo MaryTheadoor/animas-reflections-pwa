@@ -1,6 +1,7 @@
 "use client";
 
 import HeaderBar from "@/components/layout/header-bar";
+import SeoMeta from "@/components/layout/seo-meta";
 import type { ReactNode } from "react";
 
 const HEADER_FALLBACK = "88px";
@@ -20,6 +21,7 @@ export default function PageLayout({
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
+      <SeoMeta />
       <HeaderBar />
       <div id="main-content" className="flex flex-col flex-1">
         {children}

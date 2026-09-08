@@ -1172,7 +1172,7 @@ function DashboardContent() {
               <div className="space-y-10">
                 <ThemeEditor />
                 <div className="border-t border-warm-sand pt-8">
-                  <CopyEditor />
+                  <CopyEditor onOpenHelp={() => setTab("help")} />
                 </div>
               </div>
             )}

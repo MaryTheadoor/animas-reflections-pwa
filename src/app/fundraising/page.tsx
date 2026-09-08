@@ -3,10 +3,12 @@
 import { useCatalog } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
+import { useSiteContent } from "@/hooks/useSiteConfig";
 import { FUNDRAISING } from "@/lib/content";
 
 export default function FundraisingPage() {
   const { products } = useCatalog();
+  const c = useSiteContent();
   const fundraiserProducts = products.filter((product) =>
     FUNDRAISING.featuredCategories.some((catId) =>
       product.categoryId === catId
@@ -18,13 +20,13 @@ export default function FundraisingPage() {
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="text-center pt-8 sm:pt-12 mb-12">
           <h1 className="text-4xl sm:text-5xl font-bold font-display mb-3">
-            {FUNDRAISING.heading}
+            {c.fundraising.heading}
           </h1>
           <p className="text-gold-deep font-semibold text-lg mb-6">
-            {FUNDRAISING.subheading}
+            {c.fundraising.subheading}
           </p>
           <p className="text-foreground max-w-2xl mx-auto leading-relaxed">
-            {FUNDRAISING.intro}
+            {c.fundraising.intro}
           </p>
         </div>
 
@@ -34,7 +36,7 @@ export default function FundraisingPage() {
             How Our Fundraising Program Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {FUNDRAISING.howItWorks.map((step) => (
+            {c.fundraising.howItWorks.map((step) => (
               <div key={step.title} className="bg-warm-sand/30 rounded-2xl p-5">
                 <h3 className="font-bold text-primary mb-2">{step.title}</h3>
                 <p className="text-sm text-foreground leading-relaxed">{step.body}</p>

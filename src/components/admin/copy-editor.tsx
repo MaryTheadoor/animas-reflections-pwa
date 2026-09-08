@@ -4,7 +4,7 @@ import { useState } from "react";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
 import { useSiteConfig, useSiteConfigRefresh } from "@/hooks/useSiteConfig";
-import { COPY_PAGES, getContentPath, getContentArray, addContentItem, removeContentItem, setContentPath, type SiteContent } from "@/lib/content-schema";
+import { COPY_PAGES, DEFAULT_CONTENT, getContentPath, getContentArray, addContentItem, removeContentItem, setContentArray, setContentPath, type SiteContent } from "@/lib/content-schema";
 
 const REGION_COLORS: Record<string, string> = {
   "Top bar": "bg-plum",
@@ -19,7 +19,7 @@ const REGION_COLORS: Record<string, string> = {
   Footer: "bg-plum",
 };
 
-export default function CopyEditor() {
+export default function CopyEditor({ onOpenHelp }: { onOpenHelp?: () => void }) {
   const config = useSiteConfig();
   const refresh = useSiteConfigRefresh();
   const [pageId, setPageId] = useState(COPY_PAGES[0].id);
@@ -31,6 +31,13 @@ export default function CopyEditor() {
 
   const getVal = (path: string) => getContentPath(draft, path) as string | boolean;
   const setVal = (path: string, value: string | boolean) => setDraft((c) => setContentPath(c, path, value));
+  const resetField = (key: string, type: "text" | "textarea" | "toggle" | "list") => {
+    if (type === "list") {
+      setDraft((c) => setContentArray(c, key, [...getContentArray(DEFAULT_CONTENT, key)]));
+    } else {
+      setVal(key, getContentPath(DEFAULT_CONTENT, key) as string | boolean);
+    }
+  };
   const isDirty = JSON.stringify(draft) !== JSON.stringify(config.content);
 
   const handleSave = async () => {
@@ -60,6 +67,15 @@ export default function CopyEditor() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {onOpenHelp && (
+            <button
+              onClick={onOpenHelp}
+              title="Open the Help guide"
+              className="w-8 h-8 rounded-xl bg-gold/15 text-gold text-xs font-bold hover:bg-gold/30 transition-colors"
+            >
+              ?
+            </button>
+          )}
           <button
             onClick={() => setDraft(config.content)}
             disabled={!isDirty}
@@ -126,11 +142,20 @@ export default function CopyEditor() {
             const common = "w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm bg-white";
             return (
               <div key={f.key} className="bg-white border border-warm-sand rounded-xl p-3 space-y-1.5">
-                <label className="text-xs font-medium text-primary flex items-center gap-2">
-                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${color}`} />
-                  {f.label}
-                  <span className="text-[10px] text-foreground/50 font-normal">{f.region}</span>
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-medium text-primary flex items-center gap-2">
+                    <span className={`inline-block w-2.5 h-2.5 rounded-full ${color}`} />
+                    {f.label}
+                    <span className="text-[10px] text-foreground/50 font-normal">{f.region}</span>
+                  </label>
+                  <button
+                    onClick={() => resetField(f.key, f.type)}
+                    title="Reset this field to the site default"
+                    className="text-[10px] text-foreground/50 hover:text-foreground transition-colors"
+                  >
+                    Reset
+                  </button>
+                </div>
                 {f.type === "textarea" ? (
                   <textarea
                     value={typeof val === "string" ? val : ""}

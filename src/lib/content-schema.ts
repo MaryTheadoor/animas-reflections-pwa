@@ -30,6 +30,9 @@ export interface SiteGlobalContent {
   announcementText: string;
   announcementActive: boolean;
   footerTagline: string;
+  metaTitle: string;
+  metaDescription: string;
+  ogImage: string;
 }
 
 export interface NavLink {
@@ -68,7 +71,7 @@ export interface SiteContent {
   contact: SiteContactContent;
   custom: { heading: string; body: string };
   faq: { heading: string; subheading: string; items: { q: string; a: string }[] };
-  fundraising: { heading: string; subheading: string; intro: string };
+  fundraising: { heading: string; subheading: string; intro: string; howItWorks: { title: string; body: string }[] };
   terms: { heading: string; subheading: string; sections: { title: string; body: string }[] };
   privacy: { heading: string; subheading: string; sections: { title: string; body: string }[] };
   biscuitHockey: SiteSimpleContent;
@@ -86,6 +89,9 @@ export const DEFAULT_CONTENT: SiteContent = {
     announcementText: ANNOUNCEMENT.text,
     announcementActive: ANNOUNCEMENT.active,
     footerTagline: "Family owned and operated design & print operation based in Durango, CO, creating unique custom designs.",
+    metaTitle: `${SITE.name} — Custom Apparel, Printing & Fundraising in Durango, CO`,
+    metaDescription: SITE.description,
+    ogImage: "",
   },
   navigation: {
     primary: NAVIGATION.primary.map((l) => ({ label: l.label, href: l.href })),
@@ -109,7 +115,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   },
   custom: { heading: DESIGN_YOUR_OWN.heading, body: DESIGN_YOUR_OWN.body },
   faq: { heading: FAQ.heading, subheading: FAQ.subheading, items: FAQ.items.map((it) => ({ q: it.q, a: it.a })) },
-  fundraising: { heading: FUNDRAISING.heading, subheading: FUNDRAISING.subheading, intro: FUNDRAISING.intro },
+  fundraising: { heading: FUNDRAISING.heading, subheading: FUNDRAISING.subheading, intro: FUNDRAISING.intro, howItWorks: FUNDRAISING.howItWorks.map((s) => ({ title: s.title, body: s.body })) },
   terms: {
     heading: TERMS_OF_SALE.heading,
     subheading: TERMS_OF_SALE.subheading,
@@ -175,7 +181,7 @@ export const COPY_PAGES: CopyPage[] = [
     id: "global",
     label: "Global",
     route: "Everywhere",
-    regions: ["Top bar", "Footer", "Contact"],
+    regions: ["Top bar", "Footer", "Contact", "SEO"],
     fields: [
       { key: "global.name", label: "Site name", type: "text", region: "Footer" },
       { key: "global.tagline", label: "Tagline", type: "text", region: "Footer" },
@@ -185,6 +191,9 @@ export const COPY_PAGES: CopyPage[] = [
       { key: "global.announcementText", label: "Announcement bar text", type: "text", region: "Top bar" },
       { key: "global.announcementActive", label: "Show announcement bar", type: "toggle", region: "Top bar" },
       { key: "global.footerTagline", label: "Footer tagline", type: "textarea", region: "Footer" },
+      { key: "global.metaTitle", label: "SEO title", type: "text", region: "SEO" },
+      { key: "global.metaDescription", label: "SEO description", type: "textarea", region: "SEO" },
+      { key: "global.ogImage", label: "Social share image URL", type: "text", region: "SEO" },
     ],
   },
   {
@@ -247,11 +256,12 @@ export const COPY_PAGES: CopyPage[] = [
     id: "fundraising",
     label: "Fundraising",
     route: "/fundraising",
-    regions: ["Header", "Intro"],
+    regions: ["Header", "Intro", "Steps"],
     fields: [
       { key: "fundraising.heading", label: "Heading", type: "text", region: "Header" },
       { key: "fundraising.subheading", label: "Subheading", type: "text", region: "Header" },
       { key: "fundraising.intro", label: "Intro", type: "textarea", region: "Intro" },
+      { key: "fundraising.howItWorks", label: "How it works steps", type: "list", region: "Steps", itemLabel: "step", itemFields: [{ key: "title", label: "Title", type: "text" }, { key: "body", label: "Body", type: "textarea" }] },
     ],
   },
   {
