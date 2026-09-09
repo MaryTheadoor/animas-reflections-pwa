@@ -90,6 +90,13 @@ export const HELP_ENTRIES: HelpEntry[] = [
     body: "Customers open the customizer from a product (“Customize This”). They pick a color, then drag/resize/rotate a design or text within the print zone, add optional add-ons, and add to cart.\n\nProducts need a color and a print zone set to preview correctly. Designs and add-ons are managed in the admin.",
   },
   {
+    id: "print-zones",
+    title: "Print zones & garment mockups",
+    category: "Catalog",
+    keywords: ["print zone", "mockup", "printable", "print area", "customizer", "zone"],
+    body: "A print zone is the printable area on a garment view (front, back, sleeve, left/right side), stored as % of the mockup.\n\nIn the Product editor → Print Zones, pick a view, then drag the box to position it and drag the corner to resize it — it updates live over the mockup image. Upload a mockup photo (Admin → Images) so you can see it precisely. If a view is left blank, the customizer uses the default zone.",
+  },
+  {
     id: "checkout",
     title: "Checkout & payments (Square)",
     category: "Storefront",
