@@ -367,6 +367,20 @@ export default function SeoManager() {
         });
         return;
       }
+      // A PUBLISHED page with no body is a thin page whose meta description
+      // would fall back to a generic sentence. Refuse it rather than shipping
+      // that, but leave unpublished drafts free to be empty while they are
+      // being written.
+      if (drafts.keywords[i].published && !drafts.keywords[i].body.trim()) {
+        setSaveMessage({
+          kind: "error",
+          text:
+            "Keyword page #" +
+            (i + 1) +
+            " is published but has no body copy. Write the page copy, or untick Published to keep it as a draft.",
+        });
+        return;
+      }
       const seenAt = firstSeen.get(slug);
       if (seenAt !== undefined) {
         setSaveMessage({
