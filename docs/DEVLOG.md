@@ -1354,10 +1354,15 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 | src/app/**/layout.tsx, 8 server pages | Per-route static metadata from the registry |
 | PROJECT_CONTEXT.md | Known Issues #30/#31; functions + key-files tables refreshed |
 
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| 3095407 | fix(admin): storage rules cannot read Firestore — authorize admin uploads by custom claim |
+
 ### Current State at Session End
 - Lint 0 errors/0 warnings | Tests 109/109 (9 suites) | Build 24/24 (22 routes + sitemap.xml + robots.txt) | Functions tsc clean
 - Deployed: storage rules, all 16 functions (incl. 2 new), hosting
-- Branch: development
+- Branch: development (pushed)
 
 ### Pending / Next Session
 - [ ] Client to confirm street address, postal code, geo coordinates and opening hours → then add them to `BUSINESS` in `src/lib/seo.ts` (LocalBusiness gains address/geo/hours).
