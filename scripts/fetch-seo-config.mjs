@@ -49,8 +49,29 @@ function decodeFields(fields) {
  * committed snapshot differ on every save, so `npm run build` dirtied the
  * working tree and "is the repo clean?" stopped being a usable check.
  */
+/** Fixed key order, so the snapshot does not churn when Firestore returns a
+ *  document's fields in a different order (it is not guaranteed stable). */
+const KEYWORD_KEYS = [
+  "slug", "keyword", "headline", "title", "description",
+  "body", "ctaLabel", "ctaHref", "published", "order",
+];
+
+function canonicalKeyword(k) {
+  const out = {};
+  for (const key of KEYWORD_KEYS) if (k[key] !== undefined) out[key] = k[key];
+  // Anything unrecognised is kept rather than silently dropped.
+  for (const key of Object.keys(k)) if (!(key in out)) out[key] = k[key];
+  return out;
+}
+
 function snapshotOf(config) {
-  return { pages: config.pages ?? {}, keywords: config.keywords ?? [] };
+  const rawPages = config.pages ?? {};
+  const pages = {};
+  for (const path of Object.keys(rawPages).sort()) {
+    const p = rawPages[path] ?? {};
+    pages[path] = { title: p.title, description: p.description };
+  }
+  return { pages, keywords: (config.keywords ?? []).map(canonicalKeyword) };
 }
 
 function render(config) {
