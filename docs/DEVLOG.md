@@ -1331,6 +1331,7 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 6. **`auth-context.tsx`** mints the claim on sign-in and forces `getIdToken(true)` once per user per session, guarded by a ref so the token refresh cannot re-trigger `onAuthStateChanged` into a loop.
 7. **Verified live, end to end:** token claim `admin: true`; upload to the exact failing path **200**; probe cleanup **204**; unauthenticated upload still **403**.
 8. **Ported the Nown S.I.T.E.S SEO conventions** into the Next.js app (see Decisions).
+9. **Added the framework's SEO gate** as `scripts/check-seo.mjs`, wired to `postbuild`. It walks the emitted `out/` **recursively** (unlike the framework's own non-recursive scan, which would only ever see the home page in this export). It immediately caught three real defects: the home title was **63 chars** and its description **158** (both over the SERP limits), and 404/\_not-found duplicated it. All four core rules were then negative-tested by deliberately breaking the output (stripped `og:image`, wrong canonical, doubled brand in the title, sitemap `<loc>` with no page) — each failed as intended, and the restored tree passed.
 
 ### Decisions Made
 - **`config/admin` stays the single source of truth for admins.** The email list inside `storage.rules` is a *bootstrap fallback* only, so uploads work before any claim exists; ordinary admin changes go through the claim and need no redeploy. Only a founder-email change requires editing and redeploying the rules.
@@ -1351,6 +1352,8 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 | src/components/layout/json-ld.tsx | One @graph (WebSite + LocalBusiness, @id-linked) replaces two flat nodes |
 | src/app/layout.tsx | metadataBase, og:image + twitter:image, <SiteJsonLd /> |
 | scripts/generate-og.mjs, public/og-image.png | NEW — dependency-free 1200×630 share card + npm prebuild |
+| scripts/check-seo.mjs | NEW — recursive SEO gate over out/, wired to postbuild |
+| src/app/(home)/layout.tsx, src/app/(home)/page.tsx | Home page moved into a route group so it can carry its own (60/155-clamped) metadata |
 | src/app/**/layout.tsx, 8 server pages | Per-route static metadata from the registry |
 | PROJECT_CONTEXT.md | Known Issues #30/#31; functions + key-files tables refreshed |
 

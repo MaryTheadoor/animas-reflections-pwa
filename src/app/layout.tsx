@@ -25,12 +25,15 @@ export const metadata: Metadata = {
   // Lets Next resolve relative metadata URLs (canonicals, og images) to the
   // production origin instead of warning and falling back to localhost.
   metadataBase: new URL(SITE_URL),
+  // Fallback only: the home page sets its own metadata via src/app/(home)/layout.tsx,
+  // so this is what 404 and _not-found inherit. Kept inside the SERP limits
+  // (60 / 155) and deliberately distinct from the home title.
   title: {
-    default: "Animas Reflections | Custom Apparel & Merchandise — Durango, CO",
+    default: "Animas Reflections — Custom Printing in Durango, CO",
     template: "%s | Animas Reflections",
   },
   description:
-    "Custom designs. Create your own t-shirt, hoodie, bag, ornament, coaster, dog scarf, print on wood, glass, metal, jewelry and more! Based in Durango, Colorado.",
+    "Family-owned custom print shop in Durango, CO. Put your own design on apparel, drinkware, wood, glass and metal.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
