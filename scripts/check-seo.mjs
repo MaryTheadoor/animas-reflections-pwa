@@ -100,6 +100,12 @@ if (!existsSync(sitemapPath)) {
   let m;
   while ((m = re.exec(xml)) !== null) sitemapLocs.push(m[1]);
   if (sitemapLocs.length === 0) errors.push("sitemap.xml: contains no <loc> entries");
+  // Two entries for one URL means two sources generated the same page — e.g. a
+  // keyword slug colliding with a real route.
+  const duplicates = sitemapLocs.filter((loc, i) => sitemapLocs.indexOf(loc) !== i);
+  for (const dup of new Set(duplicates)) {
+    errors.push("sitemap.xml: duplicate entry for " + dup);
+  }
 }
 const sitemapSet = new Set(sitemapLocs.map((l) => l.replace(ORIGIN, "") || "/"));
 

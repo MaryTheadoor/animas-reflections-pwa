@@ -16,6 +16,16 @@
    ────────────────────────────────────────────────────────────────────── */
 
 import { SITE } from "@/lib/content";
+import { normalizeSeoConfig, type KeywordPage } from "@/lib/seo-config";
+import { SEO_CONTENT } from "@/lib/seo-content.generated";
+
+/**
+ * CMS overrides, snapshotted from Firestore config/seo at build time by
+ * scripts/fetch-seo-config.mjs. Everything below stays authoritative as the
+ * DEFAULT: a blank field in the admin means "use the committed copy", so the
+ * site can never end up with an empty <title> because someone cleared a box.
+ */
+const CMS = normalizeSeoConfig(SEO_CONTENT);
 
 export const SITE_URL = "https://www.animasreflections.com";
 export const SITE_NAME = SITE.name;
@@ -81,6 +91,12 @@ export const PAGE_SEO: readonly PageSeo[] = [
     title: "Design Your Own Custom Apparel Online",
     description:
       "Pick a product and color, upload your artwork, add text and see a live mockup before you order. Designed and printed in Durango, Colorado.",
+    indexable: true,
+  },
+  {
+    path: "/services/",
+    title: "Custom Printing Services",
+    description: `Screen printing, embroidery and sublimation for teams, businesses and events in ${SITE.location}. See what we make and how to start.`,
     indexable: true,
   },
   {
@@ -185,9 +201,12 @@ export function pageSeo(path: string): PageSeo {
  */
 export function metadataFor(path: string) {
   const page = pageSeo(path);
+  // CMS override wins when present; otherwise the committed default above.
+  const title = CMS.pages?.[path]?.title || page.title;
+  const description = CMS.pages?.[path]?.description || page.description;
   return {
-    title: { absolute: pageTitle(page.title) },
-    description: clip(page.description, DESCRIPTION_MAX),
+    title: { absolute: pageTitle(title) },
+    description: clip(description, DESCRIPTION_MAX),
     ...(page.canonical === false
       ? {}
       : { alternates: { canonical: SITE_URL + page.path } }),
@@ -269,4 +288,60 @@ export function localBusinessNode() {
  */
 export function siteGraph() {
   return { "@context": "https://schema.org", "@graph": [websiteNode(), localBusinessNode()] };
+}
+
+/* ─── Keyword landing pages (CMS-managed) ───────────────────────────────
+   Each published keyword produces one real static page at /<slug>/, listed in
+   sitemap.xml and cross-linked from /services/. Method: the Nown S.I.T.E.S
+   compact-keywords convention — one bottom-of-funnel keyword per page rather
+   than a wall of near-duplicate variants, which is what Google penalises.
+   ───────────────────────────────────────────────────────────────────── */
+
+/** Published keyword pages, in hub display order. */
+export function publishedKeywordPages(): KeywordPage[] {
+  return (CMS.keywords ?? [])
+    .filter((k) => k.published && k.slug)
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+export function keywordPageBySlug(slug: string): KeywordPage | undefined {
+  return publishedKeywordPages().find((k) => k.slug === slug);
+}
+
+/** Absolute URL for a keyword page. */
+export function keywordPath(slug: string): string {
+  return "/" + slug + "/";
+}
+
+/**
+ * Metadata for a keyword page. Title and description are DERIVED when the
+ * editor leaves them blank (the framework's seo.mjs derivation): the headline
+ * becomes the title, and the body's opening is clipped to the description
+ * limit — so a new keyword page never ships metadata-less.
+ */
+export function keywordMetadata(page: KeywordPage) {
+  const headline = page.headline || page.keyword;
+  const title = page.title || headline;
+  // The derived description must NEVER be empty. A keyword published with no
+  // body would otherwise emit a blank meta description, which fails the SEO
+  // gate in scripts/check-seo.mjs at postbuild - so the build would go red
+  // AFTER the admin was told their publish had started. Fall back to a
+  // sentence built from copy we know is real.
+  const derived = clip(page.body, DESCRIPTION_MAX);
+  const description =
+    page.description || derived || `${headline} from ${SITE_NAME} in ${SITE.location}.`;
+  return {
+    title: { absolute: pageTitle(title) },
+    description: clip(description, DESCRIPTION_MAX),
+    alternates: { canonical: SITE_URL + keywordPath(page.slug) },
+  };
+}
+
+/** Split plain-text body copy into paragraphs on blank lines. */
+export function keywordParagraphs(body: string): string[] {
+  return String(body || "")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 }

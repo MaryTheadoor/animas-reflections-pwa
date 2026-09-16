@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "og": "node scripts/generate-og.mjs",
-    "prebuild": "node scripts/generate-og.mjs",
+    "seo:fetch": "node scripts/fetch-seo-config.mjs",
+    "prebuild": "node scripts/fetch-seo-config.mjs && node scripts/generate-og.mjs",
+    "publish": "npm run build && firebase deploy --only hosting",
     "build": "next build",
     "check:seo": "node scripts/check-seo.mjs",
     "postbuild": "node scripts/check-seo.mjs",

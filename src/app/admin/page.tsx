@@ -12,6 +12,7 @@ import { useAuth, RequireAdmin } from "@/context/auth-context";
 import { SITE } from "@/lib/content";
 import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
+import SeoManager from "@/components/admin/seo-manager";
 import ImageManager from "@/components/admin/image-manager";
 import type { ManagedCategory, DesignAsset } from "@/types";
 import PlaceholderImage from "@/components/ui/placeholder-image";
@@ -160,7 +161,7 @@ const DEFAULT_CONFIG: SiteConfigData = {
 
 function DashboardContent() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<"products" | "categories" | "settings" | "designs" | "images" | "orders" | "users" | "admins">("products");
+  const [tab, setTab] = useState<"products" | "categories" | "seo" | "settings" | "designs" | "images" | "orders" | "users" | "admins">("products");
   const [config, setConfig] = useState<SiteConfigData>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -404,6 +405,7 @@ function DashboardContent() {
           {[
             { key: "products" as const, label: "Products" },
             { key: "categories" as const, label: "Categories" },
+            { key: "seo" as const, label: "SEO" },
             { key: "settings" as const, label: "Settings" },
             { key: "designs" as const, label: "Designs" },
             { key: "images" as const, label: "Images" },
@@ -435,6 +437,13 @@ function DashboardContent() {
         {/* ── Categories ── — same keep-mounted treatment as Products */}
         <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "categories" ? "" : "hidden"}`}>
           <CategoryManager />
+        </section>
+
+        {/* ── SEO ── — keep-mounted like Products/Categories (PROJECT_CONTEXT.md
+            Known Issue #30): a tab switch must never unmount an editor and
+            discard in-progress SEO copy. */}
+        <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "seo" ? "" : "hidden"}`}>
+          <SeoManager />
         </section>
 
         {/* ── Settings ── */}

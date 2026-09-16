@@ -24,12 +24,7 @@
         ]
       }
     ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
+    "rewrites": []
   },
   "firestore": {
     "rules": "firestore.rules",

@@ -10,6 +10,7 @@ import {
   type User,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import Link from "next/link";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "@/lib/firebase";
 import { ADMIN_EMAIL } from "@/lib/constants";
@@ -172,12 +173,12 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
             </p>
           )}
           {!user && (
-            <a
+            <Link
               href="/admin/login"
               className="inline-block px-6 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors"
             >
               Admin Login
-            </a>
+            </Link>
           )}
         </div>
       </div>

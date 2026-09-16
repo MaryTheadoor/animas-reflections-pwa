@@ -547,6 +547,14 @@ export const syncMyAdminClaim = onCall(
     if (!uid || !email) {
       throw new HttpsError("permission-denied", "Authentication required");
     }
+    // Require a verified address: eligibility here is decided purely on the
+    // email, so an unverified account claiming a listed address must not be able
+    // to mint the admin claim for itself. Both founder accounts are Google
+    // sign-ins and are verified.
+    if (request.auth?.token?.email_verified !== true) {
+      logger.warn("syncMyAdminClaim refused: email not verified", { uid, email });
+      return { success: true, admin: false };
+    }
     const lowered = email.toLowerCase().trim();
     const eligible = isAlwaysAdmin(lowered) || (await getAdminEmails()).includes(lowered);
     if (!eligible) return { success: true, admin: false };
@@ -937,3 +945,131 @@ export const updateOrderTracking = onCall(
     return { success: true };
   }
 );
+
+// ─── SEO Publishing (Admin) ────────────────────────────────────────
+// The marketing pages are a Next.js static export, so their SEO copy is baked
+// into HTML at build time. Saving it in Admin → SEO changes Firestore only —
+// crawlers keep reading the old <title>/<meta>/JSON-LD until the site is
+// rebuilt and out/ is redeployed. savePublishToken stores the fine-grained
+// GitHub PAT that authorizes that rebuild; publishSite fires the
+// workflow_dispatch event for .github/workflows/rebuild.yml.
+//
+// The token is server-only: firestore.rules denies every client read and write
+// on secrets/{docId}, only the Admin SDK touches it here, and it is never
+// logged, echoed back, or returned to the caller.
+
+const GITHUB_PUBLISH_REPO = "MaryTheadoor/animas-reflections-pwa";
+const GITHUB_PUBLISH_REF = "development";
+const GITHUB_PUBLISH_WORKFLOW = "rebuild.yml";
+
+// 401 = the PAT is invalid/expired/revoked · 403 = the PAT lacks Actions: write
+// · 404 = the PAT cannot see the repo, or rebuild.yml is missing on the branch.
+function dispatchFailureMessage(status: number): string {
+  if (status === 401) {
+    return "GitHub rejected the token (401). It is invalid, expired, or revoked — save a new one in Admin → SEO → Publish settings.";
+  }
+  if (status === 403) {
+    return "GitHub refused the request (403). The token is missing Actions: write access to this repository.";
+  }
+  if (status === 404) {
+    return "GitHub could not find the workflow (404). The token may not have access to MaryTheadoor/animas-reflections-pwa, or rebuild.yml is missing on the development branch.";
+  }
+  return `GitHub returned ${status} instead of 204, so the rebuild did not start.`;
+}
+
+export const savePublishToken = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    await requireAdmin(request);
+
+    const { token } = request.data as { token?: unknown };
+    if (typeof token !== "string" || token.trim() === "") {
+      throw new HttpsError("invalid-argument", "A GitHub token is required");
+    }
+
+    try {
+      const db = getFirestore();
+      await db.collection("secrets").doc("githubPublish").set({
+        token: token.trim(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: request.auth?.token?.email ?? "",
+      });
+      // Log that a token was stored — never the token itself.
+      logger.info("savePublishToken stored a GitHub token", {
+        updatedBy: request.auth?.token?.email ?? "",
+      });
+      return { success: true };
+    } catch (err) {
+      logger.error("Failed to save publish token", err);
+      throw new Error("Failed to save publish token");
+    }
+  }
+);
+
+export const publishSite = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    await requireAdmin(request);
+
+    const db = getFirestore();
+    const snap = await db.collection("secrets").doc("githubPublish").get();
+    const token = snap.data()?.token;
+    if (typeof token !== "string" || token === "") {
+      // Not an error state: the admin just has not stored a token yet.
+      return {
+        success: false,
+        configured: false,
+        message:
+          "No GitHub token configured. Save one in Admin, SEO tab, Publish settings.",
+      };
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${GITHUB_PUBLISH_REPO}/actions/workflows/${GITHUB_PUBLISH_WORKFLOW}/dispatches`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "animas-reflections-pwa",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ref: GITHUB_PUBLISH_REF }),
+        }
+      );
+
+      if (response.status === 204) {
+        logger.info("GitHub rebuild dispatched", { status: response.status });
+        return {
+          success: true,
+          configured: true,
+          message: "Rebuild started. The site updates in about 2 minutes.",
+        };
+      }
+
+      // GitHub-side failures are reported, not thrown, so the admin UI can
+      // show what is wrong with the token.
+      const body = await response.text().catch(() => "");
+      logger.error("GitHub rejected the workflow dispatch", {
+        status: response.status,
+        body: body.slice(0, 500),
+      });
+      return {
+        success: false,
+        configured: true,
+        message: dispatchFailureMessage(response.status),
+      };
+    } catch (err) {
+      logger.error("GitHub workflow dispatch could not be sent", err);
+      return {
+        success: false,
+        configured: true,
+        message:
+          "Could not reach GitHub to start the rebuild. Check the connection and try again.",
+      };
+    }
+  }
+);
+

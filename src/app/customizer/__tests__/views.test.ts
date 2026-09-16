@@ -208,6 +208,9 @@ describe("getProductViews", () => {
 
     const withSides = getProductViews(makeProduct({
       printZones: {
+        // PrintZoneTemplate requires front; this test is only about sideL/sideR,
+        // but omitting front made the fixture invalid and broke tsc --noEmit.
+        front: { x_percent: 30, y_percent: 22, width_percent: 40, height_percent: 48 },
         sideL: { x_percent: 5, y_percent: 15, width_percent: 30, height_percent: 40 },
         sideR: { x_percent: 60, y_percent: 15, width_percent: 30, height_percent: 40 },
       },

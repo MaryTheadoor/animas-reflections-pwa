@@ -1358,6 +1358,32 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 | src/app/**/layout.tsx, 8 server pages | Per-route static metadata from the registry |
 | PROJECT_CONTEXT.md | Known Issues #30/#31; functions + key-files tables refreshed |
 
+### Continued (same session) — CMS-managed SEO + keywords, and a full debugging pass
+
+**Requested:** put SEO and keywords under CMS control so they can be edited from an admin session without touching code, then a final debugging pass and a repo/live sync.
+
+11. **CMS data layer.** New `config/seo` Firestore doc + `src/lib/seo-config.ts` contract (`SeoConfig`, `KeywordPage`, `normalizeSeoConfig()`, `slugifyKeyword()`, `RESERVED_SLUGS`). `src/lib/seo.ts` now merges CMS overrides over the committed `PAGE_SEO` defaults, so **a blank field always means "use the default"** and a cleared box can never publish an empty `<title>`.
+12. **Build-time fetch.** `scripts/fetch-seo-config.mjs` (on `prebuild`) snapshots `config/seo` into the committed `src/lib/seo-content.generated.ts`; it keeps the committed snapshot if Firestore is unreachable, so a build never depends on the network. Idempotent — writes only on change.
+13. **Keyword landing pages.** One real static page per published keyword at `/<slug>/` (`src/app/[keyword]/page.tsx`, `generateStaticParams`), listed in `sitemap.xml` and cross-linked from the new `/services/` hub so none are orphans. Seeded three real pages (embroidery, t-shirt printing, corporate apparel) **through the CMS write path** to prove the chain end to end.
+14. **Admin → SEO.** New tab: per-page title/description with live counters and per-page reset, a full keyword manager (live slug, URL preview, thin-content warning, duplicate/blank/reserved blocking), and a Publish section.
+15. **Publish.** `publishSite` + `savePublishToken` functions, `.github/workflows/rebuild.yml`, and `npm run publish` locally. The PAT lives in the admin-only, client-unreadable `secrets/githubPublish` — deliberately **not** Secret Manager, because functions v2's `defineSecret()` fails the deploy when the secret does not exist yet, which would block `firebase deploy --only functions`.
+
+**Debugging pass findings (all fixed):**
+
+| # | Severity | Finding | Fix |
+|---|----------|---------|-----|
+| 1 | **High (security)** | `config/admin` was readable **anonymously** — `match /config/{document=**}` with `allow read: if true` ALSO matched `config/admin`, and Firestore ORs matching rules, so the public wildcard overrode the admin-only rule. Verified: unauthenticated GET returned 200 with the admin email list. | Single-segment `config/{docId}` with `allow read: if docId != 'admin'`. Re-verified: 403. |
+| 2 | **High (SEO)** | The catch-all `rewrites` entry made **every unknown URL return HTTP 200 serving the home page** — soft 404s; `out/404.html` was never served. It also made live verification lie: an undeployed keyword page answered 200. | `"rewrites": []`; Hosting now serves 404.html with a real 404. |
+| 3 | **High (functionality)** | `savePublishToken` had **zero callers**, so the Publish button could never work and its error message pointed at a UI that did not exist. | Token input + save action added to the Publish section. |
+| 4 | **High (build)** | A published keyword with an empty body derived an **empty meta description**, which fails the SEO gate at postbuild — the build went red *after* the admin was told the publish had started. | `keywordMetadata()` now falls back to a generated sentence; the derived description can never be empty. |
+| 5 | Medium (security) | The bootstrap Storage admin list matched on email alone, with no `email_verified` check. | `email_verified` now required in `storage.rules` and in `syncMyAdminClaim`. Confirmed both founder accounts are Google-verified before tightening. |
+| 6 | Medium (SEO) | `/services/` had zero inbound links in the emitted HTML — an orphan hub. | Linked from the footer nav. |
+| 7 | Medium (UX) | The title counter measured the **pre-`pageTitle()`** string, so a 55-character override showed green while the published title was silently truncated. | Counter measures the composed title. |
+| 8 | Medium (build safety) | `fetch-seo-config.mjs` wrote an **empty config and exited 0** when there was no committed snapshot to fall back on — a silent SEO regression. | Now exits 1 with a clear message. |
+| 9 | Low (data loss) | Saving in the editor dropped fields it does not model — keyword `order` and page overrides for routes outside its editable list. | Editor preserves what it does not edit. |
+
+**Also caught during the pass:** a lint error from my new `/[keyword]/` route exposing a pre-existing `<a href="/admin/login">` (now `<Link>`); and a duplicate `publishSite` subagent that I had launched twice — the orphan was interrupted, and the surviving agent independently found and fixed a **critical** CI defect: the workflow had no `NEXT_PUBLIC_*` env, so a CI checkout (no `.env.local`) would have deployed a site with undefined Firebase config.
+
 ### Commits This Session
 | Hash | Message |
 |------|---------|

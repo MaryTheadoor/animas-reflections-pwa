@@ -28,9 +28,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Any other config doc - public read, admin-only write
-    match /config/{document=**} {
-      allow read: if true;
+    // Any other config doc - public read, admin-only write.
+    // NOTE: this is a SINGLE-segment match, not /config/{document=**}. Firestore
+    // ORs every matching rule, so the previous recursive wildcard also matched
+    // config/admin and its "allow read: if true" silently overrode the
+    // admin-only rule below — the admin email list was readable anonymously
+    // (verified: an unauthenticated GET of config/admin returned HTTP 200).
+    // Excluding 'admin' here keeps config/site and config/seo public while
+    // leaving config/admin guarded by its own rule. Do not widen this back.
+    match /config/{docId} {
+      allow read: if docId != 'admin';
       allow write: if isAdmin();
     }
 
@@ -78,6 +85,15 @@ service cloud.firestore {
       match /addresses/{addressId} {
         allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // Server-only secrets (e.g. the GitHub publish token). No client may read or
+    // write these; Cloud Functions use the Admin SDK, which bypasses rules.
+    // Stored here rather than in Secret Manager because functions v2's
+    // defineSecret() FAILS THE DEPLOY when the secret does not yet exist, which
+    // would block `firebase deploy --only functions` until someone creates it.
+    match /secrets/{docId} {
+      allow read, write: if false;
     }
 
     // Deny everything else by default

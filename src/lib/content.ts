@@ -27,6 +27,7 @@ export const NAVIGATION = {
   secondary: [],
   footer: [
     { label: "Shop All", href: "/shop" },
+    { label: "What We Do", href: "/services" },
     { label: "Cart", href: "/checkout" },
     { label: "Search", href: "/search" },
     { label: "Fundraising", href: "/fundraising" },

@@ -26,11 +26,16 @@ service firebase.storage {
     //      keep working even before any claim has been minted.
     // Only a change to a founder email requires editing and redeploying this
     // file. `config/admin` remains the source of truth for everything else.
+    // email_verified is required as well as the address: without it an account
+    // could be created against a listed address and inherit admin Storage
+    // access. Both founder accounts are Google sign-ins, so this is already true
+    // for them (verified against the live Auth records, 2026-09-16).
     function isBootstrapAdmin() {
-      return request.auth.token.get('email', '').lower() in [
-        'animasreflections@gmail.com',
-        'mary.theadoor.doctor@gmail.com'
-      ];
+      return request.auth.token.get('email_verified', false) == true
+        && request.auth.token.get('email', '').lower() in [
+          'animasreflections@gmail.com',
+          'mary.theadoor.doctor@gmail.com'
+        ];
     }
 
     function isAdmin() {

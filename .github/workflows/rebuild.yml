@@ -1,0 +1,154 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Publish — rebuild the static export and redeploy Firebase Hosting (live).
+#
+# WHY THIS EXISTS
+#   This site is a Next.js static export: the SEO copy (titles, meta
+#   descriptions, JSON-LD, landing copy) is baked into HTML at build time.
+#   Editing it in Admin → SEO writes Firestore, but crawlers and visitors keep
+#   seeing the OLD html until the site is rebuilt and the new out/ directory is
+#   redeployed. The admin "Publish" button calls the publishSite Cloud Function,
+#   which fires this workflow with a GitHub Actions workflow_dispatch event on
+#   the `development` branch. Nothing else in the app triggers it.
+#
+#   The Cloud Function hard-codes the filename "rebuild.yml", so do not rename
+#   or move this file without updating GITHUB_PUBLISH_WORKFLOW in
+#   functions/src/index.ts.
+#
+# REQUIRED SECRETS (repo → Settings → Secrets and variables → Actions)
+#   1. FIREBASE_SERVICE_ACCOUNT_ANIMAS_REFLECTIONS   [repository secret, REQUIRED]
+#      The full JSON key of a GCP service account in project
+#      `animas-reflections-pwa` that may deploy Hosting. This workflow
+#      authenticates to Google with it — no Google login, no gcloud auth.
+#      ── How a human creates it ─────────────────────────────────────────────
+#      a. console.cloud.google.com → select project `animas-reflections-pwa`
+#         → IAM & Admin → Service Accounts → "Create service account".
+#         Name it e.g. `github-actions-hosting-deploy`.
+#      b. Grant it these roles (least privilege that can still deploy Hosting):
+#           • roles/firebasehosting.admin      (Firebase Hosting Admin — the
+#                                               role that actually publishes
+#                                               releases to the live channel)
+#           • roles/firebase.viewer            (read project/Hosting metadata;
+#                                               firebase-tools calls these APIs)
+#           • roles/serviceusage.apiKeysViewer (firebase-tools reads the web
+#                                               app's API key when resolving
+#                                               the Hosting site)
+#         roles/editor or roles/owner would also work and are what the Firebase
+#         docs fall back to, but they are far broader than a Hosting deploy
+#         needs — prefer the three roles above.
+#      c. On that service account → Keys → "Add key" → "Create new key" →
+#         JSON → download the .json file.
+#      d. Repo → Settings → Secrets and variables → Actions → "New repository
+#         secret" → Name: FIREBASE_SERVICE_ACCOUNT_ANIMAS_REFLECTIONS →
+#         Value: paste the ENTIRE contents of the downloaded .json file →
+#         "Add secret". (Paste the file's text, not its path.)
+#      e. The Firebase Hosting API must be enabled on the project (it is, for a
+#         project that already serves Hosting). Rotate by repeating (c)-(d).
+#   2. GITHUB_TOKEN — provided automatically by Actions; nothing to create.
+#      It is passed only so the deploy action can post its status.
+#
+#   NOTE: no GitHub PAT is needed in the workflow itself. The fine-grained PAT
+#   that lets the admin UI trigger a publish lives in Firestore at
+#   `secrets/githubPublish` and is used by the publishSite Cloud Function.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Publish
+
+# Manual / API-triggered only. The admin "Publish" button calls this through the
+# GitHub Actions workflow_dispatch API. Do not add push triggers: every push to
+# development would otherwise redeploy the live site.
+on:
+  workflow_dispatch:
+
+# Two publishes must never overlap — a second one would race the first and could
+# deploy a stale out/ on top of a fresh one. queue instead of cancel, so a click
+# during a running build still gets its rebuild afterwards.
+concurrency:
+  group: publish-live
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Rebuild and deploy hosting
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The static export inlines every NEXT_PUBLIC_* value into the bundle at
+    # BUILD time, and .env.local is gitignored — a fresh CI checkout has none of
+    # them. Without this block the deploy would ship apiKey/projectId undefined,
+    # so no visitor could sign in, open the cart, or reach a Cloud Function: the
+    # Publish button would push a broken site live.
+    # These are PUBLIC client identifiers (already in .env.example and already
+    # compiled into the shipped JS) — never secrets. Do not put a Square access
+    # token or a GitHub PAT here.
+    # Override any of them with repository Variables of the same name
+    # (Settings → Secrets and variables → Actions → Variables tab).
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyCzByJ-ZWsY6tDuNh0wFrG7ESxualcVNGo' }}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'animas-reflections-pwa.firebaseapp.com' }}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'animas-reflections-pwa' }}
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ vars.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'animas-reflections-pwa.firebasestorage.app' }}
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '508402195460' }}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID || '1:508402195460:web:17ab83e8a71c79232c2951' }}
+      NEXT_PUBLIC_SQUARE_APP_ID: ${{ vars.NEXT_PUBLIC_SQUARE_APP_ID || 'sq0idp-QAzYzFHiOcHrBmGfmdfGTQ' }}
+      NEXT_PUBLIC_SQUARE_LOCATION_ID: ${{ vars.NEXT_PUBLIC_SQUARE_LOCATION_ID || 'L6VCX130RHYQR' }}
+      NEXT_PUBLIC_SQUARE_ENVIRONMENT: ${{ vars.NEXT_PUBLIC_SQUARE_ENVIRONMENT || 'production' }}
+      NEXT_PUBLIC_ADMIN_EMAIL: ${{ vars.NEXT_PUBLIC_ADMIN_EMAIL || 'mary.theadoor.doctor@gmail.com' }}
+      NEXT_PUBLIC_SHIPPING_TIER_STICKERS: ${{ vars.NEXT_PUBLIC_SHIPPING_TIER_STICKERS || '3.00' }}
+      NEXT_PUBLIC_SHIPPING_TIER_APPAREL: ${{ vars.NEXT_PUBLIC_SHIPPING_TIER_APPAREL || '7.50' }}
+      NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD: ${{ vars.NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD || '100.00' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # next/font fetches Google Fonts over the network at build time. Keep
+      # normal egress here: no NEXT_FONT_* offline flags, no network sandboxing,
+      # no "npm ci --ignore-scripts". A build without font access fails or ships
+      # fallback metrics, which would shift layout on the live site.
+      # "prebuild" (OG images) and "postbuild" (the SEO gate) both run as part of
+      # this script; a non-zero exit fails the job before any deploy happens.
+      - name: Build the static export
+        run: npm run build
+
+      # A build that exits 0 but emits nothing must never reach the deploy step.
+      - name: Verify the static export exists
+        run: |
+          if [ ! -f out/index.html ]; then
+            echo "::error::out/index.html is missing — the build did not produce a static export. Refusing to deploy."
+            exit 1
+          fi
+          echo "Static export OK: $(find out -name '*.html' | wc -l) HTML files, $(du -sh out | cut -f1) total."
+
+      # Official Firebase action. It runs firebase-tools against firebase.json at
+      # entryPoint and deploys ONLY Hosting — it does not build, so it ships the
+      # out/ directory produced above. channelId: live = the production site.
+      - name: Deploy to Firebase Hosting (live)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ANIMAS_REFLECTIONS }}
+          projectId: animas-reflections-pwa
+          entryPoint: .
+          # channelId: live = the production channel served at
+          # https://animas-reflections-pwa.web.app, not a preview channel.
+          channelId: live
+
+      # Final gate: a green run must never mean "nothing was published". If the
+      # export is gone at the end of the job, fail loudly.
+      - name: Confirm the publish
+        run: |
+          if [ ! -f out/index.html ]; then
+            echo "::error::out/index.html is missing at the end of the run — the publish did not ship a static export."
+            exit 1
+          fi
+          echo "Published out/ to the live channel: https://animas-reflections-pwa.web.app"
