@@ -1,5 +1,9 @@
 import PageLayout from "@/components/layout/page-layout";
 import { PRIVACY_POLICY } from "@/lib/content";
+import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
+
+export const metadata: Metadata = metadataFor("/privacy/");
 
 export default function PrivacyPage() {
   return (

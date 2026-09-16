@@ -1303,6 +1303,68 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - Lint 0 | Tests 109/109 (9 suites) | Build 22/22 | Functions tsc clean
 - Backup scripts: syntax-checked + functionally verified (comma-split, no stderr abort)
 
+---
+
+## Session 30 — 2026-09-16 | 14:00 MST — Admin upload permission failure + Nown S.I.T.E.S SEO conventions
+
+### Context Restored From
+- Screenshot in Downloads (`IMG_20260916_174730.jpg`): `Upload failed: Firebase Storage: User does not have permission to access 'products/aae7490d-…/color-mockups/charcoal/front-c4ff63f2-….png'. (storage/unauthorized)`
+- `storage.rules`, `firestore.rules`, `firebase.json`, `functions/src/index.ts`, `src/context/auth-context.tsx`, `src/components/admin/image-manager.tsx`, `src/components/admin/product-manager.tsx`, PROJECT_CONTEXT.md
+- Live state: Firebase Rules API (deployed rulesets), Firestore `config/admin`, and the real browser session.
+
+### Actions Taken
+
+1. **Diagnosed the upload failure from the deployed rules, not the local files.** Pulled both live rulesets from the Rules API and confirmed the deployed `storage.rules` was current (released 2026-08-21) and identical to the working tree.
+2. **Reproduced in the user's real browser** as `mary.theadoor.doctor@gmail.com`. With one valid ID token: Firestore `GET config/admin` returned **200** (so `firestore.rules` `isAdmin()` = true) while a Storage upload to the exact failing path returned **403**. Two logically identical admin checks disagreed — so the fault had to be the Storage-side check itself.
+3. **Bisected it with temporary probe paths** (dedicated `permprobeA..H` prefixes, so no real data path was ever loosened):
+   | Probe | Rule | Result |
+   |---|---|---|
+   | A | `isSignedIn()` | **200** |
+   | B | signedIn + email in a literal list | **200** |
+   | C | signedIn + `firestore.exists(config/admin)` | 403 |
+   | F | signedIn + `firestore.exists(config/site)` (public-read) | 403 |
+   | G | signedIn + `firestore.exists(products/{id})` (public-read) | 403 |
+   | H | signedIn + `firestore.exists(config/__absent__)` (control) | 403 |
+   **Conclusion: cross-service `firestore.exists()`/`firestore.get()` from Cloud Storage rules returns false for EVERY path in this project — including public-read documents and an absent control — so `storage.rules`' `isAdmin()` could never be true.** All probe paths were removed after diagnosis.
+4. **Rewrote `storage.rules` `isAdmin()` to be self-contained:** the `admin` custom claim OR a bootstrap list of the two founder emails. No `firestore.*` anywhere. Documented in-file why it must not come back.
+5. **Added claim minting** to `functions/src/index.ts`: `syncAdminClaims` (admin-only backfill) and `syncMyAdminClaim` (self-service — grants only when the caller's own email is already an admin). `saveAdminEmails` now re-syncs claims after saving the list, so an admin added through the UI works on their next sign-in with no rules redeploy.
+6. **`auth-context.tsx`** mints the claim on sign-in and forces `getIdToken(true)` once per user per session, guarded by a ref so the token refresh cannot re-trigger `onAuthStateChanged` into a loop.
+7. **Verified live, end to end:** token claim `admin: true`; upload to the exact failing path **200**; probe cleanup **204**; unauthenticated upload still **403**.
+8. **Ported the Nown S.I.T.E.S SEO conventions** into the Next.js app (see Decisions).
+
+### Decisions Made
+- **`config/admin` stays the single source of truth for admins.** The email list inside `storage.rules` is a *bootstrap fallback* only, so uploads work before any claim exists; ordinary admin changes go through the claim and need no redeploy. Only a founder-email change requires editing and redeploying the rules.
+- **`firestore.rules` was left untouched** — its admin check is proven working (200), and there was no reason to disturb a working authorization path.
+- **No `firestore.*` in `storage.rules`, ever** — the failure mode is silent (rules evaluate false, uploads just 403), which is what made this cost a full diagnosis.
+- **Auto-generated keyword landing pages were NOT shipped.** The framework's `compact-keywords.mjs` is portable and the method is sound, but a real keyword set is a client/business input, and shipping thin auto-generated pages onto a live commercial site is a net SEO risk. The infrastructure is in place; the keyword list needs the client's approval first.
+- Titles/descriptions are clamped on word boundaries (60/155) and address data we cannot verify (street address, postal code, geo, opening hours) is **omitted rather than invented**.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| storage.rules | isAdmin() = custom claim OR bootstrap email list; removed cross-service firestore.* + probe paths |
+| functions/src/index.ts | +syncAdminClaims, +syncMyAdminClaim, +applyAdminClaims; saveAdminEmails re-syncs claims |
+| src/context/auth-context.tsx | mints the admin claim on sign-in + one forced token refresh |
+| src/lib/seo.ts | NEW — PAGE_SEO registry, metadataFor(), clip(), JSON-LD @graph builders |
+| src/app/sitemap.ts, src/app/robots.ts | NEW — generated from PAGE_SEO |
+| public/sitemap.xml, public/robots.txt | DELETED (hand-maintained, had drifted, conflict with generated routes) |
+| src/components/layout/json-ld.tsx | One @graph (WebSite + LocalBusiness, @id-linked) replaces two flat nodes |
+| src/app/layout.tsx | metadataBase, og:image + twitter:image, <SiteJsonLd /> |
+| scripts/generate-og.mjs, public/og-image.png | NEW — dependency-free 1200×630 share card + npm prebuild |
+| src/app/**/layout.tsx, 8 server pages | Per-route static metadata from the registry |
+| PROJECT_CONTEXT.md | Known Issues #30/#31; functions + key-files tables refreshed |
+
+### Current State at Session End
+- Lint 0 errors/0 warnings | Tests 109/109 (9 suites) | Build 24/24 (22 routes + sitemap.xml + robots.txt) | Functions tsc clean
+- Deployed: storage rules, all 16 functions (incl. 2 new), hosting
+- Branch: development
+
+### Pending / Next Session
+- [ ] Client to confirm street address, postal code, geo coordinates and opening hours → then add them to `BUSINESS` in `src/lib/seo.ts` (LocalBusiness gains address/geo/hours).
+- [ ] Decide on a real compact-keyword set for keyword landing pages (framework tool: `nown-sites-framework/tools/compact-keywords.mjs`).
+- [ ] `animas-reflections-pwa.zip` (230 MB) is untracked in the repo root — delete or move it out.
+- [ ] Merge `development` → `master` only on explicit user approval.
+
 ```
 
 ## Session N — YYYY-MM-DD | HH:MM MST

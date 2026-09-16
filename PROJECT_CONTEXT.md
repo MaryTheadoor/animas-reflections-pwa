@@ -100,12 +100,15 @@
 | functions/src/index.ts | ALL backend functions |
 | firebase.json | Hosting + Firestore + Functions + Storage config |
 | firestore.rules | Public read, auth write; orders read-by-auth, functions-only write |
-| storage.rules | Public read, authenticated upload |
+| storage.rules | Public read, admin-only write (custom claim OR bootstrap founder list — see Known Issue #31) |
+| src/lib/seo.ts | SEO single source of truth: PAGE_SEO registry, metadataFor(), clip(), JSON-LD @graph builders |
+| src/app/sitemap.ts / robots.ts | Generated from PAGE_SEO (replaced hand-maintained public/ files) |
+| scripts/generate-og.mjs | Dependency-free 1200×630 og:image generator (runs on npm prebuild) |
 | firestore.indexes.json | orders composite index (customerEmail + createdAt) |
 
 ---
 
-## 6. FIREBASE FUNCTIONS (14 deployed, us-central1, Node 22 Gen2)
+## 6. FIREBASE FUNCTIONS (16 deployed, us-central1, Node 22 Gen2)
 
 **Square is PAYMENT-ONLY since the catalog architecture overhaul (2026-08). Firestore is the master catalog — all Square sync functions were deleted.**
 
@@ -117,7 +120,9 @@
 | fetchCustomerOrders | Orders matching a customer email (account page) |
 | updateOrderTracking | Set tracking URL/number on an order |
 | fetchSiteConfig / saveSiteConfig | Site config CRUD |
-| saveAdminEmails | Admin email list management |
+| saveAdminEmails | Admin email list management; re-syncs the `admin` custom claim after saving |
+| syncAdminClaims | Admin-only backfill: re-sync every user's `admin` claim with config/admin |
+| syncMyAdminClaim | Self-service: grants the caller `admin` only if their own email is already an admin |
 | getCustomerAddresses / saveCustomerAddress / deleteCustomerAddress | Address CRUD |
 | getCustomerProfile / saveCustomerProfile | Profile CRUD |
 | health | Status check |
@@ -168,7 +173,9 @@
 27. **WebBridge verification:** the checkout page requires a cart item to render customer fields — cart state is in React memory only, lost on navigation. To verify checkout, add a product to cart first in the same tab.
 28. **Session-log discipline:** DEVLOG.md is the session record (Sessions 1–21). PROJECT_CONTEXT.md is the recovery blueprint — update both at session end, commit + push, and run `npm run backup:snapshot` before closing a session.
 29. **Batch 1 security (2026-08-21):** `requireAdmin()` guards all 5 admin callables (functions/src/index.ts); `createSquareOrderAndPay` re-derives ALL prices/add-ons/shipping from Firestore via `functions/src/pricing.ts` and rejects orders whose client `expectedTotal` diverges >2¢ — client amounts are never charged. Checkout must send `product_id`/`addon_id`/`priceType`/`expectedTotal`. `config/admin` is private-read in firestore.rules; storage.rules restricts product/design writes to admins and uploads reads to owner/admin. `saveAdminEmails` normalizes emails to lowercase. Deploy with `firebase deploy --only functions,firestore,storage` after any changes to these.
-30. **Batches 2–4 conventions (2026-08-21):** the catalog loads ONCE per session via `CatalogProvider` (`src/context/catalog-context.tsx`) — `useCatalog` is a context hook now; don't add independent Firestore catalog reads. Shop/search filter state lives in the URL (`?category=&type=&q=&sort=&density=`, `mode=` on shop) — any new filter state must read/write the query string. `sanitizeHTML` = DOMPurify in the browser, regex fallback elsewhere; never bypass it. New orders store `customerEmailLower` — order lookups must match on it (legacy exact-case query is the fallback). Category delete is blocked while subcategories/products remain; category parent selectors must exclude the whole descendant subtree. Admin editors stay MOUNTED across tab switches (hidden via CSS) — never conditionally unmount them. Product deletes must skip Storage files still referenced by another product (`deleteProductStorage`). Deploy order after checkout/function changes: hosting BEFORE functions.
+30. **Cloud Storage rules CANNOT read Firestore in this project (2026-09-16):** cross-service `firestore.exists()`/`firestore.get()` inside `storage.rules` returns **false for EVERY path** — verified against the live bucket, including public-read docs (`config/site`, `products/{id}`) and an absent control doc. The previous `isAdmin()` (firestore.exists(config/admin) + `.data.emails.hasAny([...])`) therefore evaluated to false for genuine admins and **every admin image upload failed with `storage/unauthorized`** — even though `firestore.rules`' logically-identical check returned 200 for the very same token. **DO NOT put `firestore.*` back into `storage.rules`.** Admin writes are now authorized by the `admin` **custom claim** (`syncAdminClaims` / `syncMyAdminClaim`, re-synced by `saveAdminEmails`) OR the bootstrap founder list in `storage.rules`. Adding an admin via Admin → Admins needs no rules redeploy; only a founder-email change does. `config/admin` remains the source of truth for admins. Client side: `auth-context.tsx` mints the claim on sign-in and calls `getIdToken(true)` once per user per session (ref-guarded so the refresh cannot loop).
+31. **SEO artifacts come from ONE registry (2026-09-16):** `src/lib/seo.ts` `PAGE_SEO` drives both per-route `<head>` metadata (`metadataFor(path)`) and the generated `src/app/sitemap.ts` / `robots.ts`. `public/sitemap.xml` and `public/robots.txt` were **deleted** — do not recreate them (they had drifted, and they would conflict with the generated routes). `public/og-image.png` is generated by `scripts/generate-og.mjs` on `npm prebuild` (`npm run og` to regenerate alone). The site emits **one** JSON-LD `@graph` (WebSite + LocalBusiness, `@id`-linked) via `<SiteJsonLd />` in the root layout — do not add a second site-level JSON-LD block. Adding a route means adding its copy to `PAGE_SEO` once; `metadataFor()` throws at build time on an unregistered path.
+32. **Batches 2–4 conventions (2026-08-21):** the catalog loads ONCE per session via `CatalogProvider` (`src/context/catalog-context.tsx`) — `useCatalog` is a context hook now; don't add independent Firestore catalog reads. Shop/search filter state lives in the URL (`?category=&type=&q=&sort=&density=`, `mode=` on shop) — any new filter state must read/write the query string. `sanitizeHTML` = DOMPurify in the browser, regex fallback elsewhere; never bypass it. New orders store `customerEmailLower` — order lookups must match on it (legacy exact-case query is the fallback). Category delete is blocked while subcategories/products remain; category parent selectors must exclude the whole descendant subtree. Admin editors stay MOUNTED across tab switches (hidden via CSS) — never conditionally unmount them. Product deletes must skip Storage files still referenced by another product (`deleteProductStorage`). Deploy order after checkout/function changes: hosting BEFORE functions.
 
 ---
 

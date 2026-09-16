@@ -1,5 +1,9 @@
 import PageLayout from "@/components/layout/page-layout";
 import { TERMS_OF_SALE } from "@/lib/content";
+import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
+
+export const metadata: Metadata = metadataFor("/terms/");
 
 export default function TermsPage() {
   return (

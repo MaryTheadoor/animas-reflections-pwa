@@ -1,5 +1,9 @@
 import PageLayout from "@/components/layout/page-layout";
 import { IM_OK_R_U } from "@/lib/content";
+import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
+
+export const metadata: Metadata = metadataFor("/im-ok-r-u/");
 
 export default function ImOkRuPage() {
   return (

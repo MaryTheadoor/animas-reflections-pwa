@@ -1,5 +1,9 @@
 import PageLayout from "@/components/layout/page-layout";
 import { OUR_STORY, SITE } from "@/lib/content";
+import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
+
+export const metadata: Metadata = metadataFor("/about/");
 
 export default function AboutPage() {
   return (

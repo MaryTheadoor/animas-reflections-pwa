@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -10,7 +10,8 @@ import {
   type User,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, functions } from "@/lib/firebase";
 import { ADMIN_EMAIL } from "@/lib/constants";
 
 interface AuthContextValue {
@@ -68,10 +69,18 @@ async function syncUserDoc(u: User) {
   }
 }
 
+/** Asks the backend to mint this user's `admin` custom claim, if eligible. */
+async function syncMyAdminClaim(): Promise<void> {
+  await httpsCallable(functions, "syncMyAdminClaim")();
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Guards the claim sync so the token refresh below cannot re-trigger
+  // onAuthStateChanged into an infinite loop. One sync per user per session.
+  const claimSyncedFor = useRef<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -80,7 +89,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         syncUserDoc(u);
         const admin = await isUserAdmin(u.email);
         setIsAdmin(admin);
+        // Cloud Storage rules cannot read Firestore in this project, so they
+        // authorize admin uploads with the `admin` custom claim. Mint it, then
+        // force a token refresh so admin image uploads work in this session
+        // rather than an hour later. Failures are non-fatal: storage.rules
+        // also carries a bootstrap email list.
+        if (admin && claimSyncedFor.current !== u.uid) {
+          claimSyncedFor.current = u.uid;
+          try {
+            await syncMyAdminClaim();
+            await u.getIdToken(true);
+          } catch {
+            // Non-fatal — see comment above.
+          }
+        }
       } else {
+        claimSyncedFor.current = null;
         setIsAdmin(false);
       }
       setLoading(false);

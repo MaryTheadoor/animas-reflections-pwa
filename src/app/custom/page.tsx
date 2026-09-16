@@ -1,5 +1,9 @@
 import PageLayout from "@/components/layout/page-layout";
 import { DESIGN_YOUR_OWN, SITE } from "@/lib/content";
+import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
+
+export const metadata: Metadata = metadataFor("/custom/");
 
 export default function CustomPage() {
   return (

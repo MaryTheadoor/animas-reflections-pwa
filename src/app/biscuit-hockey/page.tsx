@@ -1,5 +1,9 @@
 import PageLayout from "@/components/layout/page-layout";
 import { BISCUIT_HOCKEY } from "@/lib/content";
+import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
+
+export const metadata: Metadata = metadataFor("/biscuit-hockey/");
 
 export default function BiscuitHockeyPage() {
   return (

@@ -1,6 +1,10 @@
 import PageLayout from "@/components/layout/page-layout";
 import { CONTACT } from "@/lib/content";
 import Link from "next/link";
+import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
+
+export const metadata: Metadata = metadataFor("/contact/");
 
 export default function ContactPage() {
   return (

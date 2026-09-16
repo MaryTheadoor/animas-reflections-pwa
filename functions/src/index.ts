@@ -7,6 +7,7 @@ import {
 } from "firebase-functions/v2/https";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import { SquareClient, SquareEnvironment, SquareError } from "square";
 import { defineString } from "firebase-functions/params";
 import {
@@ -67,6 +68,72 @@ async function requireAdmin(request: CallableRequest): Promise<void> {
     logger.warn("Admin call denied", { uid: request.auth.uid, email });
     throw new HttpsError("permission-denied", "Admin access required");
   }
+}
+
+// ─── Admin custom claims ───────────────────────────────────────────
+// Cloud Storage rules cannot read Cloud Firestore in this project:
+// cross-service firestore.exists()/firestore.get() returns false for every
+// path, so storage.rules used to deny every admin upload. storage.rules
+// therefore authorizes admin writes with the `admin` custom claim, and these
+// helpers keep that claim in step with config/admin — which stays the single
+// source of truth for who is an admin.
+
+/** Emails that always hold admin rights, mirroring requireAdmin(). */
+function isAlwaysAdmin(email: string): boolean {
+  const lowered = email.toLowerCase().trim();
+  return (
+    lowered === bootstrapAdminEmail.value().toLowerCase().trim() ||
+    lowered.endsWith("@animasreflections.com")
+  );
+}
+
+/** Grants or revokes `admin` on every known Auth user to match config/admin. */
+async function applyAdminClaims(): Promise<{
+  granted: string[];
+  revoked: string[];
+  missing: string[];
+}> {
+  const auth = getAuth();
+  const granted: string[] = [];
+  const revoked: string[] = [];
+  const missing: string[] = [];
+
+  const targets = new Set<string>(await getAdminEmails());
+  const bootstrap = bootstrapAdminEmail.value().toLowerCase().trim();
+  if (bootstrap) targets.add(bootstrap);
+
+  for (const email of targets) {
+    try {
+      const user = await auth.getUserByEmail(email);
+      await auth.setCustomUserClaims(user.uid, { ...(user.customClaims ?? {}), admin: true });
+      granted.push(email);
+    } catch {
+      // No Auth account for this email yet; syncMyAdminClaim covers them when
+      // they first sign in.
+      missing.push(email);
+    }
+  }
+
+  // Revoke from known users who are no longer admins.
+  const listed = await auth.listUsers(1000);
+  for (const user of listed.users) {
+    const email = (user.email ?? "").toLowerCase().trim();
+    if (!email) continue;
+    if (targets.has(email) || isAlwaysAdmin(email)) continue;
+    if (user.customClaims?.admin === true) {
+      const claims = { ...(user.customClaims ?? {}) };
+      delete claims.admin;
+      await auth.setCustomUserClaims(user.uid, claims);
+      revoked.push(email);
+    }
+  }
+
+  logger.info("applyAdminClaims complete", {
+    granted: granted.length,
+    revoked: revoked.length,
+    missing: missing.length,
+  });
+  return { granted, revoked, missing };
 }
 
 // ─── Create Square Order & Process Payment ─────────────────────────
@@ -444,11 +511,51 @@ export const saveAdminEmails = onCall(
     try {
       const db = getFirestore();
       await db.collection("config").doc("admin").set({ emails }, { merge: true });
-      return { success: true };
+      // Storage rules authorize admin uploads via the `admin` custom claim, so
+      // keep Firebase Auth in step with the list that was just saved.
+      const claims = await applyAdminClaims();
+      return { success: true, claims };
     } catch (err) {
       logger.error("Failed to save admin emails", err);
       throw new Error("Failed to save admin emails");
     }
+  }
+);
+
+/** Admin-only backfill: re-sync every user's `admin` claim with config/admin. */
+export const syncAdminClaims = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    await requireAdmin(request);
+    const claims = await applyAdminClaims();
+    return { success: true, ...claims };
+  }
+);
+
+/**
+ * Self-service claim minting. Any signed-in user may call it, but a claim is
+ * only granted when the caller's own email is already an admin (config/admin,
+ * the bootstrap email, or the @animasreflections.com domain) — so an admin
+ * added through the Admin UI gets Storage access on their next sign-in without
+ * anyone running a backfill.
+ */
+export const syncMyAdminClaim = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    const uid = request.auth?.uid;
+    const email = request.auth?.token?.email;
+    if (!uid || !email) {
+      throw new HttpsError("permission-denied", "Authentication required");
+    }
+    const lowered = email.toLowerCase().trim();
+    const eligible = isAlwaysAdmin(lowered) || (await getAdminEmails()).includes(lowered);
+    if (!eligible) return { success: true, admin: false };
+
+    const auth = getAuth();
+    const user = await auth.getUser(uid);
+    await auth.setCustomUserClaims(uid, { ...(user.customClaims ?? {}), admin: true });
+    logger.info("syncMyAdminClaim granted", { uid, email: lowered });
+    return { success: true, admin: true };
   }
 );
 

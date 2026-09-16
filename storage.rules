@@ -7,16 +7,35 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Mirrors the Firestore isAdmin() check: an email present in config/admin.
-    // Both the normalized (lowercase) and the stored form are accepted so
-    // legacy config docs keep working until re-saved via the Admin UI.
+    // ── Admin authorization for Storage ────────────────────────────────
+    // Cloud Storage security rules CANNOT read Cloud Firestore in this
+    // project. Cross-service firestore.exists()/firestore.get() was verified
+    // against the live bucket on 2026-09-16 and returns false for EVERY
+    // Firestore path — including public-read documents such as config/site and
+    // products/{id}. The previous implementation (firestore.exists(config/admin)
+    // + firestore.get(...).data.emails.hasAny([...])) therefore evaluated to
+    // false for genuine admins and every admin image upload failed with
+    // storage/unauthorized. DO NOT reintroduce firestore.* here.
+    //
+    // Admin status is derived from the request itself instead:
+    //   1. the `admin` custom claim, minted by the syncAdminClaims and
+    //      syncMyAdminClaim Cloud Functions and re-synced by saveAdminEmails —
+    //      so an admin added through Admin → Admins starts working on their
+    //      next sign-in with no rules redeploy; and
+    //   2. a bootstrap list of founder emails, so uploads work immediately and
+    //      keep working even before any claim has been minted.
+    // Only a change to a founder email requires editing and redeploying this
+    // file. `config/admin` remains the source of truth for everything else.
+    function isBootstrapAdmin() {
+      return request.auth.token.get('email', '').lower() in [
+        'animasreflections@gmail.com',
+        'mary.theadoor.doctor@gmail.com'
+      ];
+    }
+
     function isAdmin() {
       return isSignedIn()
-        && firestore.exists(/databases/(default)/documents/config/admin)
-        && firestore.get(/databases/(default)/documents/config/admin).data.emails.hasAny([
-          request.auth.token.email.lower(),
-          request.auth.token.email
-        ]);
+        && (request.auth.token.get('admin', false) == true || isBootstrapAdmin());
     }
 
     // Design catalog assets - public read, admin-only write

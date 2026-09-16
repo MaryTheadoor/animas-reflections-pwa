@@ -1,8 +1,7 @@
 "use client";
 
 import { FAQ } from "@/lib/content";
-
-const SITE_URL = "https://www.animasreflections.com";
+import { SITE_URL, siteGraph } from "@/lib/seo";
 
 interface JsonLdProps {
   type: "Organization" | "Product" | "WebSite" | "BreadcrumbList" | "FAQPage";
@@ -26,50 +25,24 @@ export default function JsonLd({ type, data }: JsonLdProps) {
   );
 }
 
-export function OrganizationJsonLd() {
+function GraphJsonLd({ graph }: { graph: unknown }) {
   return (
-    <JsonLd
-      type="Organization"
-      data={{
-        name: "Animas Reflections",
-        url: SITE_URL,
-        logo: SITE_URL + "/logo.png",
-        contactPoint: {
-          "@type": "ContactPoint",
-          telephone: "+1-970-769-2779",
-          contactType: "customer service",
-        },
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: "Durango",
-          addressRegion: "CO",
-          addressCountry: "US",
-        },
-        sameAs: [
-          "https://www.instagram.com/cjfuss.animasreflections/",
-        ],
-      }}
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(graph).replace(/</g, "\\u003c") }}
     />
   );
 }
 
-export function WebsiteJsonLd() {
-  return (
-    <JsonLd
-      type="WebSite"
-      data={{
-        name: "Animas Reflections",
-        url: SITE_URL,
-        description:
-          "Custom designs. Create your own t-shirt, hoodie, bag, ornament, coaster, dog scarf, print on wood, glass, metal, jewelry and more!",
-        potentialAction: {
-          "@type": "SearchAction",
-          target: SITE_URL + "/search?q={search_term_string}",
-          "query-input": "required name=search_term_string",
-        },
-      }}
-    />
-  );
+/**
+ * The site-wide structured data: ONE @graph holding the WebSite and
+ * LocalBusiness nodes, cross-referenced by stable @id — the shape the Nown
+ * S.I.T.E.S framework emits (tools/seo.mjs buildJsonLd). Preferred over
+ * separate flat nodes because a search engine can then resolve the two as one
+ * entity. Render this once, in the root layout.
+ */
+export function SiteJsonLd() {
+  return <GraphJsonLd graph={siteGraph()} />;
 }
 
 // FAQPage schema is rich-result eligible in Google Search. Built from the same

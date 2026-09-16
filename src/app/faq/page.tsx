@@ -2,6 +2,10 @@ import PageLayout from "@/components/layout/page-layout";
 import { FaqJsonLd } from "@/components/layout/json-ld";
 import { FAQ } from "@/lib/content";
 import Link from "next/link";
+import type { Metadata } from "next";
+import { metadataFor } from "@/lib/seo";
+
+export const metadata: Metadata = metadataFor("/faq/");
 
 export default function FaqPage() {
   return (
