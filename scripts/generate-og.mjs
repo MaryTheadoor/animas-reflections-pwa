@@ -350,9 +350,27 @@ const muted = parseColor(colors['text-muted'], mix(ink, bg, 0.45));
  *  em dash the font does have. */
 const forFont = (s) => String(s).replace(/\s*\|\s*/g, ' — ');
 
-const name = forFont(String(stringField(siteBlock, 'name') || 'Animas Reflections').trim());
-const defaultTitle = String(seoTitle || stringField(siteBlock, 'description') || name).trim();
-const title = forFont(String(flag('--title', defaultTitle)).trim());
+/** The card draws the brand as its own row, so a headline that OPENS with the
+ *  brand draws it twice ("ANIMAS REFLECTIONS" then "ANIMAS REFLECTIONS — ...").
+ *  Strip a leading "<brand>" plus whatever punctuation and space follows it.
+ *  Character codes are used instead of a regex so the separator set (space, tab,
+ *  em dash, en dash, middle dot, pipe, colon, comma, semicolon, hyphen) stays
+ *  plain to read and cannot be mangled by escaping. This keeps the card correct
+ *  however the headline source is reworded — the site title was shortened once
+ *  already and silently brought the duplication back. */
+function stripBrand(s, brand) {
+  if (!brand || s.slice(0, brand.length).toLowerCase() !== brand.toLowerCase()) return s;
+  const seps = [32, 9, 8212, 8211, 183, 124, 58, 44, 59, 45];
+  let i = brand.length;
+  while (i < s.length && seps.indexOf(s.charCodeAt(i)) !== -1) i++;
+  return s.slice(i).trim() || s;
+}
+
+const brand = String(stringField(siteBlock, 'name') || 'Animas Reflections').trim();
+const name = forFont(brand);
+const defaultTitle = String(seoTitle || stringField(siteBlock, 'description') || brand).trim();
+const requestedTitle = String(flag('--title', defaultTitle)).trim();
+const title = forFont(stripBrand(requestedTitle, brand));
 // Subtitle: the site tagline (content.ts -> SITE.tagline), not the tail of the
 // SEO title, so the card is not repeating its own headline.
 const subtitle = forFont(String(flag('--subtitle', stringField(siteBlock, 'tagline') || '')).trim());
