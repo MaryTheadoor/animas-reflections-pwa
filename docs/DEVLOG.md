@@ -1388,11 +1388,22 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 | Hash | Message |
 |------|---------|
 | 3095407 | fix(admin): storage rules cannot read Firestore — authorize admin uploads by custom claim |
+| 94f6dbd | docs: DEVLOG session 30 commit hash |
+| 672a382 | feat(seo): build-time SEO gate, and fix the title/description limits it found |
+| 3a8c08a | fix(og): stop the share card drawing the brand twice |
+| 31cac04 | feat(cms): CMS-managed SEO and keyword landing pages, plus a full debugging pass |
 
 ### Current State at Session End
-- Lint 0 errors/0 warnings | Tests 109/109 (9 suites) | Build 24/24 (22 routes + sitemap.xml + robots.txt) | Functions tsc clean
-- Deployed: storage rules, all 16 functions (incl. 2 new), hosting
+- Lint 0 errors/0 warnings | `tsc --noEmit` **0** (project type-clean for the first time) | Tests 109/109 (9 suites) | Build 25 pages (22 routes + 3 keyword pages + sitemap.xml + robots.txt) | SEO gate green | Functions tsc clean
+- Deployed: firestore rules, storage rules, all **18** functions, hosting — all verified live
+- Live: 3 keyword pages 200 with their own titles; unknown URLs now **404** (were 200-homepage); sitemap 16 URLs; storage admin upload 200 / unauthenticated 403; `publishSite` returns a graceful not-configured message
+- CMS: `config/seo` holds 3 published keyword pages; Admin → SEO renders with live counters; save/reset round-trip verified via an authoritative CLI-token read
 - Branch: development (pushed)
+
+### Outstanding setup for the client (one-time, for hands-off publishing)
+- Create a GitHub **fine-grained PAT** (repo `MaryTheadoor/animas-reflections-pwa`, permissions `Actions: write` + `Contents: read`) and paste it into **Admin → SEO → Rebuild access**. Until then the Publish button reports not-configured and `npm run publish` is the local fallback.
+- Create a GCP service account with Firebase Hosting Admin and store its JSON as the repository secret `FIREBASE_SERVICE_ACCOUNT_ANIMAS_REFLECTIONS` (step-by-step instructions are in the header comment of `.github/workflows/rebuild.yml`).
+- Optional: override any `NEXT_PUBLIC_*` value with a repository **Variable** of the same name; the workflow falls back to the public defaults.
 
 ### Pending / Next Session
 - [ ] Client to confirm street address, postal code, geo coordinates and opening hours → then add them to `BUSINESS` in `src/lib/seo.ts` (LocalBusiness gains address/geo/hours).
