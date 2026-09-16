@@ -66,8 +66,14 @@ concurrency:
   group: publish-live
   cancel-in-progress: false
 
+# The action's action.yml declares NO permission requirements and marks repoToken
+# optional (it is used only for auto-commenting on pull requests). This workflow
+# deploys to the LIVE channel from a manual dispatch, so there is no PR to
+# comment on: disableComment removes the need for pull-requests: write, and
+# checks: write covers the run-status reporting. Kept minimal on purpose.
 permissions:
   contents: read
+  checks: write
 
 jobs:
   publish:
@@ -142,6 +148,9 @@ jobs:
           # channelId: live = the production channel served at
           # https://animas-reflections-pwa.web.app, not a preview channel.
           channelId: live
+          # Nothing to comment on for a manual dispatch, and it keeps the
+          # workflow's token permissions minimal.
+          disableComment: true
 
       # Final gate: a green run must never mean "nothing was published". If the
       # export is gone at the end of the job, fail loudly.

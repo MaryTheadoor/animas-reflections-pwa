@@ -76,6 +76,20 @@ async function main() {
   try {
     const res = await fetch(ENDPOINT, { headers: { accept: "application/json" } });
     if (res.status === 404) {
+      // A 404 is legitimate on a fresh project, but if the committed snapshot
+      // has real content then the document was DELETED - and silently writing an
+      // empty config would drop every page override and keyword page from the
+      // next build. Keep the snapshot and say so loudly instead.
+      const emptyRendered = render({ pages: {}, keywords: [] });
+      const hasContent = existsSync(TARGET) && readFileSync(TARGET, "utf8") !== emptyRendered;
+      if (hasContent) {
+        console.warn(
+          "[seo-config] config/seo is MISSING (HTTP 404) but the committed snapshot has content. " +
+            "Keeping the snapshot so the build does not silently drop your keyword pages. " +
+            "If the document was deleted by accident, re-save it from Admin -> SEO."
+        );
+        return;
+      }
       console.log("[seo-config] config/seo does not exist yet - using an empty config");
     } else if (!res.ok) {
       throw new Error("HTTP " + res.status);
