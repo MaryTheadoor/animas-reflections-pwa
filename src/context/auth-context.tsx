@@ -39,13 +39,17 @@ async function getAdminEmails(): Promise<string[]> {
   return [];
 }
 
-// Three-tier admin detection: (1) hardcoded env fallback, (2) @animasreflections.com
-// domain, (3) Firestore config/admin doc managed via Admin → Admins tab.
+// Admin detection: (1) hardcoded env fallback, (2) Firestore config/admin doc managed
+// via Admin → Admins tab.
+//
+// DO NOT reintroduce a domain rule (e.g. "any @animasreflections.com address"). Email/
+// password signup is public and unverified, so an attacker can register an address on a
+// domain they do not own and inherit admin. Verified live 2026-10-06; see
+// docs/STATUS_SWEEP.md §0.
 async function isUserAdmin(email: string | null): Promise<boolean> {
   if (!email) return false;
   const lowered = email.toLowerCase().trim();
   if (ADMIN_EMAIL && lowered === ADMIN_EMAIL.toLowerCase().trim()) return true;
-  if (ADMIN_EMAIL && lowered.endsWith("@animasreflections.com")) return true;
   const adminEmails = await getAdminEmails();
   return adminEmails.includes(lowered);
 }

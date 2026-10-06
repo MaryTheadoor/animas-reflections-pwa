@@ -36,8 +36,13 @@ function getSquareClient(): SquareClient {
 // ─── Admin Authorization ──────────────────────────────────────────
 // The client-side RequireAdmin gate only hides UI. Every admin Cloud Function
 // MUST call requireAdmin() — otherwise any signed-in user (or anonymous caller)
-// could invoke it directly. Mirrors the client's three-tier admin detection:
-// config/admin doc, @animasreflections.com domain, and a bootstrap email.
+// could invoke it directly. Mirrors the client's admin detection: the
+// config/admin doc and a bootstrap email.
+//
+// DO NOT reintroduce a domain rule (e.g. "any @animasreflections.com address").
+// Email/password signup is public and unverified, so an attacker can register an
+// address on a domain they do not own and inherit admin. Verified live 2026-10-06;
+// recorded in docs/STATUS_SWEEP.md, section 0.
 
 const bootstrapAdminEmail = defineString("BOOTSTRAP_ADMIN_EMAIL", {
   default: "mary.theadoor.doctor@gmail.com",
@@ -62,7 +67,6 @@ async function requireAdmin(request: CallableRequest): Promise<void> {
   const lowered = email.toLowerCase().trim();
   const allowed =
     lowered === bootstrapAdminEmail.value().toLowerCase().trim() ||
-    lowered.endsWith("@animasreflections.com") ||
     (await getAdminEmails()).includes(lowered);
   if (!allowed) {
     logger.warn("Admin call denied", { uid: request.auth.uid, email });
@@ -82,8 +86,7 @@ async function requireAdmin(request: CallableRequest): Promise<void> {
 function isAlwaysAdmin(email: string): boolean {
   const lowered = email.toLowerCase().trim();
   return (
-    lowered === bootstrapAdminEmail.value().toLowerCase().trim() ||
-    lowered.endsWith("@animasreflections.com")
+    lowered === bootstrapAdminEmail.value().toLowerCase().trim()
   );
 }
 
@@ -534,8 +537,8 @@ export const syncAdminClaims = onCall(
 
 /**
  * Self-service claim minting. Any signed-in user may call it, but a claim is
- * only granted when the caller's own email is already an admin (config/admin,
- * the bootstrap email, or the @animasreflections.com domain) — so an admin
+ * only granted when the caller's own email is already an admin (config/admin or
+ * the bootstrap email) — so an admin
  * added through the Admin UI gets Storage access on their next sign-in without
  * anyone running a backfill.
  */

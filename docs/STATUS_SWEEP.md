@@ -8,7 +8,21 @@ site on 2026-10-06. Branch `development` @ `7e71997`.
 
 ---
 
-## 0. CRITICAL — live privilege escalation (found 2026-10-06)
+## 0. CRITICAL — live privilege escalation (found 2026-10-06) — **FIXED & DEPLOYED**
+
+> **Status: FIXED, 2026-10-06.** The suffix test was deleted from all three sites and
+> deployed (functions + hosting). Verified live: the string
+> `endsWith("@animasreflections.com")` and the `@animasreflections.com` literal are
+> **absent from every deployed JS chunk** (11 scanned), while positive controls
+> (`endsWith` in 8 chunks, `Import CSV` present) confirm the scan reads real content.
+> Server side compiled and deployed cleanly (18 functions updated).
+>
+> **No admin was locked out:** the `config/admin` allowlist holds
+> `animasreflections@gmail.com` and `mary.theadoor.doctor@gmail.com` — both gmail
+> addresses, not domain addresses — read from the live Admins tab before deploying. The
+> signed-in admin is additionally covered by the bootstrap email.
+>
+> Exposure was limited: the site is on its staging URL and not yet public.
 
 **Anyone can become an admin.** The admin checks accept any email ending in
 `@animasreflections.com`, and public email/password signup is enabled, so an attacker can
