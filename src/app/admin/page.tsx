@@ -14,6 +14,7 @@ import ProductManager from "@/components/admin/product-manager";
 import CategoryManager from "@/components/admin/category-manager";
 import SeoManager from "@/components/admin/seo-manager";
 import ImageManager from "@/components/admin/image-manager";
+import HelpGuide from "@/components/admin/help-guide";
 import type { ManagedCategory, DesignAsset } from "@/types";
 import PlaceholderImage from "@/components/ui/placeholder-image";
 import { DismissedTooltipsCount } from "@/components/ui/admin-tooltip";
@@ -161,7 +162,7 @@ const DEFAULT_CONFIG: SiteConfigData = {
 
 function DashboardContent() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<"products" | "categories" | "seo" | "settings" | "designs" | "images" | "orders" | "users" | "admins">("products");
+  const [tab, setTab] = useState<"products" | "categories" | "seo" | "settings" | "designs" | "images" | "orders" | "users" | "admins" | "help">("products");
   const [config, setConfig] = useState<SiteConfigData>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -412,6 +413,7 @@ function DashboardContent() {
             { key: "orders" as const, label: "Orders" },
             { key: "users" as const, label: "Users" },
             { key: "admins" as const, label: "Admins" },
+            { key: "help" as const, label: "Help" },
           ].map((t) => (
             <button
               key={t.key}
@@ -1164,6 +1166,13 @@ function DashboardContent() {
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <h2 className="text-xl font-bold font-display mb-4">User Management</h2>
             <UsersSection />
+          </section>
+        )}
+
+        {/* ── Help & Tutorials ── */}
+        {tab === "help" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <HelpGuide />
           </section>
         )}
       </main>

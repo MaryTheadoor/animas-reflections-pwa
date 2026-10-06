@@ -192,6 +192,13 @@ Grouped so the meeting can be short. Items marked ★ block work that is already
 
 ### A. Business facts (needed for schema, contact page, legal copy)
 
+> **ANSWERED 2026-10-06 — the business is ONLINE ONLY right now.** No street address
+> and no opening hours are needed, and the LocalBusiness schema's omission of
+> `streetAddress` / `postalCode` / `geo` / `openingHours` (`src/lib/seo.ts:225-239`)
+> is therefore correct as-is. Questions 1–3 below are closed; the remaining item here
+> is Q4 (social handles). Consider adding explicit "online only" wording to the Contact
+> page so customers don't look for a storefront.
+
 1. ★ **Street address and ZIP** for the shop? Needed for the LocalBusiness schema
    (currently omitted rather than invented) and the Contact page.
 2. **Opening hours** — or is it appointment-only / online-only?
@@ -201,6 +208,12 @@ Grouped so the meeting can be short. Items marked ★ block work that is already
 5. Confirm the **phone (970-769-2779) and email** on the site are the right public contacts.
 
 ### B. Catalog and brand taxonomy
+
+> **ANSWERED 2026-10-06 — "Biscuit Hockey" is a BRAND.** Model it as a brand/collection
+> (the "By Design / Brand" browse axis), not a product type. The `/biscuit-hockey` page
+> already exists as a sub-brand page, which is consistent. Q6 is closed; Q7 (the complete
+> brand list) is now the useful follow-up so the browse axis is exhaustive rather than
+> accumulated ad hoc.
 
 6. ★★ **"Biscuit Hockey" — a brand/collection, or a product category?** This has been
    carried as an open question since Session 16 (~8 sessions). It blocks the browse-by
