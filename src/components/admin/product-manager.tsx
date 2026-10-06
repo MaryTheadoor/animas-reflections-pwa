@@ -19,6 +19,7 @@ import { ADDON_PRICE, DEFAULT_COLOR_TINTS } from "@/lib/constants";
 import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, ProductAddon } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
 import AdminTooltip from "@/components/ui/admin-tooltip";
+import { importCatalogCsv } from "@/lib/catalog-import";
 
 const EMPTY_PRODUCT: ManagedProduct = {
   id: "",
@@ -77,6 +78,46 @@ export default function ProductManager({ categories }: Props) {
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // CSV catalog import — manual pipeline: the operator exports a data sheet from the
+  // source platform, prepares it, and uploads the file here. See docs/CATALOG_IMPORT.md.
+  const [csvBusy, setCsvBusy] = useState(false);
+  const [csvResult, setCsvResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null);
+  const csvInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleCsvFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvBusy(true);
+    setCsvResult(null);
+    try {
+      const text = await file.text();
+      const res = await importCatalogCsv(text);
+      setCsvResult(res);
+      loadProducts();
+    } catch (err) {
+      setCsvResult({ created: 0, updated: 0, errors: [err instanceof Error ? err.message : "Import failed"] });
+    } finally {
+      setCsvBusy(false);
+      if (csvInputRef.current) csvInputRef.current.value = "";
+    }
+  };
+
+  const downloadCsvTemplate = () => {
+    const template = [
+      "name,variant,price,sku,inventory,colors,category,productType,description,active,featured,image",
+      "Tee,L,20.00,TEE-L,5,Black;White,Apparel,apparel,Classic tee,true,false,https://example.com/tee-front.png",
+      "Tee,M,20.00,TEE-M,3,Black;White,Apparel,apparel,Classic tee,true,false,https://example.com/tee-front.png",
+      "Hat,One Size,15.00,HAT-1,0,Red,Accessory,accessory,Adjustable hat,true,true,https://example.com/hat.png",
+    ].join("\n");
+    const blob = new Blob([template], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "product-catalog-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // ── Add-on editor ────────────────────────────────────────────────────────
   const siteConfig = useSiteConfig();
@@ -164,7 +205,6 @@ export default function ProductManager({ categories }: Props) {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProducts();
     // Load all designs for product-design linking
     getDocs(collection(db, "designs")).then((snap) => {
@@ -692,6 +732,51 @@ export default function ProductManager({ categories }: Props) {
         <p className="text-sm text-foreground/80 text-center py-8">
           No products yet. Click &quot;+ New Product&quot; to create one.
         </p>
+      )}
+
+      {/* ── CSV catalog import ──
+          Manual pipeline (docs/CATALOG_IMPORT.md): the operator exports a sheet from the
+          source platform by hand and uploads it here. One row per variant; rows sharing a
+          product name collapse into one product. Square item-export column names are
+          accepted, so a Square export can be uploaded as-is. */}
+      {!editing && (
+        <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-warm-sand/20 rounded-xl border border-warm-sand">
+          <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvFile} />
+          <AdminTooltip
+            content="One row per variant; rows sharing a product name are grouped into one product. Square item-export columns (item_name, variation_name, item_price, item_sku) work too. It upserts and reports created/updated + any row errors."
+            dismissKey="csv-import"
+            side="bottom"
+          >
+            <button
+              onClick={() => csvInputRef.current?.click()}
+              disabled={csvBusy}
+              className="px-3 py-1.5 text-xs font-medium bg-gold text-on-gold rounded-lg hover:bg-gold-light transition-colors disabled:opacity-50"
+            >
+              {csvBusy ? "Importing…" : "Import CSV"}
+            </button>
+          </AdminTooltip>
+          <button
+            onClick={downloadCsvTemplate}
+            className="px-3 py-1.5 text-xs font-medium text-primary border border-primary/20 rounded-lg hover:border-primary/40 transition-colors"
+          >
+            Download template
+          </button>
+          <span className="text-[10px] text-foreground/70">
+            One row per variant — rows sharing a product name are grouped into one product. Square item-export columns are accepted too.
+          </span>
+          {csvResult && (
+            <div className="w-full text-[11px] text-foreground/80">
+              <span className="text-green-700">✓ {csvResult.created} created · {csvResult.updated} updated</span>
+              {csvResult.errors.length > 0 && (
+                <div className="mt-1 text-danger max-h-24 overflow-y-auto">
+                  {csvResult.errors.slice(0, 20).map((er, i) => (
+                    <div key={i}>• {er}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── Edit Form ── */}
