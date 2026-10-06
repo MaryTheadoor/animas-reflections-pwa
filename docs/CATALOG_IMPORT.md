@@ -298,9 +298,14 @@ An import that cannot tell the operator what it did not understand is not finish
 3. **Money parsing.** `toNum()` currently strips everything but digits and `.` — which
    silently turns `1.234,56` (EU) into `1.23456` and `$1,299.00` into `1299.00` by luck.
    Currency format needs to be explicit and tested.
-4. **Batching.** Firestore allows 500 writes per batch. A 2,000-product catalog with
-   variants exceeds that; needs chunking plus progress reporting, and ideally a
-   resumable/abortable run.
+4. **Write strategy and progress.** Corrected 2026-10-06 against the recovered code:
+   it writes one `setDoc(..., { merge: true })` per product, sequentially, each preceded
+   by a `getDoc` to decide created-vs-updated. That means the 500-writes-per-`writeBatch`
+   limit **does not apply** — any product count will work. The real costs are N+1 reads,
+   no progress indication during a long run, and no way to resume or abort a partial
+   import. A ~400-product migration is tolerable; a resumable run would be better.
+   (An earlier revision of this note claimed a 500-write batching requirement, which
+   was wrong for this implementation.)
 5. **Images.** Exports give **URLs** (often the old platform's CDN). We either store
    remote URLs (fast, but they break when the old store is cancelled) or fetch and
    re-upload to Firebase Storage (durable, but needs CORS, size limits, and failure
@@ -383,9 +388,40 @@ is out; the recovered CSV upload path is the foundation.
 - Every defaulted field is named in the report.
 - A read-only pass over the file is available and never writes (§6.10).
 - No `undefined` reaches Firestore; a malformed row fails that row, not the run.
-- The run survives >500 products (batching) and reports progress.
+- The run reports progress and survives any catalog size (the sequential writer already
+  has no 500-write ceiling — see §5.4).
+- Variants are written with structured `options` and the product's `options` dimensions,
+  so the variant matrix editor can round-trip them.
+- Categories on the sheet resolve to real categories, not an empty `categoryId`.
 - The operator can recognise their own catalog in the result — for a manual pipeline that
   is the real acceptance test.
+- **The Help tab has an entry explaining the Square → data sheet → upload migration
+  workflow** (owner instruction, 2026-10-06). It must describe the feature as it actually
+  behaves, so it lands with the phase that finishes the translation layer, not before.
+
+## 9. Implementation status (2026-10-06)
+
+**Phase 1: done and deployed** (`32d29ab`). Recovered from `origin/master` (`86b1362`):
+`src/lib/csv.ts`, `src/lib/catalog-import.ts`, `src/lib/__tests__/csv.test.ts`, and the
+admin `Products → Import CSV` upload control with template download and a
+created/updated/row-errors report. Verified live in the deployed bundle.
+
+**Phase 2: not started.** Reading the recovered code confirmed three concrete defects that
+block a real migration. Each is a bug, not a preference:
+
+| # | Defect | Evidence | Consequence |
+|---|---|---|---|
+| 1 | **Re-import duplicates** | `csv.ts:138` groups by `row.id \|\| row.name.toLowerCase()`, but `csv.ts:145` sets `id: row.id \|\| crypto.randomUUID()` | Without an `id` column every import creates **new** products with fresh random ids, so uploading a corrected sheet duplicates the catalog instead of updating it. Breaks the idempotency requirement above. |
+| 2 | **Category is dropped** | `csv.ts:148` hard-codes `categoryId: ""` | The sheet's `category` column is parsed into `CatalogCsvRow.category` and then thrown away. Every imported product lands uncategorised — which also means it will not appear under the brand/collection browse axis the client just confirmed ("Biscuit Hockey is a brand"). |
+| 3 | **Variant options are empty** | `csv.ts:185` sets `options: row.variant ? {} : undefined` | Variants carry only a name string; neither the variant's `options` map nor the product's declared `options` dimensions are populated. The variant matrix editor cannot round-trip the result. |
+
+Also outstanding from the plan: the **report** covers row errors only (no unmapped-column
+or defaulted-field sections), and the Square variant-name heuristics
+(`extractColors`/`extractSizes`/`detectBrand`) plus the brand map are not yet wired in.
+
+**Two decisions gate the fixes** (§6): identity/collision behaviour — the fix for defect 1
+needs to know whether a name collision should update, skip, or abort — and whether
+categories should be auto-created or mapped to existing ones — the fix for defect 2.
 
 ---
 **Scope recap:** manual, admin-operated, file-upload import. No backend, no Square API
