@@ -399,29 +399,43 @@ is out; the recovered CSV upload path is the foundation.
   workflow** (owner instruction, 2026-10-06). It must describe the feature as it actually
   behaves, so it lands with the phase that finishes the translation layer, not before.
 
-## 9. Implementation status (2026-10-06)
+## 9. Implementation status (updated 2026-10-06)
 
 **Phase 1: done and deployed** (`32d29ab`). Recovered from `origin/master` (`86b1362`):
 `src/lib/csv.ts`, `src/lib/catalog-import.ts`, `src/lib/__tests__/csv.test.ts`, and the
-admin `Products → Import CSV` upload control with template download and a
-created/updated/row-errors report. Verified live in the deployed bundle.
+admin `Products → Import CSV` upload control with template download. Verified live.
 
-**Phase 2: not started.** Reading the recovered code confirmed three concrete defects that
-block a real migration. Each is a bug, not a preference:
+**Phase 2: the three blocking defects are fixed and deployed** (`2a362cb`). Both decisions
+in §6 were taken by the owner: **update the existing product** on a collision, and
+**map categories to existing only, reporting the rest**.
 
-| # | Defect | Evidence | Consequence |
-|---|---|---|---|
-| 1 | **Re-import duplicates** | `csv.ts:138` groups by `row.id \|\| row.name.toLowerCase()`, but `csv.ts:145` sets `id: row.id \|\| crypto.randomUUID()` | Without an `id` column every import creates **new** products with fresh random ids, so uploading a corrected sheet duplicates the catalog instead of updating it. Breaks the idempotency requirement above. |
-| 2 | **Category is dropped** | `csv.ts:148` hard-codes `categoryId: ""` | The sheet's `category` column is parsed into `CatalogCsvRow.category` and then thrown away. Every imported product lands uncategorised — which also means it will not appear under the brand/collection browse axis the client just confirmed ("Biscuit Hockey is a brand"). |
-| 3 | **Variant options are empty** | `csv.ts:185` sets `options: row.variant ? {} : undefined` | Variants carry only a name string; neither the variant's `options` map nor the product's declared `options` dimensions are populated. The variant matrix editor cannot round-trip the result. |
+| # | Was | Now |
+|---|---|---|
+| 1 | Re-import duplicated the catalog — grouping keyed on the name but the id was a fresh `randomUUID()` | `slugifyKey(name)` makes the id deterministic (sheet `id` when present), so a re-import updates in place |
+| 2 | `categoryId: ""` threw the sheet's category away | Resolved by name against the caller's categories; unmatched names are reported, **never auto-created** |
+| 3 | `options: {}` claimed a modelled variant that wasn't | Removed. Variants carry only the sheet's label until the heuristics below land |
 
-Also outstanding from the plan: the **report** covers row errors only (no unmapped-column
-or defaulted-field sections), and the Square variant-name heuristics
-(`extractColors`/`extractSizes`/`detectBrand`) plus the brand map are not yet wired in.
+The **report** is now complete: `warnings` is a separate channel from `errors`, and covers
+unmatched categories, headers that map to nothing, and `productType` values that fell back
+to `"other"`. Header aliases moved into a single `FIELD_ALIASES` map so the row mapper and
+the unmapped-column detection cannot drift apart.
 
-**Two decisions gate the fixes** (§6): identity/collision behaviour — the fix for defect 1
-needs to know whether a name collision should update, skip, or abort — and whether
-categories should be auto-created or mapped to existing ones — the fix for defect 2.
+Tests: 117 → 121 (deterministic ids, category resolution, unmapped columns, productType
+coercion).
+
+**The Help entry is in** (owner instruction): a "Migrating a catalog from Square" guide
+entry plus a step-by-step migration tutorial — export, create categories first, import,
+read the report, correct-and-re-import. It states the remaining limitation plainly rather
+than describing the feature aspirationally.
+
+**Still outstanding — the one open piece:**
+- **Structured variant options.** Decomposing a sheet label like `"L / Navy"` into
+  `{Size: "L", Color: "Navy"}` plus the product's declared `options` dimensions needs the
+  Square variant-name heuristics (`extractColors` / `extractSizes` / `extractTags`) and
+  the `BRAND_PATTERNS` brand map from the deleted `functions/src/sync.ts` (recoverable at
+  `e7e1100^`). Until then, imported variants are name-only and must be wired to matrix
+  dimensions per product by hand. This is §7 phase 4.
+- Migrating to another platform (Shopify/Woo/Etsy column sets) and XLSX remain future work.
 
 ---
 **Scope recap:** manual, admin-operated, file-upload import. No backend, no Square API
