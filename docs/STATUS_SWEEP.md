@@ -34,10 +34,24 @@ Verified by inspecting the live admin JS bundles on 2026-10-06:
   across all 11 admin chunks.
 
 **Consequence:** every feature Line B built is **not available in production today**,
-despite its own log recording four separate "deployed live" verifications. Either those
-deploys were later overwritten by Line A's deploys, or the claim was inaccurate.
-It cannot be settled from the current state which happened — but the current fact is
-unambiguous: **Line B's work is not live.**
+despite its own log recording four separate "deployed live" verifications.
+
+**RESOLVED 2026-10-06 — this is a production REGRESSION, not an inaccurate claim.**
+The client independently asked "did we have a tutorial or help section at one point?
+i cant find it on the live site". That Help Hub exists **only** on Line B
+(`src/components/admin/help-guide.tsx` + `src/lib/help-content.ts`, 16 help entries +
+3 tutorials, commit `4a23bc3`), and the current admin dashboard has **9 tabs with no
+Help tab**. The client remembers using it. Therefore Line B's deploys were real and
+working, and **Line A's later deploys overwrote them**, silently removing live
+functionality.
+
+Line B features that were live and are now gone: Help Hub, CSV catalog import,
+reusable colour library, server-side inventory enforcement, modifier groups,
+Content & Theme editor (theme + copy + SEO/OG), visual print-zone editor,
+rich-text headings/links.
+
+Restoring Line B's work is therefore **not optional polish — it is recovering
+regressed functionality**, and it needs the careful reconciliation described in §3.
 
 ---
 
@@ -101,13 +115,25 @@ new tokens; (4) full lint/test/build + live admin smoke test before it reaches `
 
 ### 4.2 Commercially critical — verify before launch
 
-1. **Is live checkout charging real cards, or is it still on Square sandbox?**
-   `src/lib/constants.ts:22-23` falls back to `"sandbox"`, and `functions/src/index.ts:23`
-   defaults the server param to `"sandbox"` too. `.env.local` and `functions/.env` do set
-   the Square keys, but their values are in secrets files and were **not** read.
-   The `health` endpoint returns only `squareConfigured:true`, which does not reveal the
-   environment. **Cannot be determined from outside — must be verified.** The G2 test is
-   the way to do it.
+1. **Square environment: intent is PRODUCTION; verify it actually is.**
+   - **Client states the intent is production** (2026-10-06). The code disagrees by default.
+   - **Client-side is fine but the switch is a red herring:** `SQUARE_ENV`
+     (`src/lib/constants.ts:22-23`) is **dead code — nothing in `src/` consumes it.**
+     Its `|| "sandbox"` fallback therefore changes nothing; the client's environment is
+     decided solely by the app ID passed to `Square.payments(appId, locationId)`.
+     The live bundle passes `sq0idp-QAzYzFHiOcHrBmGfmdfGTQ` + `L6VCX130RHYQR`
+     (identical to the committed fallbacks at `:29-30`, so `.env.local` either matches
+     them or the fallback is in use). The ID carries no `sandbox-` prefix.
+     **Fix worth making:** either delete `SQUARE_ENV` or actually consume it — as written
+     it looks like a working sandbox switch and is not one.
+   - **Server-side is the part that charges and is unverified:** `functions/src/index.ts:23`
+     reads the `SQUARE_ENVIRONMENT` param defaulting to `"sandbox"`, and builds the
+     `SquareClient` environment from it (`:26-30`). Its value comes from `functions/.env`,
+     which holds the access token and was **not** read.
+   - **How to settle it:** confirm the `SQUARE_ENVIRONMENT=` line in `functions/.env`
+     is `production` (authoritative), then run the G2 real-card test. If the param were
+     still `sandbox` while the token is production, every Square API call would fail —
+     which would also explain why G2 has never been completed.
 2. **20 npm audit findings** — 1 **critical** (`next@16.2.7`), 7 high (`firebase`,
    `sharp`, `postcss`, `source-map-js`), 3 moderate, 1 low. Production-only view:
    10 findings. `next@16.3.x` upgrade clears the critical.
@@ -221,8 +247,16 @@ Grouped so the meeting can be short. Items marked ★ block work that is already
 
 ## 6. Suggested immediate sequence
 
-1. Get answers to ★ items in §5 — several unblock already-built work.
-2. Run the G2 real-card test — settles §4.2 item 1 and the checkout direction question.
-3. Reconcile the two lines on a dedicated branch, per §3 — before any further feature work.
-4. Refresh `GAP_ANALYSIS.md`, `PROJECT_STATUS_REPORT.md`, and `SCOPE.md` to match reality.
-5. Then the remaining launch tasks: G15, G19/G22/G23, G20, G21.
+1. **Confirm `SQUARE_ENVIRONMENT=production` in `functions/.env`** — one-line check, and
+   the site cannot legitimately take money without it.
+2. Run the G2 real-card test — settles the checkout question and confirms §5 item 16.
+3. **Reconcile the two lines on a dedicated branch, per §3 — before any further feature
+   work.** This is now urgent rather than housekeeping: it is recovering live
+   functionality (Help Hub, CSV import, theme/copy editor, inventory, modifier groups,
+   print-zone editor) that Line A's deploys silently removed.
+4. Get answers to ★ items in §5 — several unblock already-built work.
+5. Refresh `GAP_ANALYSIS.md`, `PROJECT_STATUS_REPORT.md`, and `SCOPE.md` to match reality.
+6. Then the remaining launch tasks: G15, G19/G22/G23, G20, G21.
+
+**Do not deploy again from a single line until step 3 is done** — every hosting deploy
+from Line A alone overwrites Line B's live features, and vice versa.
