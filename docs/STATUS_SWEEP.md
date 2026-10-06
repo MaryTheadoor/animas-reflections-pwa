@@ -8,6 +8,47 @@ site on 2026-10-06. Branch `development` @ `7e71997`.
 
 ---
 
+## 0. CRITICAL — live privilege escalation (found 2026-10-06)
+
+**Anyone can become an admin.** The admin checks accept any email ending in
+`@animasreflections.com`, and public email/password signup is enabled, so an attacker can
+register an address on a domain they do not own and inherit full admin rights.
+
+Three live checks trust the domain wildcard:
+
+| Site | Check |
+|---|---|
+| `src/context/auth-context.tsx:48` | `if (ADMIN_EMAIL && lowered.endsWith("@animasreflections.com")) return true;` in `isUserAdmin()` |
+| `functions/src/index.ts:65` | `lowered.endsWith("@animasreflections.com") ||` in `requireAdmin()` — gates **every** admin Cloud Function |
+| `functions/src/index.ts:86` | same suffix test in `isAlwaysAdmin()` |
+
+**Verified, not inferred:**
+
+1. The Email/Password provider is **enabled** on the project. Probing the public Identity
+   Toolkit endpoint with a deliberately malformed email returned `INVALID_EMAIL` — a
+   validation error. A disabled provider returns `OPERATION_NOT_ALLOWED`. (No account was
+   created; the malformed address cannot create one.)
+2. No `email_verified` check exists on any wildcard path. The two places that *do* check it
+   are the safe paths: `syncMyAdminClaim` (`functions/src/index.ts:554`) and the bootstrap
+   list in `storage.rules:34`.
+3. `firestore.rules` has no domain check — the rules are not the weak link; the wildcard is.
+
+**Impact:** full admin — read orders and customer data, edit site config, add themselves to
+the admin allowlist, push products to Square, and call `savePublishToken` / `publishSite`
+(GitHub publish secret and CI).
+
+**Fix:** delete the suffix test from all three sites, leaving the allowlist
+(`config/admin`) and the bootstrap email as the authority. This is the one change
+`origin/master` makes that is missing here **in the dangerous direction** — commit
+`9ac7d6f` removed it from both the client and `requireAdmin`.
+
+**Not verified (deliberately):** whether a *complete* signup with a well-formed
+`@animasreflections.com` address succeeds. Testing that would create a real account in the
+production project. The code path and the enabled-provider probe above make the exploit
+high-confidence; the last link is untested by choice.
+
+---
+
 ## 1. Headline: two divergent lines of work
 
 The repository has **two lines of work that forked on 2026-08-25 (`b66bf3e`)** and
@@ -84,11 +125,20 @@ least three places where Line B's version would **re-break something Line A fixe
 | # | File | Line B | Line A (current, verified working) | Risk if merged naively |
 |---|---|---|---|---|
 | 1 | `storage.rules` | `firestore.exists(/config/admin)` | custom claim **or** bootstrap email list | Line A verified live that cross-service `firestore.exists()` returns **false for every path** → admin uploads would 403 again |
-| 2 | `functions/src/index.ts` | **removed** `publishSite`, `savePublishToken`, `syncAdminClaims`, `syncMyAdminClaim`, and the `@animasreflections.com` wildcard | has all of them; the publish pipeline and admin claims depend on them | Admin → SEO → Publish stops working; admin claim minting stops |
+| 2 | `functions/src/index.ts` | **lacks** `publishSite`, `savePublishToken`, `syncAdminClaims`, `syncMyAdminClaim` — **but see the correction below** | has all of them; the publish pipeline and admin claims depend on them | Admin → SEO → Publish stops working; admin claim minting stops |
 | 3 | `src/app/globals.css` + theme | **editable theme system** (`src/lib/site-defaults.ts`, 12 tokens incl. `goldDeep`), hardcoded dark overrides **removed** from `globals.css` | Line A just added `gold-ink`, `on-gold`, `danger` tokens + dark remapping in `globals.css` | Two competing theme mechanisms; Line B's editable theme has no knowledge of Line A's new tokens (and vice versa) |
 
 Also both lines edited `devlog.md`, `PROJECT_CONTEXT.md`, `product-manager.tsx`,
 `auth-context.tsx`, `product/page.tsx`, `admin/page.tsx`, and 8 page files.
+
+**Correction (2026-10-06, verified against the fork point).** An earlier revision of this
+table said Line B *removed* `publishSite` / `savePublishToken` / `syncAdminClaims` /
+`syncMyAdminClaim`. That causal claim is **wrong**: the fork point `b66bf3e` already had
+none of them (`git show b66bf3e:functions/src/index.ts` → 14 exports, the same list as
+Line B's tip). These four were **added by Line A after the fork**. The practical
+consequence is unchanged — merging Line B's file wholesale still drops them — but the
+cause is divergence, not deletion. Line B's *only* edit to that file is deleting the
+`@animasreflections.com` wildcard line, which is a fix Line A needs (see §0).
 
 **Recommendation:** treat reconciliation as a deliberate, tested task on its own branch —
 not a merge commit. Sequence: (1) branch off `development`; (2) merge `origin/master`
