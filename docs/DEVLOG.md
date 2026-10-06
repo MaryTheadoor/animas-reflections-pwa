@@ -1487,3 +1487,89 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] ...
 - [ ] ...
 ```
+
+---
+
+## Session 32 — 2026-10-06 | Help Hub restored + catalog-import spec
+
+> Numbering note: the DEVLOG restarted at 30 on the unmerged `origin/master` line and
+> has also reached 32 there. Numbers are per-line until the two are reconciled — see
+> `docs/STATUS_SWEEP.md` §1.
+
+### Context Restored From
+- `docs/STATUS_SWEEP.md` (this session's sweep); client answers in the meeting
+- Verified that production runs this line and that `origin/master`'s work was
+  overwritten by this line's deploys
+
+### Actions Taken
+1. **Diagnosed why deployments looked "missing"** — the service worker is cache-first
+   and `CACHE_NAME` (`"animas-reflections-v2"`) never changes between builds, so a
+   returning visitor is served the *previous* JS on the first load after a deploy.
+   Confirmed live: the admin showed 9 tabs with no Help until the SW registration and
+   cache were cleared, after which Help appeared immediately. This has been masking
+   deploys generally.
+2. **Restored the admin Help & Tutorials tab** (10th tab) — ported from `origin/master`
+   (`4a23bc3`) and re-adapted so it documents the admin that actually exists: dropped
+   the CSV-import entry/tutorial (not on this line), dropped modifier-group and
+   colour-library wording, reframed inventory as a display/search signal rather than a
+   sales block, described print zones as percentage fields, and corrected the tab list
+   and SEO entry. Verified live: tab renders, search filters (`inventory` → 1 result).
+3. **Answered the bulk-import question with evidence** — this line has no importer:
+   `functions/src/` holds only `index.ts` + `pricing.ts` (the old `sync.ts` and
+   `product-pipeline.ts` were deleted, leaving stale compiled orphans in
+   `functions/lib/`), and `createSquareProduct` is a single-product push to Square.
+   The working CSV importer lives on the other line (`86b1362`).
+4. **Wrote `docs/CATALOG_IMPORT.md`** — the development note requested: a plan to import
+   CSV / sheet catalog exports from other e-commerce platforms in order to migrate
+   stores, including the programmatic translation layer (dialect profiles, canonical
+   intermediate row, derived option dimensions, and a mandatory mapped/defaulted/
+   unmapped report). Records the target schema from `src/types/index.ts`, nine
+   codebase-specific hazards (`stripUndefined`, encoding, money parsing, 500-write
+   batching, image strategy, category creation, client-vs-server write path, closed
+   `productType` union, variant round-tripping), and eight open decisions.
+
+### Decisions Made
+- The import is **two problems**: a parser and a **translation layer**. The translation
+  layer is the deliverable; the parser already exists to be recovered.
+- Nothing may be silently dropped — every unmapped source column and every defaulted
+  field must appear in the import report. An import that cannot report what it did not
+  understand is not finished.
+- Platform differences belong in **declarative profiles** keyed by header aliases, not
+  in branching inside the pipeline, so a new platform is an addition rather than an edit.
+- Bulk import should be an **admin callable function**, not a client-side write path
+  (batching + server-authoritative writes + admin-claim gating).
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/lib/help-content.ts | NEW — 15 guide entries + 2 tutorials, adapted to this line |
+| src/components/admin/help-guide.tsx | NEW — Help tab UI (search, tutorials, guide) |
+| src/app/admin/page.tsx | +Help import, +`"help"` tab key, +tab entry, +render block |
+| docs/STATUS_SWEEP.md | +client answers (online-only; Biscuit Hockey is a brand) |
+| docs/CATALOG_IMPORT.md | NEW — catalog import / migration plan and translation-layer design |
+
+### Commits This Session
+| Hash | Message |
+|------|---------|
+| `acb83a3` | docs: status sweep — live state, divergent lines, outstanding issues, client questions |
+| `9663202` | docs(sweep): correct the divergence finding — it is a live regression, not a bad claim |
+| `e70949d` | feat(admin): restore the Help & Tutorials tab |
+
+### Current State at Session End
+- Lint 0 | Tests 109/109 (9 suites) | Build 25 pages | SEO gate green
+- Hosting deployed and verified live: Help tab present (10th), search working
+- Branch `development`; `master` still diverged (13 vs 20) and **unpushed** — no force-push
+- No dev server running (the wedged PID 22876 was cleared; port 3000 free)
+
+### Pending / Next Session
+- [ ] **Fix the service-worker staleness** — version `CACHE_NAME` per build, or make
+      `/_next/static/*` and navigations network-first. Small, and it stops masking deploys.
+- [ ] **Reconcile the two lines** — now the highest-value task; Help Hub, CSV import,
+      theme/copy editor, modifier groups, colour library, print-zone editor, and
+      inventory enforcement are all built and all stranded on `origin/master`
+- [ ] Confirm the `SQUARE_ENVIRONMENT=` line in `functions/.env` is `production`
+- [ ] Choose which platform(s) the catalog migration is actually from → scopes
+      `docs/CATALOG_IMPORT.md` §6.1
+- [ ] Remove the stale `functions/lib/{sync,product-pipeline}.js*` orphans
+- [ ] Carry-over: G2 real-card checkout test, G1 catalog population, G4/G5 images,
+      G15 Lighthouse, G19/G22/G23, G20 DNS cutover, G21 analytics
