@@ -2,12 +2,19 @@
  * Admin help content — the searchable user guide + step-by-step tutorials.
  * Rendered by <HelpGuide /> in the admin "Help" tab.
  *
- * Ported from the Content & Theme line (origin/master, commit 4a23bc3) which had
- * it live before that deployment was overwritten. Entries describing features that
- * exist only on that line were removed or corrected so the guide matches the admin
- * that is actually deployed — see docs/STATUS_SWEEP.md §1. When the two lines are
- * reconciled, restore the removed entry ("Import your catalog from a CSV"), its
- * tutorial, and the modifier-Group / colour-library / visual-print-zone wording.
+ * Ported from the Content & Theme line (origin/master, commit 4a23bc3) which had it live
+ * before that deployment was overwritten. Entries describing features that exist only on
+ * that line were removed or corrected so the guide matches the admin actually deployed —
+ * see docs/STATUS_SWEEP.md §1.
+ *
+ * Status of the previously-removed wording (updated 2026-10-06):
+ *  - "Import your catalog from a CSV" → restored as `catalog-import`, rewritten for this
+ *    line now that categories resolve and re-imports update in place.
+ *  - modifier Groups and the colour library → both reinstated on this line, and their
+ *    entries above describe them again.
+ *  - visual print-zone drag/resize → reinstated; the `print-zones` entry describes it.
+ * If the two lines are ever reconciled, prefer this file's wording: it matches the
+ * deployed admin, whereas origin/master's copy describes features it alone has.
  */
 
 export interface HelpEntry {
@@ -67,6 +74,13 @@ export const HELP_ENTRIES: HelpEntry[] = [
     category: "Catalog",
     keywords: ["category", "subcategory", "parent", "organize", "nav"],
     body: "Categories group products for the shop and navigation.\n\nCreate categories in the Categories tab and reorder them there. Categories also drive the “By Design / Brand” browse mode on the shop page, and the featured-category filters on the fundraising page.",
+  },
+  {
+    id: "catalog-import",
+    title: "Migrating a catalog from Square",
+    category: "Catalog",
+    keywords: ["import", "csv", "migrate", "migration", "square", "export", "spreadsheet", "bulk", "upload", "catalog"],
+    body: "You can bring an existing Square catalog in from a spreadsheet instead of retyping every product.\n\n1. Export from Square. In the Square Dashboard, export your item library to CSV. If you sell the same catalog in person, the export may include POS-only items — the website products are the ones marked visible online, so filter to those first.\n\n2. Check the sheet. One row per variant. Rows that share the same product name are grouped into one product with several variants. Every row needs a name, and any row with variant data needs a price. Our template column names work, and Square's own export column names are accepted as-is (item_name, variation_name, item_price, item_sku), so a raw Square export can normally be uploaded unchanged.\n\nOptional columns: sku, inventory, colors (semicolon- or pipe-separated), category, productType, description, active, featured, image (plus image2 and image3), seoTitle, seoDescription.\n\n3. Create the categories first. The import matches the category names in your sheet against the categories you already have in the Categories tab. It will not invent new ones — anything it cannot match comes back in the report, and those products are imported without a category. So create the categories you need (or correct the spellings) before importing.\n\n4. Import. Products → Import CSV → choose your file. “Download template” gives you a starter file with the right column names.\n\n5. Read the report. You get how many products were created and updated, a “Needs your attention” list (unmatched categories, columns that mapped to nothing, product types that fell back to “other”), and any rows that failed outright.\n\n6. Correct and re-import. Re-uploading the same file updates the same products rather than creating duplicates, so the usual loop is: fix the spreadsheet, upload again, check the report.\n\nCurrent limitation: variants arrive with the label from your sheet (for example “L / Navy”). Structured size and colour options are not yet derived from that label, so imported variants are not automatically mapped onto the variant matrix dimensions — set those up per product in the editor if you need them.",
   },
   {
     id: "images",
@@ -134,6 +148,20 @@ export const HELP_ENTRIES: HelpEntry[] = [
 ];
 
 export const TUTORIALS: HelpTutorial[] = [
+  {
+    id: "migrate-from-square",
+    title: "Migrate a catalog from Square",
+    description: "Export your Square items, tidy the sheet, and bring them in here.",
+    steps: [
+      { title: "Export from Square", body: "In the Square Dashboard, export your item library to a CSV file. If you also sell in person, filter out POS-only items first — the website products are the ones marked visible online." },
+      { title: "Create the categories", body: "In the Categories tab, add every category your sheet refers to, with names spelled the way the sheet spells them. The import matches by name and will not create categories for you." },
+      { title: "Check the sheet", body: "One row per variant; rows sharing a product name become one product. Every row needs a name, and any row with variant data needs a price. Square's own column names are accepted, so the export usually works as-is." },
+      { title: "Import", body: "Products → Import CSV → choose your file. Use Download template if you are building a sheet from scratch." },
+      { title: "Read the report", body: "Check the created/updated counts, then the “Needs your attention” list: unmatched categories, columns that mapped to nothing, and product types that fell back to “other”. Failed rows are listed separately." },
+      { title: "Correct and re-import", body: "Fix the spreadsheet and upload it again. Re-importing updates the same products rather than duplicating them, so repeat until the report is clean." },
+      { title: "Tidy up per product", body: "Imported variants keep the label from your sheet. Add structured options, print zones, and mockup images in the product editor where a product needs them." },
+    ],
+  },
   {
     id: "getting-started",
     title: "Getting started",

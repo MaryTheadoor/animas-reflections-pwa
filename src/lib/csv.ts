@@ -86,6 +86,58 @@ function splitList(v: string | undefined): string[] {
 }
 
 /**
+ * Canonical field → accepted header aliases. Single source of truth: `mapCatalogRow`
+ * reads through this, and `csvToProducts` uses it to report headers it did not
+ * recognise, so the two cannot drift apart.
+ */
+const FIELD_ALIASES: Record<string, string[]> = {
+  id: ["id", "productid", "itemid"],
+  name: ["name", "itemname", "productname", "product"],
+  variant: ["variant", "variation", "variationname", "variantname", "option", "options"],
+  price: ["price", "itemprice", "baseprice", "variantprice"],
+  sku: ["sku", "itemsku", "variantsku"],
+  inventory: ["inventory", "stock", "quantity", "itemstock"],
+  colors: ["colors", "colour", "color", "colornames"],
+  category: ["category", "categoryname", "itemcategory"],
+  productType: ["producttype", "type", "itemtype"],
+  description: ["description", "itemdescription", "desc"],
+  active: ["active", "visible", "isenabled"],
+  featured: ["featured", "isfeatured"],
+  image: ["image", "imageurl", "images", "image1"],
+  image2: ["image2"],
+  image3: ["image3"],
+  seoTitle: ["seotitle", "metatitle"],
+  seoDescription: ["seodescription", "metadescription"],
+};
+
+/** Every header string any field accepts, normalised — used to report unmapped columns. */
+const RECOGNISED_HEADERS = new Set(
+  Object.values(FIELD_ALIASES).flat().map((a) => a.toLowerCase().replace(/[\s_\-]+/g, "")),
+);
+
+/**
+ * Stable, id-safe key derived from a product name. Used as the Firestore document id
+ * when the sheet supplies no explicit id, which is what makes re-importing the same
+ * sheet update the same documents instead of creating a second copy of the catalog.
+ */
+export function slugifyKey(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 120) || "product"
+  );
+}
+
+/** Lets the import resolve references against data that already exists. */
+export interface ImportOptions {
+  /** Lowercased category name → category id. Unmatched names are reported, never created. */
+  categoryMap?: Map<string, string>;
+}
+
+/**
  * Map one CSV row (using the normalized header → value header map) to a CatalogCsvRow.
  * Returns { error } when required fields are missing/invalid.
  */
@@ -98,41 +150,61 @@ export function mapCatalogRow(headers: string[], cells: string[]): CatalogCsvRow
     }
     return undefined;
   };
-  const name = get("name", "itemname", "productname", "product");
+  const name = get(...FIELD_ALIASES.name);
   if (!name || !name.trim()) return { error: "Missing product name" };
 
-  const price = toNum(get("price", "itemprice", "baseprice", "variantprice"));
-  const variant = get("variant", "variation", "variationname", "variantname", "option", "options");
+  const price = toNum(get(...FIELD_ALIASES.price));
+  const variant = get(...FIELD_ALIASES.variant);
 
   return {
-    id: get("id", "productid", "itemid") || undefined,
+    id: get(...FIELD_ALIASES.id) || undefined,
     name: name.trim(),
     variant: variant && variant.trim() ? variant.trim() : undefined,
     price,
-    sku: get("sku", "itemsku", "variantsku") || undefined,
-    inventory: toNum(get("inventory", "stock", "quantity", "itemstock")),
-    colors: splitList(get("colors", "colour", "color", "colornames")),
-    category: get("category", "categoryname", "itemcategory") || undefined,
-    productType: get("producttype", "type", "itemtype") || undefined,
-    description: get("description", "itemdescription", "desc") || undefined,
-    active: toBool(get("active", "visible", "isenabled")),
-    featured: toBool(get("featured", "isfeatured")),
-    images: splitList(get("image", "imageurl", "images", "image1"))
-      .concat(splitList(get("image2")))
-      .concat(splitList(get("image3"))),
-    seoTitle: get("seotitle", "metatitle") || undefined,
-    seoDescription: get("seodescription", "metadescription") || undefined,
+    sku: get(...FIELD_ALIASES.sku) || undefined,
+    inventory: toNum(get(...FIELD_ALIASES.inventory)),
+    colors: splitList(get(...FIELD_ALIASES.colors)),
+    category: get(...FIELD_ALIASES.category) || undefined,
+    productType: get(...FIELD_ALIASES.productType) || undefined,
+    description: get(...FIELD_ALIASES.description) || undefined,
+    active: toBool(get(...FIELD_ALIASES.active)),
+    featured: toBool(get(...FIELD_ALIASES.featured)),
+    images: splitList(get(...FIELD_ALIASES.image))
+      .concat(splitList(get(...FIELD_ALIASES.image2)))
+      .concat(splitList(get(...FIELD_ALIASES.image3))),
+    seoTitle: get(...FIELD_ALIASES.seoTitle) || undefined,
+    seoDescription: get(...FIELD_ALIASES.seoDescription) || undefined,
   };
 }
 
 const VALID_PRODUCT_TYPES: ProductType[] = ["apparel", "sticker", "sign", "jewelry", "accessory", "other"];
 
+/** Resolve a sheet category name to an existing category id, recording misses. */
+function resolveCategory(
+  name: string | undefined,
+  opts: ImportOptions,
+  unresolved: Set<string>,
+): string {
+  if (!name || !name.trim()) return "";
+  const key = name.trim().toLowerCase();
+  const id = opts.categoryMap?.get(key);
+  if (id) return id;
+  unresolved.add(name.trim());
+  return "";
+}
+
 /**
  * Group mapped rows into products (one product per unique id/name, with all its variants).
+ *
+ * The product id is **deterministic** — the sheet's `id` when present, otherwise a slug
+ * of the name — so re-importing a corrected sheet updates the same documents instead of
+ * creating a second copy of the catalog.
  */
-export function rowsToProducts(rows: CatalogCsvRow[]) {
+export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const byKey = new Map<string, ManagedProduct>();
+  const unresolvedCategories = new Set<string>();
 
   for (const row of rows) {
     const key = row.id || row.name.toLowerCase();
@@ -141,11 +213,14 @@ export function rowsToProducts(rows: CatalogCsvRow[]) {
 
     if (!product) {
       const type = (row.productType || "other").toLowerCase() as ProductType;
+      if (row.productType && !VALID_PRODUCT_TYPES.includes(type)) {
+        warnings.push(`Unknown productType "${row.productType}" on "${row.name}" → imported as "other"`);
+      }
       product = {
-        id: row.id || crypto.randomUUID(),
+        id: row.id || slugifyKey(row.name),
         name: row.name,
         description: row.description ?? "",
-        categoryId: "",
+        categoryId: resolveCategory(row.category, opts, unresolvedCategories),
         productType: VALID_PRODUCT_TYPES.includes(type) ? type : "other",
         colors: row.colors.map((c) => c.toLowerCase()).filter((c, i, a) => a.indexOf(c) === i),
         tags: [],
@@ -182,21 +257,39 @@ export function rowsToProducts(rows: CatalogCsvRow[]) {
         price: row.price ?? 0,
         sku: row.sku ?? "",
         inventory: row.inventory,
-        options: row.variant ? {} : undefined,
+        // No structured options are written: a flat sheet gives one variant label per
+        // row, and decomposing "L / Navy" into {Size, Color} needs the Square
+        // variant-name heuristics. The original wrote `options: {}` here, which
+        // claimed the variant was modelled when it was not, and stopped the variant
+        // matrix editor from round-tripping the product.
       });
     } else {
       errors.push(`Row for "${row.name}" has no variant data (variant/price/sku/inventory)`);
     }
   }
 
-  return { products: [...byKey.values()], errors };
+  for (const c of unresolvedCategories) {
+    warnings.push(
+      `Category "${c}" does not exist, so those products were imported without one. Create the category (or correct the sheet) and re-import — they will update in place.`,
+    );
+  }
+
+  return { products: [...byKey.values()], errors, warnings };
 }
 
 /** Parse + map a full CSV string into products, grouped by product. */
-export function csvToProducts(text: string, onError?: (msg: string) => void) {
+export function csvToProducts(text: string, opts: ImportOptions = {}, onError?: (msg: string) => void) {
   const rows = parseCsv(text);
-  if (rows.length < 2) return { products: [], errors: ["CSV must have a header row and at least one data row"] };
+  if (rows.length < 2) {
+    return {
+      products: [] as ManagedProduct[],
+      errors: ["CSV must have a header row and at least one data row"],
+      warnings: [] as string[],
+      unmappedColumns: [] as string[],
+    };
+  }
   const headers = rows[0];
+  const unmappedColumns = headers.filter((h) => h.trim() && !RECOGNISED_HEADERS.has(normHeader(h)));
   const mapped: CatalogCsvRow[] = [];
   const errors: string[] = [];
   for (const dataRow of rows.slice(1)) {
@@ -205,6 +298,17 @@ export function csvToProducts(text: string, onError?: (msg: string) => void) {
     else mapped.push(r);
     if (onError) onError(errors[errors.length - 1] ?? "");
   }
-  const grouped = rowsToProducts(mapped);
-  return { products: grouped.products, errors: [...errors, ...grouped.errors] };
+  const grouped = rowsToProducts(mapped, opts);
+  const warnings = [...grouped.warnings];
+  if (unmappedColumns.length) {
+    warnings.push(
+      `Column${unmappedColumns.length === 1 ? "" : "s"} in the file mapped to nothing and ${unmappedColumns.length === 1 ? "was" : "were"} ignored: ${unmappedColumns.join(", ")}`,
+    );
+  }
+  return {
+    products: grouped.products,
+    errors: [...errors, ...grouped.errors],
+    warnings,
+    unmappedColumns,
+  };
 }

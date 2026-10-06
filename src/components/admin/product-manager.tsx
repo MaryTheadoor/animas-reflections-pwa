@@ -20,7 +20,7 @@ import { ADDON_PRICE, DEFAULT_COLOR_TINTS } from "@/lib/constants";
 import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, ProductAddon } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
 import AdminTooltip from "@/components/ui/admin-tooltip";
-import { importCatalogCsv } from "@/lib/catalog-import";
+import { importCatalogCsv, type ImportReport } from "@/lib/catalog-import";
 
 const EMPTY_PRODUCT: ManagedProduct = {
   id: "",
@@ -86,7 +86,7 @@ export default function ProductManager({ categories }: Props) {
   // CSV catalog import — manual pipeline: the operator exports a data sheet from the
   // source platform, prepares it, and uploads the file here. See docs/CATALOG_IMPORT.md.
   const [csvBusy, setCsvBusy] = useState(false);
-  const [csvResult, setCsvResult] = useState<{ created: number; updated: number; errors: string[] } | null>(null);
+  const [csvResult, setCsvResult] = useState<ImportReport | null>(null);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleCsvFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,11 +96,19 @@ export default function ProductManager({ categories }: Props) {
     setCsvResult(null);
     try {
       const text = await file.text();
-      const res = await importCatalogCsv(text);
+      // Categories are passed so sheet category names resolve to real category ids;
+      // unmatched names come back in `warnings` rather than being created silently.
+      const res = await importCatalogCsv(text, categories);
       setCsvResult(res);
       loadProducts();
     } catch (err) {
-      setCsvResult({ created: 0, updated: 0, errors: [err instanceof Error ? err.message : "Import failed"] });
+      setCsvResult({
+        created: 0,
+        updated: 0,
+        errors: [err instanceof Error ? err.message : "Import failed"],
+        warnings: [],
+        unmappedColumns: [],
+      });
     } finally {
       setCsvBusy(false);
       if (csvInputRef.current) csvInputRef.current.value = "";
@@ -799,6 +807,14 @@ export default function ProductManager({ categories }: Props) {
           {csvResult && (
             <div className="w-full text-[11px] text-foreground/80">
               <span className="text-green-700">✓ {csvResult.created} created · {csvResult.updated} updated</span>
+              {csvResult.warnings.length > 0 && (
+                <div className="mt-1 text-foreground/80 max-h-32 overflow-y-auto">
+                  <span className="font-medium">Needs your attention:</span>
+                  {csvResult.warnings.slice(0, 20).map((w, i) => (
+                    <div key={i}>• {w}</div>
+                  ))}
+                </div>
+              )}
               {csvResult.errors.length > 0 && (
                 <div className="mt-1 text-danger max-h-24 overflow-y-auto">
                   {csvResult.errors.slice(0, 20).map((er, i) => (

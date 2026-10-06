@@ -65,4 +65,36 @@ describe("csvToProducts", () => {
     const { errors } = csvToProducts(bad);
     expect(errors.some((e) => e.includes("missing a price"))).toBe(true);
   });
+
+  it("derives a deterministic product id so a re-import updates in place", () => {
+    const first = csvToProducts(csv).products;
+    const second = csvToProducts(csv).products;
+    expect(first.map((p) => p.id)).toEqual(second.map((p) => p.id));
+    // and ids are stable slugs of the name, not random uuids
+    expect(first.find((p) => p.name === "Tee")!.id).toBe("tee");
+  });
+
+  it("resolves sheet categories against existing ones", () => {
+    const categoryMap = new Map([["apparel", "cat-apparel"]]);
+    const { products, warnings } = csvToProducts(csv, { categoryMap });
+    expect(products.find((p) => p.name === "Tee")!.categoryId).toBe("cat-apparel");
+    // "Accessory" is not in the map, so it is reported rather than invented
+    expect(products.find((p) => p.name === "Hat")!.categoryId).toBe("");
+    expect(warnings.some((w) => w.includes("Accessory"))).toBe(true);
+  });
+
+  it("reports columns that map to nothing", () => {
+    const withJunk = "name,price,internal_notes\nTee,20.00,ignore me";
+    const { unmappedColumns, warnings } = csvToProducts(withJunk);
+    expect(unmappedColumns).toEqual(["internal_notes"]);
+    expect(warnings.some((w) => w.includes("internal_notes"))).toBe(true);
+  });
+
+  it("warns and coerces an unknown productType instead of inventing a union member", () => {
+    const odd = "name,price,productType\nThing,5.00,spaceship";
+    const { products, warnings, errors } = csvToProducts(odd);
+    expect(errors).toEqual([]);
+    expect(products[0].productType).toBe("other");
+    expect(warnings.some((w) => w.includes("spaceship"))).toBe(true);
+  });
 });
