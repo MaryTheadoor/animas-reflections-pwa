@@ -12,7 +12,7 @@ export default function CartNavButton() {
       </svg>
       <span>Cart</span>
       {itemCount > 0 && (
-        <span className="absolute -top-0.5 right-0 bg-gold text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold leading-none">
+        <span className="absolute -top-0.5 right-0 bg-gold-deep text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold leading-none">
           {itemCount}
         </span>
       )}

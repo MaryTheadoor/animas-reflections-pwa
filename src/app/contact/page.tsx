@@ -13,8 +13,8 @@ export default function ContactPage() {
         <h1 className="text-4xl font-bold font-display mb-2">{CONTACT.heading}</h1>
         <p className="text-foreground text-lg mb-10">{CONTACT.subheading}</p>
         <div className="glass-card p-8 space-y-4">
-          <p className="text-foreground"><strong>Phone:</strong> <a href={`tel:${CONTACT.phone}`} className="hover:text-gold">{CONTACT.phone}</a></p>
-          <p className="text-foreground"><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`} className="hover:text-gold">{CONTACT.email}</a></p>
+          <p className="text-foreground"><strong>Phone:</strong> <a href={`tel:${CONTACT.phone}`} className="hover:text-gold-deep">{CONTACT.phone}</a></p>
+          <p className="text-foreground"><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`} className="hover:text-gold-deep">{CONTACT.email}</a></p>
           <p className="text-foreground"><strong>Location:</strong> {CONTACT.location}</p>
           <p className="text-xs text-foreground/80 mt-4">
             {CONTACT.privacy_note}{" "}

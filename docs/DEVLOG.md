@@ -1411,6 +1411,46 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] `animas-reflections-pwa.zip` (230 MB) is untracked in the repo root — delete or move it out.
 - [ ] Merge `development` → `master` only on explicit user approval.
 
+---
+
+## Session 31 — 2026-10-05 | A11y contrast follow-ups + dead-token fix
+
+### Context Restored From
+- DEVLOG Sessions 1–30 (repo had moved on well past Session 15's a11y pass); Session 15 "Pending" list of optional contrast follow-ups; `_webbridge/contrast.py`
+- Live-current palette in `src/app/globals.css` (`gold-deep` from Session 15, `--color-teal` never defined)
+
+### Actions Taken
+1. **Re-verified Session 15's a11y/compliance work is intact** — zoom fix, `:focus-visible`, skip link, cart-dialog semantics, customizer arrow-key reposition, `/privacy` route + Square cookie disclosure + CPA rights language, `gold-deep` token. All present; nothing to redo.
+2. **Closed the flagged contrast follow-ups** (product price, stock badge, teaser pill, offline banner). Offline banner was already `bg-red-600` (4.8:1). The rest fixed via `gold-deep` / new `gold-ink`.
+3. **Found and fixed a real class bug — the `teal` token does not exist.** `--color-teal` is not defined anywhere (Tailwind v4 CSS-first theme, no config file), so `bg-teal/80`, `bg-teal/10`, `text-teal`, `bg-teal/5` compiled to **nothing**. The "X in stock" product badge therefore had no background at all — white text straight over the product photo. Replaced with real `teal-700`/`teal-100` (5.5:1 / 4.8:1). Affected: product card, admin product + legend dots, account tracking box.
+4. **Gold-on-light text was failing AA** (2.96:1 on cream). Introduced `--color-gold-ink` (#92400E) for gold-family text sitting on a `gold/10` tint (5.95:1) and moved all other light-surface gold text/hover/nav-active to `gold-deep`. `--color-gold-deep` is now **remapped to #E68A00 under `html.dark`**, so one class is correct in both themes (6.8:1 on dark).
+5. **Gold CTA buttons (user decision: dark label on bright gold).** `bg-gold text-white` was 3.19:1 — a failure at every button's text size (14–16px). Added `--color-on-gold` (#111827, deliberately **not** dark-remapped, because the gold face stays #D97706 in both themes while `text-foreground`/`text-white` flip). All 37 `bg-gold text-white` → `bg-gold text-on-gold` (5.6:1; hover `gold-light` = 6.8:1). `.btn-gold-tactile` label shortened to dark. Bright brand gold face preserved exactly.
+6. **Small gold pills/badges** (stock badge, cart count, variant-matrix cells) → `bg-gold-deep` (5.0:1 light / 4.6:1 dark).
+7. **Danger colour is now semantic** — `--color-danger` (#dc2626 light → #f87171 dark). Replaced `text-red-400` (2.8:1 on white) and bare `text-red-500` (3.8:1) and bare `text-red-600` (3.0:1 on dark). Deliberately kept `text-red-600` on `bg-red-50` badges, which stay light in both themes.
+8. **Verified** — lint 0, tests 109/109 (9 suites), build 25 pages, SEO gate green. WebBridge visual check in light + dark (shop, home, CTAs). All new tokens confirmed present in the emitted CSS.
+
+### Decisions Made
+- Gold family is now four tokens with distinct jobs: `gold` (fills/accents, bright, unchanged), `gold-deep` (text on light surfaces; auto-flips to #E68A00 on dark), `gold-ink` (gold text on a `gold/10` tint), `on-gold` (label on a gold fill; never flips).
+- `--color-gold-deep`, `--color-gold-ink`, `--color-danger` are theme-remapped; `--color-on-gold` intentionally is not.
+- Accent/brand hues unchanged: bright gold, teal primary, plum, and the announcement banner hue the client asked to keep.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/app/globals.css | +`--color-gold-ink`, `--color-on-gold`, `--color-danger`; dark remap of gold-deep/gold-ink/danger; nav-dock active → gold-deep; `.btn-gold-tactile` dark label |
+| 31 tsx files | dead `teal` classes → real `teal-700`/`teal-100`; gold-on-light → gold-deep/gold-ink; 37 CTAs → `text-on-gold`; danger token; gold-deep/teal-700 badge fills |
+
+### Current State at Session End
+- Lint 0 | Tests 109/109 (9 suites) | Build 25 pages | SEO gate green
+- Changes staged in the working tree on `development`; **not committed and not deployed** — awaiting go-ahead
+- `_webbridge/contrast.py` restored untouched — its hardcoded colour list predates this session
+
+### Pending / Next Session
+- [ ] Review + deploy this session's work (hosting-only)
+- [ ] **Dark-mode counterpart audit** — still open since Session 14; this session fixed the dark *regressions* it could introduce, but the full dark pass is unstarted
+- [ ] `_webbridge/contrast.py` colour list is now stale (predates gold-ink/on-gold/danger)
+- [ ] Carry-over: client address/geo for LocalBusiness, keyword set decision, `animas-reflections-pwa.zip` cleanup, G2 live checkout, G15 Lighthouse, G20 DNS, G21 analytics
+
 ```
 
 ## Session N — YYYY-MM-DD | HH:MM MST

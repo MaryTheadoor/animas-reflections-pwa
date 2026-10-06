@@ -133,7 +133,7 @@ function ProductContent() {
       <PageLayout>
         <div className="text-center py-20">
           <h1 className="text-2xl font-bold font-display mb-4">Product Not Found</h1>
-          <Link href="/shop" className="px-6 py-3 bg-gold text-white rounded-2xl font-semibold btn-tactile btn-gold-tactile">
+          <Link href="/shop" className="px-6 py-3 bg-gold text-on-gold rounded-2xl font-semibold btn-tactile btn-gold-tactile">
             Browse Products
           </Link>
         </div>
@@ -186,7 +186,7 @@ function ProductContent() {
 
         {/* Breadcrumb */}
         <div className="text-xs text-foreground/80 mb-4">
-          <Link href="/shop" className="hover:text-gold">Shop</Link>
+          <Link href="/shop" className="hover:text-gold-deep">Shop</Link>
           <span className="mx-1">/</span>
           <span className="text-foreground">{product.name}</span>
         </div>
@@ -229,7 +229,7 @@ function ProductContent() {
                   {isLong && (
                     <button
                       onClick={() => setDescExpanded(!descExpanded)}
-                      className="text-xs text-gold hover:text-gold-light mt-1 transition-colors"
+                      className="text-xs text-gold-deep hover:text-gold-deep mt-1 transition-colors"
                     >
                       {descExpanded ? "Show less" : "Read more"}
                     </button>
@@ -271,7 +271,7 @@ function ProductContent() {
             })()}
 
             {/* Price */}
-            <p className="text-3xl font-bold text-gold mb-6">
+            <p className="text-3xl font-bold text-gold-deep mb-6">
               ${price.toFixed(2)}
               {variants.length > 1 && minVariantPrice > 0 && (
                 <span className="text-sm font-normal text-foreground ml-2">
@@ -425,7 +425,7 @@ function ProductContent() {
                     modifierInputs,
                   });
                 }}
-                className="flex-1 px-6 py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
+                className="flex-1 px-6 py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
               >
                 Add to Cart — ${price.toFixed(2)}
               </button>

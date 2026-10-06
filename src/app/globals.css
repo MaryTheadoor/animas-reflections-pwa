@@ -10,6 +10,18 @@
   --color-gold: #D97706;
   --color-gold-light: #E68A00;
   --color-gold-deep: #B45309;
+  /* gold-ink is for gold-family text that sits on a gold/10 tint — the tint
+     lifts the background closer to the text, so it needs a deeper value than
+     gold-deep to hold 4.5:1 (contrast-audit follow-up). */
+  --color-gold-ink: #92400E;
+  /* Label colour for a gold-filled surface. The gold button face keeps the
+     same #D97706 in BOTH themes, so its text must stay dark in both (5.6:1).
+     Deliberately NOT remapped under html.dark — a light-on-gold label would
+     only reach 3.2:1. */
+  --color-on-gold: #111827;
+  /* Semantic danger colour: passes AA on light surfaces; remapped under
+     html.dark (see Dark Mode) because red-600 fails on the dark navy. */
+  --color-danger: #dc2626;
   --color-plum: #935B8A;
   --color-plum-light: #A86B9F;
   --color-text: #111827;
@@ -112,6 +124,12 @@ html.dark body {
   --color-primary-light: #FFFFFF;
   --color-foreground: #F1F5F9;
   --color-white: #1E293B;
+  /* Gold-family text tokens flip to a light gold on the dark navy: #E68A00
+     reaches 6.8:1 on #0F172A where gold-deep would only manage 3.6:1. */
+  --color-gold-deep: #E68A00;
+  --color-gold-ink: #E68A00;
+  /* Danger flips to the lighter red for 6.5:1 on the dark background. */
+  --color-danger: #f87171;
   background: #0F172A;
 }
 
@@ -138,7 +156,8 @@ html.dark .nav-dock-link {
 
 html.dark .nav-dock-link:hover,
 html.dark .nav-dock-link.active {
-  color: var(--color-gold);
+  /* colour inherited from the base rule's --color-gold-deep, which remaps to
+     #E68A00 (6.8:1) under html.dark. */
   opacity: 1;
   background: rgba(217, 119, 6, 0.2);
 }
@@ -229,7 +248,9 @@ html.dark .nav-dock-theme {
 .nav-dock-link:hover,
 .nav-dock-link.active {
   opacity: 1;
-  color: var(--color-gold);
+  /* gold-deep (not gold) so the active label clears 4.5:1 on the white dock;
+     the token is remapped to a light gold under html.dark. */
+  color: var(--color-gold-deep);
   background: rgba(217, 119, 6, 0.08);
   transform: translateY(-2px);
 }
@@ -295,7 +316,8 @@ html.dark .nav-dock-theme {
   background-color: #D97706;
   border-color: #B05E04;
   border-bottom-color: #8A4703;
-  color: white;
+  /* Dark label on the gold face (5.6:1). A white label only reached 3.2:1. */
+  color: var(--color-on-gold);
 }
 .btn-primary-tactile {
   background-color: #8400FF;

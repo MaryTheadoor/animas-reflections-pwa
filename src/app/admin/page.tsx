@@ -32,9 +32,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
         <div className="flex items-center justify-center min-h-screen bg-cream">
           <div className="text-center p-8">
             <h1 className="text-xl font-bold font-display mb-4">Dashboard Error</h1>
-            <p className="text-red-500 text-sm mb-4 font-mono">{this.state.error}</p>
+            <p className="text-danger text-sm mb-4 font-mono">{this.state.error}</p>
             <button onClick={() => { this.setState({ error: null }); window.location.reload(); }}
-              className="px-6 py-3 bg-gold text-white rounded-2xl font-semibold">
+              className="px-6 py-3 bg-gold text-on-gold rounded-2xl font-semibold">
               Reload Dashboard
             </button>
           </div>
@@ -501,7 +501,7 @@ function DashboardContent() {
                       const colors = (config.catalog_options?.colors ?? []).filter((_, i) => i !== idx);
                       setConfig({ ...config, catalog_options: { ...config.catalog_options, colors } });
                     }}
-                    className="text-red-400 hover:text-red-600 text-xs px-2"
+                    className="text-danger hover:text-danger text-xs px-2"
                   >
                     ✕
                   </button>
@@ -542,7 +542,7 @@ function DashboardContent() {
                       const sizes = (config.catalog_options?.sizes ?? []).filter((_, i) => i !== idx);
                       setConfig({ ...config, catalog_options: { ...config.catalog_options, sizes } });
                     }}
-                    className="text-red-400 hover:text-red-600 text-xs"
+                    className="text-danger hover:text-danger text-xs"
                   >
                     ✕
                   </button>
@@ -595,7 +595,7 @@ function DashboardContent() {
                       const productTypes = (config.catalog_options?.productTypes ?? []).filter((_, i) => i !== idx);
                       setConfig({ ...config, catalog_options: { ...config.catalog_options, productTypes } });
                     }}
-                    className="text-red-400 hover:text-red-600 text-xs px-2"
+                    className="text-danger hover:text-danger text-xs px-2"
                   >
                     ✕
                   </button>
@@ -616,7 +616,7 @@ function DashboardContent() {
           {/* Custom Option Names */}
           <div className="mb-8">
             <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-teal" /> Custom Option Names
+              <span className="w-2 h-2 rounded-full bg-teal-700" /> Custom Option Names
             </h3>
             <p className="text-xs text-foreground/70 mb-3">
               Additional option dimensions beyond size/color (e.g., &quot;Material&quot;, &quot;Finish&quot;, &quot;Grommet Count&quot;)
@@ -639,7 +639,7 @@ function DashboardContent() {
                       const customOptionNames = (config.catalog_options?.customOptionNames ?? []).filter((_, i) => i !== idx);
                       setConfig({ ...config, catalog_options: { ...config.catalog_options, customOptionNames } });
                     }}
-                    className="text-red-400 hover:text-red-600 text-xs"
+                    className="text-danger hover:text-danger text-xs"
                   >
                     ✕
                   </button>
@@ -718,7 +718,7 @@ function DashboardContent() {
                       const standardAddons = (config.addon_defaults?.standardAddons ?? []).filter((_, i) => i !== idx);
                       setConfig({ ...config, addon_defaults: { ...config.addon_defaults, standardAddons } });
                     }}
-                    className="text-red-400 hover:text-red-600 text-xs px-2"
+                    className="text-danger hover:text-danger text-xs px-2"
                   >
                     ✕
                   </button>
@@ -802,7 +802,7 @@ function DashboardContent() {
                         const customer_fields = (config.customer_fields ?? []).filter((_, i) => i !== idx);
                         setConfig({ ...config, customer_fields });
                       }}
-                      className="text-red-400 hover:text-red-600 text-xs px-2"
+                      className="text-danger hover:text-danger text-xs px-2"
                     >
                       ✕
                     </button>
@@ -967,7 +967,7 @@ function DashboardContent() {
           {/* ── Shipping & Pricing ── */}
           <div className="mb-8">
             <h3 className="font-bold font-display text-sm mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-teal" /> Shipping &amp; Pricing
+              <span className="w-2 h-2 rounded-full bg-teal-700" /> Shipping &amp; Pricing
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
@@ -999,7 +999,7 @@ function DashboardContent() {
 
           <div className="flex gap-3 items-center">
             <button onClick={saveConfig} disabled={saving}
-              className="px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile">
+              className="px-6 py-2.5 bg-gold text-on-gold rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile">
               {saving ? "Saving..." : "Save Theme"}
             </button>
             {saved && <span className="text-sm text-green-600 animate-fade-in-up">Saved!</span>}
@@ -1038,7 +1038,7 @@ function DashboardContent() {
                   <span className="text-primary">{email}</span>
                   <button
                     onClick={() => removeAdmin(email)}
-                    className="text-red-400 hover:text-red-600 text-xs font-medium"
+                    className="text-danger hover:text-danger text-xs font-medium"
                   >
                     Remove
                   </button>
@@ -1074,7 +1074,7 @@ function DashboardContent() {
             {uploadError && (
               <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm flex items-center justify-between">
                 <span>{uploadError}</span>
-                <button onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-600 ml-2">&times;</button>
+                <button onClick={() => setUploadError(null)} className="text-danger hover:text-danger ml-2">&times;</button>
               </div>
             )}
             {uploadSuccess && (
@@ -1093,7 +1093,7 @@ function DashboardContent() {
             </div>
             <div className="flex items-center gap-3 mb-6">
               <label className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${
-                selectedFile ? "border-gold bg-gold/5 text-gold" : "border-primary/20 text-foreground hover:border-primary/40"
+                selectedFile ? "border-gold bg-gold/5 text-gold-deep" : "border-primary/20 text-foreground hover:border-primary/40"
               }`}>
                 {selectedFile ? `File: ${selectedFile.name}` : "Choose Image File"}
                 <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
@@ -1102,7 +1102,7 @@ function DashboardContent() {
               <button
                 onClick={handleDesignUpload}
                 disabled={uploading || !selectedFile || !designName.trim() || !designCategory.trim()}
-                className="px-6 py-2 rounded-xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors disabled:opacity-40 btn-tactile btn-gold-tactile text-sm shrink-0"
+                className="px-6 py-2 rounded-xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors disabled:opacity-40 btn-tactile btn-gold-tactile text-sm shrink-0"
               >
                 {uploading ? `Uploading ${Math.round(uploadProgress)}%` : "Publish Design"}
               </button>
@@ -1135,7 +1135,7 @@ function DashboardContent() {
                     </div>
                   )}
                   <button onClick={() => removeDesign(d.id)}
-                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-opacity">&times;</button>
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-opacity">&times;</button>
                 </div>
               ))}
             </div>
@@ -1226,7 +1226,7 @@ function OrdersSection() {
   const pagedOrders = orders.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
   if (loading) return <p className="text-sm text-foreground">Loading orders...</p>;
-  if (error) return <p className="text-sm text-red-500">{error}</p>;
+  if (error) return <p className="text-sm text-danger">{error}</p>;
   if (!orders?.length) return <p className="text-sm text-foreground/80">No orders yet.</p>;
 
   return (
@@ -1263,7 +1263,7 @@ function OrdersSection() {
                     {designCount > 0 ? (
                       <button
                         onClick={() => setDesignOpenId(isOpen ? null : o.id)}
-                        className="text-gold hover:underline font-medium"
+                        className="text-gold-deep hover:underline font-medium"
                       >
                         {isOpen ? "▾" : "▸"} {designCount} file{designCount > 1 ? "s" : ""}
                       </button>
@@ -1274,11 +1274,11 @@ function OrdersSection() {
                   <td className="py-2 text-foreground">{new Date(o.createdAt as string).toLocaleDateString()}</td>
                   <td className="py-2">
                     {o.trackingUrl ? (
-                      <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold text-xs hover:underline">Track</a>
+                      <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold-deep text-xs hover:underline">Track</a>
                     ) : (
                       <button
                         onClick={() => { setExpandedId(o.id); setTrackingUrl(""); setTrackingNumber(""); }}
-                        className="text-xs text-foreground/70 hover:text-gold"
+                        className="text-xs text-foreground/70 hover:text-gold-deep"
                       >
                         + Add
                       </button>
@@ -1294,7 +1294,7 @@ function OrdersSection() {
                           <div key={i} className="flex items-center gap-2 text-xs">
                             <span className="text-foreground/80">{item.name} × {item.quantity}</span>
                             <a href={item.designUrl} target="_blank" rel="noopener noreferrer"
-                              className="text-gold hover:underline truncate max-w-xs">
+                              className="text-gold-deep hover:underline truncate max-w-xs">
                               {item.designUrl?.split("/").pop()?.split("?")[0] ?? "View design"} ↗
                             </a>
                           </div>
@@ -1328,7 +1328,7 @@ function OrdersSection() {
             <button
               onClick={() => saveTracking(expandedId, `order_${expandedId}`)}
               disabled={savingTracking || (!trackingUrl && !trackingNumber)}
-              className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+              className="px-4 py-2 bg-gold text-on-gold rounded-lg text-sm font-semibold disabled:opacity-50"
             >
               {savingTracking ? "Saving..." : "Save"}
             </button>
@@ -1403,14 +1403,14 @@ function UsersSection() {
   if (error) {
     return (
       <div>
-        <p className="text-sm text-red-500 mb-2">Could not load users: {error}</p>
+        <p className="text-sm text-danger mb-2">Could not load users: {error}</p>
         <p className="text-xs text-foreground/80">
           Manage authentication in{" "}
           <a
             href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-gold hover:underline"
+            className="text-gold-deep hover:underline"
           >
             Firebase Console
           </a>
@@ -1428,7 +1428,7 @@ function UsersSection() {
             href="https://console.firebase.google.com/project/animas-reflections-pwa/authentication/users"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-gold hover:underline"
+            className="text-gold-deep hover:underline"
           >
             Firebase Console
           </a>
@@ -1449,7 +1449,7 @@ function UsersSection() {
               {u.displayName && <p className="text-xs text-foreground/80 truncate">{u.email}</p>}
             </div>
             <div className="flex items-center gap-4 shrink-0 text-xs text-foreground/80">
-              <span className="px-2 py-0.5 bg-gold/10 text-gold rounded-full font-medium">
+              <span className="px-2 py-0.5 bg-gold/10 text-gold-ink rounded-full font-medium">
                 {u.orderCount} {u.orderCount === 1 ? "order" : "orders"}
               </span>
               <span className="text-right leading-tight">

@@ -572,7 +572,7 @@ export default function ProductManager({ categories }: Props) {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => startEdit(EMPTY_PRODUCT)}
-            className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors"
+            className="px-4 py-2 bg-gold text-on-gold rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors"
           >
             + New
           </button>
@@ -582,14 +582,14 @@ export default function ProductManager({ categories }: Props) {
       {pushError && (
         <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm flex items-center justify-between">
           <span>{pushError}</span>
-          <button onClick={() => setPushError(null)} className="text-red-400 hover:text-red-600 ml-2">&times;</button>
+          <button onClick={() => setPushError(null)} className="text-danger hover:text-danger ml-2">&times;</button>
         </div>
       )}
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && !editing && (
         <div className="flex items-center gap-3 bg-gold/10 border border-gold/20 rounded-xl px-4 py-3">
-          <span className="text-sm font-medium text-gold">{selectedIds.size} selected</span>
+          <span className="text-sm font-medium text-gold-deep">{selectedIds.size} selected</span>
           <button onClick={selectAll} className="text-xs text-foreground hover:text-primary">
             {selectedIds.size === products.length ? "Deselect All" : "Select All"}
           </button>
@@ -600,7 +600,7 @@ export default function ProductManager({ categories }: Props) {
           <button onClick={() => bulkSetActive(false)} className="px-3 py-1.5 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
             Deactivate
           </button>
-          <button onClick={bulkDelete} className="px-3 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+          <button onClick={bulkDelete} className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-600 transition-colors">
             Delete
           </button>
         </div>
@@ -633,7 +633,7 @@ export default function ProductManager({ categories }: Props) {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">
                   {p.name}
-                  {!p.active && <span className="text-red-400 ml-1 text-xs">(hidden)</span>}
+                  {!p.active && <span className="text-danger ml-1 text-xs">(hidden)</span>}
                 </p>
                 <p className="text-xs text-foreground/80">
                   {p.variants?.length ?? 0} variants · {categories.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
@@ -657,7 +657,7 @@ export default function ProductManager({ categories }: Props) {
                 )}
                 <button
                   onClick={() => handleDuplicate(p)}
-                  className="px-3 py-1 text-xs bg-teal/10 text-teal rounded-lg hover:bg-teal/20 transition-colors"
+                  className="px-3 py-1 text-xs bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors"
                 >
                   Duplicate
                 </button>
@@ -669,7 +669,7 @@ export default function ProductManager({ categories }: Props) {
                 </button>
                 <button
                   onClick={() => handleDelete(p.id)}
-                  className="px-3 py-1 text-xs bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"
+                  className="px-3 py-1 text-xs bg-red-50 text-danger rounded-lg hover:bg-red-100 transition-colors"
                 >
                   Delete
                 </button>
@@ -677,7 +677,7 @@ export default function ProductManager({ categories }: Props) {
                   <button
                     onClick={() => handlePushToSquare(p.id)}
                     disabled={pushingToSquare === p.id}
-                    className="px-3 py-1 text-xs bg-gold/10 text-gold rounded-lg hover:bg-gold/20 transition-colors disabled:opacity-50"
+                    className="px-3 py-1 text-xs bg-gold/10 text-gold-ink rounded-lg hover:bg-gold/20 transition-colors disabled:opacity-50"
                   >
                     {pushingToSquare === p.id ? "Pushing..." : "Push → Square"}
                   </button>
@@ -732,7 +732,7 @@ export default function ProductManager({ categories }: Props) {
               {!addingCategory ? (
                 <button
                   onClick={() => setAddingCategory(true)}
-                  className="mt-1 text-xs text-gold hover:text-gold-light transition-colors"
+                  className="mt-1 text-xs text-gold-deep hover:text-gold-deep transition-colors"
                 >
                   + New Category
                 </button>
@@ -748,7 +748,7 @@ export default function ProductManager({ categories }: Props) {
                     className="flex-1 px-2 py-1 rounded-lg border border-gold text-xs focus:ring-1 focus:ring-gold outline-none"
                   />
                   <button onClick={handleAddCategory} disabled={!newCategoryName.trim()}
-                    className="px-2 py-1 bg-gold text-white rounded-lg text-xs font-medium disabled:opacity-50"
+                    className="px-2 py-1 bg-gold text-on-gold rounded-lg text-xs font-medium disabled:opacity-50"
                   >
                     Add
                   </button>
@@ -905,7 +905,7 @@ export default function ProductManager({ categories }: Props) {
                     placeholder="https://..."
                     className="w-full px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs"
                   />
-                  <label className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] text-foreground/80 hover:text-gold cursor-pointer border border-dashed border-primary/20 rounded-lg">
+                  <label className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] text-foreground/80 hover:text-gold-deep cursor-pointer border border-dashed border-primary/20 rounded-lg">
                     📷 Upload
                     <input
                       type="file"
@@ -977,7 +977,7 @@ export default function ProductManager({ categories }: Props) {
                         {view === "sideL" ? "Left Side" : view === "sideR" ? "Right Side" : view}
                       </span>
                       {zone && (
-                        <button onClick={clearZone} className="text-[10px] text-red-400 hover:text-red-600">reset</button>
+                        <button onClick={clearZone} className="text-[10px] text-danger hover:text-danger">reset</button>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-1">
@@ -1066,7 +1066,7 @@ export default function ProductManager({ categories }: Props) {
                         const opts = (form.options ?? []).filter((_, i) => i !== idx);
                         updateField("options", opts);
                       }}
-                      className="text-red-400 hover:text-red-600 text-xs px-2"
+                      className="text-danger hover:text-danger text-xs px-2"
                     >
                       ✕
                     </button>
@@ -1106,7 +1106,7 @@ export default function ProductManager({ categories }: Props) {
               </label>
               <button
                 onClick={() => setUseMatrixEditor(!useMatrixEditor)}
-                className="text-xs text-gold hover:text-gold-light transition-colors"
+                className="text-xs text-gold-deep hover:text-gold-deep transition-colors"
               >
                 {useMatrixEditor ? "Manual Entry" : "Matrix Editor"}
               </button>
@@ -1156,7 +1156,7 @@ export default function ProductManager({ categories }: Props) {
                       />
                       <button
                         onClick={() => removeVariant(v.id)}
-                        className="text-red-400 hover:text-red-600 text-xs shrink-0"
+                        className="text-danger hover:text-danger text-xs shrink-0"
                         title="Remove variant"
                       >
                         ✕
@@ -1180,12 +1180,12 @@ export default function ProductManager({ categories }: Props) {
                               <button onClick={() => {
                                 const fields = (v.customFields ?? []).filter((_, j) => j !== i);
                                 updateVariant(v.id, "customFields", fields.length > 0 ? fields : undefined);
-                              }} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
+                              }} className="text-danger hover:text-danger text-xs shrink-0">✕</button>
                             </div>
                           ))}
                           <button
                             onClick={() => updateVariant(v.id, "customFields", [...(v.customFields ?? []), { key: "", value: "" }])}
-                            className="text-[10px] text-gold hover:text-gold-light"
+                            className="text-[10px] text-gold-deep hover:text-gold-deep"
                           >
                             + Add field
                           </button>
@@ -1194,7 +1194,7 @@ export default function ProductManager({ categories }: Props) {
                       {(v.customFields?.length ?? 0) === 0 && (
                         <button
                           onClick={() => updateVariant(v.id, "customFields", [{ key: "", value: "" }])}
-                          className="text-[10px] text-foreground/70 hover:text-gold"
+                          className="text-[10px] text-foreground/70 hover:text-gold-deep"
                           title="Add custom attributes like grommets, material, etc."
                         >
                           +Attrs
@@ -1292,7 +1292,7 @@ export default function ProductManager({ categories }: Props) {
                 <button
                   onClick={addCustomColor}
                   disabled={!newColor.trim()}
-                  className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-medium hover:bg-gold-light transition-colors disabled:opacity-50 shrink-0"
+                  className="px-4 py-2 bg-gold text-on-gold rounded-xl text-sm font-medium hover:bg-gold-light transition-colors disabled:opacity-50 shrink-0"
                 >
                   Add
                 </button>
@@ -1317,7 +1317,7 @@ export default function ProductManager({ categories }: Props) {
                     />
                     <button
                       onClick={() => { setColorPickerImage(null); setColorPickerCanvas(null); }}
-                      className="mt-1 text-xs text-red-400 hover:text-red-600"
+                      className="mt-1 text-xs text-danger hover:text-danger"
                     >
                       Clear image
                     </button>
@@ -1332,7 +1332,7 @@ export default function ProductManager({ categories }: Props) {
                   <span key={c} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full text-[10px]">
                     <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: colorSwatch(c) }} />
                     {c}
-                    <button onClick={() => toggleColor(c)} className="text-red-400 hover:text-red-600 ml-0.5">&times;</button>
+                    <button onClick={() => toggleColor(c)} className="text-danger hover:text-danger ml-0.5">&times;</button>
                   </span>
                 ))}
               </div>
@@ -1371,7 +1371,7 @@ export default function ProductManager({ categories }: Props) {
                           className="w-24 px-2 py-1.5 rounded-lg border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-xs font-mono"
                         />
                         {tint && (
-                          <button onClick={() => clearColorTint(color)} className="text-red-400 hover:text-red-600 text-xs shrink-0" title="Clear swatch color">✕</button>
+                          <button onClick={() => clearColorTint(color)} className="text-danger hover:text-danger text-xs shrink-0" title="Clear swatch color">✕</button>
                         )}
                       </div>
                       {/* Per-color photo row — assign gallery images to colors */}
@@ -1415,7 +1415,7 @@ export default function ProductManager({ categories }: Props) {
                                   ))}
                                 </div>
                                 {photo && (
-                                  <button onClick={() => removePerColorImage(color, view)} className="text-[9px] text-red-400 hover:text-red-600 text-left">
+                                  <button onClick={() => removePerColorImage(color, view)} className="text-[9px] text-danger hover:text-danger text-left">
                                     remove
                                   </button>
                                 )}
@@ -1441,7 +1441,7 @@ export default function ProductManager({ categories }: Props) {
               {form.tags.map((tag) => (
                 <span key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary rounded-full text-xs">
                   {tag}
-                  <button onClick={() => removeTag(tag)} className="hover:text-red-500">&times;</button>
+                  <button onClick={() => removeTag(tag)} className="hover:text-danger">&times;</button>
                 </span>
               ))}
             </div>
@@ -1516,7 +1516,7 @@ export default function ProductManager({ categories }: Props) {
                   <input type="number" step="0.01" min="0" value={a.price}
                     onChange={(e) => updateAddon(a.id, "price", parseFloat(e.target.value) || 0)}
                     className="w-20 px-2 py-1 rounded-lg border border-primary/10 bg-white text-sm text-right focus:border-gold outline-none" />
-                  <button onClick={() => removeAddon(a.id)} className="text-red-400 hover:text-red-600 text-xs">✕</button>
+                  <button onClick={() => removeAddon(a.id)} className="text-danger hover:text-danger text-xs">✕</button>
                 </div>
               ))}
               <button
@@ -1528,7 +1528,7 @@ export default function ProductManager({ categories }: Props) {
             </div>
 
             {form.productAddons !== undefined && (
-              <button onClick={() => updateField("productAddons", undefined)} className="mt-2 text-xs text-foreground/80 hover:text-gold transition-colors">
+              <button onClick={() => updateField("productAddons", undefined)} className="mt-2 text-xs text-foreground/80 hover:text-gold-deep transition-colors">
                 Reset to site defaults
               </button>
             )}
@@ -1591,7 +1591,7 @@ export default function ProductManager({ categories }: Props) {
                         const mods = (form.modifiers ?? []).filter((_, i) => i !== idx);
                         updateField("modifiers", mods);
                       }}
-                      className="text-red-400 hover:text-red-600 text-xs px-2"
+                      className="text-danger hover:text-danger text-xs px-2"
                     >
                       ✕
                     </button>
@@ -1637,7 +1637,7 @@ export default function ProductManager({ categories }: Props) {
               + Add Modifier
             </button>
             {form.modifiers !== undefined && (
-              <button onClick={() => updateField("modifiers", undefined)} className="mt-2 text-xs text-foreground/80 hover:text-gold transition-colors">
+              <button onClick={() => updateField("modifiers", undefined)} className="mt-2 text-xs text-foreground/80 hover:text-gold-deep transition-colors">
                 Reset to site defaults
               </button>
             )}
@@ -1672,7 +1672,7 @@ export default function ProductManager({ categories }: Props) {
                       }}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                         selected
-                          ? "bg-gold/10 border-gold/30 text-gold"
+                          ? "bg-gold/10 border-gold/30 text-gold-deep"
                           : "bg-warm-sand/30 border-transparent text-foreground hover:border-primary/20"
                       }`}
                     >
@@ -1780,13 +1780,13 @@ export default function ProductManager({ categories }: Props) {
                     <button onClick={() => {
                       const fields = (form.attributes?.customFields ?? []).filter((_, j) => j !== i);
                       updateField("attributes", { ...form.attributes, customFields: fields.length > 0 ? fields : undefined });
-                    }} className="text-red-400 hover:text-red-600 text-xs shrink-0">✕</button>
+                    }} className="text-danger hover:text-danger text-xs shrink-0">✕</button>
                   </div>
                 ))}
                 <button onClick={() => {
                   const fields = [...(form.attributes?.customFields ?? []), { key: "", value: "" }];
                   updateField("attributes", { ...form.attributes, customFields: fields });
-                }} className="text-xs text-gold hover:text-gold-light transition-colors">+ Add field</button>
+                }} className="text-xs text-gold-deep hover:text-gold-deep transition-colors">+ Add field</button>
               </div>
             </div>
           </div>
@@ -1797,7 +1797,7 @@ export default function ProductManager({ categories }: Props) {
               Images ({form.images.length})
             </label>
             {uploadError && (
-              <p className="text-xs text-red-500 mb-2">{uploadError}</p>
+              <p className="text-xs text-danger mb-2">{uploadError}</p>
             )}
             <div className="flex flex-wrap gap-3 mb-2">
               {form.images.map((url) => (
@@ -1811,7 +1811,7 @@ export default function ProductManager({ categories }: Props) {
                   />
                   <button
                     onClick={() => removeImage(url)}
-                    className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute -top-1.5 -right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     &times;
                   </button>
@@ -1835,14 +1835,14 @@ export default function ProductManager({ categories }: Props) {
             {saveError && (
               <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm flex items-center justify-between">
                 <span>{saveError}</span>
-                <button onClick={() => setSaveError(null)} className="text-red-400 hover:text-red-600 ml-2">&times;</button>
+                <button onClick={() => setSaveError(null)} className="text-danger hover:text-danger ml-2">&times;</button>
               </div>
             )}
             <div className="flex gap-3">
               <button
                 onClick={handleSave}
                 disabled={saving || !form.name.trim() || !form.categoryId || form.variants.length === 0}
-                className="px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
+                className="px-6 py-2.5 bg-gold text-on-gold rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
               >
                 {saving ? "Saving..." : editing?.id ? "Update Product" : "Create Product"}
               </button>

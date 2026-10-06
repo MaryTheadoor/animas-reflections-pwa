@@ -26,7 +26,7 @@ export default function FaqPage() {
               <summary className="p-5 sm:p-6 cursor-pointer flex items-center justify-between gap-4 font-bold text-primary list-none">
                 <span>{item.q}</span>
                 <svg
-                  className="w-5 h-5 shrink-0 text-gold transition-transform group-open:rotate-180"
+                  className="w-5 h-5 shrink-0 text-gold-deep transition-transform group-open:rotate-180"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -49,7 +49,7 @@ export default function FaqPage() {
           </p>
           <Link
             href="/contact"
-            className="inline-flex items-center justify-center h-12 px-8 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
+            className="inline-flex items-center justify-center h-12 px-8 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
           >
             Contact Us
           </Link>

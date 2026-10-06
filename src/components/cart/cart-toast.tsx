@@ -11,7 +11,7 @@ export default function CartToast() {
     <div className="fixed top-24 right-4 z-[60] animate-slide-in-right max-w-xs w-full">
       <div className="bg-white rounded-2xl shadow-xl border border-gold/30 p-4 flex items-start gap-3">
         <div className="shrink-0 w-10 h-10 bg-gold/10 rounded-xl flex items-center justify-center">
-          <svg className="w-5 h-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-gold-deep" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
@@ -23,7 +23,7 @@ export default function CartToast() {
             <p className="text-xs text-foreground/80 truncate">{lastAdded.variant_name}</p>
           )}
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-gold font-semibold text-sm">
+            <span className="text-gold-deep font-semibold text-sm">
               ${(lastAdded.base_price * lastAdded.quantity).toFixed(2)}
             </span>
             {lastAdded.addons.length > 0 && (

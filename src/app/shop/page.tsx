@@ -198,7 +198,7 @@ function ShopContent() {
               <button
                 onClick={() => browseMode === "design" ? setActiveCategory("All") : setActiveType("All")}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  (browseMode === "design" ? activeCategory : activeType) === "All" ? "bg-gold text-white" : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
+                  (browseMode === "design" ? activeCategory : activeType) === "All" ? "bg-gold-deep text-white" : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                 }`}
               >
                 All
@@ -254,7 +254,7 @@ function ShopContent() {
 
         {error && (
           <div className="text-center py-20">
-            <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-danger mb-4">{error}</p>
             <button onClick={refresh} className="px-6 py-2.5 rounded-xl btn-tactile btn-primary-tactile">Retry</button>
           </div>
         )}

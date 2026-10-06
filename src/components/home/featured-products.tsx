@@ -75,7 +75,7 @@ export default function FeaturedProducts() {
         <div className="text-center mt-10">
           <Link
             href="/shop"
-            className="inline-flex items-center justify-center h-12 px-8 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
+            className="inline-flex items-center justify-center h-12 px-8 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
           >
             Browse All {products.length} Products
           </Link>

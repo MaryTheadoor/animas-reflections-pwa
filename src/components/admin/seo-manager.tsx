@@ -188,7 +188,7 @@ function formatWhen(iso: string): string {
 }
 
 function meterClass(len: number, max: number): string {
-  if (len > max) return "text-red-600 font-semibold";
+  if (len > max) return "text-danger font-semibold";
   if (len > max - NEAR_LIMIT) return "text-amber-600 font-medium";
   return "text-foreground/70";
 }
@@ -211,7 +211,7 @@ const CHIP_CLASS =
 
 function Counter({ len, max, clipped = false }: { len: number; max: number; clipped?: boolean }) {
   return (
-    <span className={"text-xs tabular-nums " + (clipped ? "text-red-600 font-semibold" : meterClass(len, max))}>
+    <span className={"text-xs tabular-nums " + (clipped ? "text-danger font-semibold" : meterClass(len, max))}>
       {len} / {max} characters{clipped ? " — cut off" : ""}
     </span>
   );
@@ -636,7 +636,7 @@ export default function SeoManager() {
             <button
               onClick={save}
               disabled={saving}
-              className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
+              className="px-4 py-2 bg-gold text-on-gold rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
             >
               {saving ? "Saving..." : "Save changes"}
             </button>
@@ -721,7 +721,7 @@ export default function SeoManager() {
                       placeholder={page.title}
                       className={FIELD_CLASS}
                     />
-                    <p className={titleClipped || emittedTitle.length > TITLE_MAX ? "text-[11px] text-red-600 mt-1" : HINT_CLASS}>
+                    <p className={titleClipped || emittedTitle.length > TITLE_MAX ? "text-[11px] text-danger mt-1" : HINT_CLASS}>
                       {titleClipped || emittedTitle.length > TITLE_MAX
                         ? "Too long — the brand suffix pushes it past " +
                           TITLE_MAX +
@@ -774,7 +774,7 @@ export default function SeoManager() {
           </div>
           <button
             onClick={addKeyword}
-            className="px-4 py-2 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors"
+            className="px-4 py-2 bg-gold text-on-gold rounded-xl text-sm font-semibold hover:bg-gold-light transition-colors"
           >
             + Add keyword page
           </button>
@@ -820,14 +820,14 @@ export default function SeoManager() {
                     </div>
                     <button
                       onClick={() => removeKeyword(k.id)}
-                      className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                      className="text-xs text-danger hover:text-danger transition-colors"
                     >
                       Delete
                     </button>
                   </div>
 
                   <div
-                    className={"text-xs font-mono break-all " + (reserved ? "text-red-600" : "text-foreground/80")}
+                    className={"text-xs font-mono break-all " + (reserved ? "text-danger" : "text-foreground/80")}
                   >
                     {slug ? url : "Set a keyword to get a URL"}
                     {reserved && " — taken by an existing page"}
@@ -854,7 +854,7 @@ export default function SeoManager() {
                         placeholder={slugifyKeyword(k.keyword) || "custom-embroidery-durango"}
                         className={(reserved ? FIELD_ERROR_CLASS : FIELD_CLASS) + " mt-1 font-mono text-xs"}
                       />
-                      <p className={reserved ? "text-xs text-red-600 mt-1 font-medium" : HINT_CLASS}>
+                      <p className={reserved ? "text-xs text-danger mt-1 font-medium" : HINT_CLASS}>
                         {reserved
                           ? "This slug is already used by a page on the site. Pick a different one — a page saved at /" +
                             slug +
@@ -869,7 +869,7 @@ export default function SeoManager() {
                   </div>
 
                   {takenBy >= 0 && (
-                    <p className="text-xs text-red-600">
+                    <p className="text-xs text-danger">
                       Another keyword page (#{takenBy + 1}) already uses /{slug}/. Two pages cannot share one URL —
                       change one of the slugs before saving.
                     </p>
@@ -960,7 +960,7 @@ export default function SeoManager() {
                       className={FIELD_CLASS}
                     />
                     {keywordTitle && (
-                      <p className={keywordTitleClipped ? "text-[11px] text-red-600 mt-1" : HINT_CLASS}>
+                      <p className={keywordTitleClipped ? "text-[11px] text-danger mt-1" : HINT_CLASS}>
                         {keywordTitleClipped ? "Too long — cut off in search results. Publishes as " : "Publishes as "}
                         <span className="font-mono">{keywordTitle}</span>
                       </p>
@@ -1015,7 +1015,7 @@ export default function SeoManager() {
           <button
             onClick={save}
             disabled={saving || !dirty}
-            className="px-6 py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
+            className="px-6 py-2.5 bg-gold text-on-gold rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
           >
             {saving ? "Saving..." : "Save changes"}
           </button>
@@ -1088,7 +1088,7 @@ export default function SeoManager() {
             </button>
           </div>
           {tokenMessage && (
-            <p className={"text-xs " + (tokenMessage.kind === "ok" ? "text-green-700" : "text-red-600")}>
+            <p className={"text-xs " + (tokenMessage.kind === "ok" ? "text-green-700" : "text-danger")}>
               {tokenMessage.text}
             </p>
           )}

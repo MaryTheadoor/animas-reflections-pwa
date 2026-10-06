@@ -232,7 +232,7 @@ export default function CheckoutPage() {
       <div className="flex flex-col flex-1 items-center justify-center py-20 px-6 text-center">
         <h1 className="text-4xl font-bold font-display mb-4">Your cart is empty</h1>
         <p className="text-foreground mb-6">Add some products to get started.</p>
-        <Link href="/shop" className="px-8 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile">Browse Products</Link>
+        <Link href="/shop" className="px-8 py-3 bg-gold text-on-gold rounded-2xl font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile">Browse Products</Link>
       </div>
     );
   }
@@ -258,7 +258,7 @@ export default function CheckoutPage() {
             <Image src="/logo.png" alt={SITE.name} width={40} height={40} className="rounded-xl" priority />
             <span className="text-lg font-bold font-display hidden sm:inline">{SITE.name}</span>
           </Link>
-          <Link href="/shop" className="text-sm font-medium hover:text-gold transition-colors">Back to Shop</Link>
+          <Link href="/shop" className="text-sm font-medium hover:text-gold-deep transition-colors">Back to Shop</Link>
         </nav>
       </header>
 
@@ -320,7 +320,7 @@ export default function CheckoutPage() {
             <div className="flex justify-between text-foreground"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
             {addonsTotal > 0 && <div className="flex justify-between text-foreground"><span>Add-ons</span><span>${addonsTotal.toFixed(2)}</span></div>}
             <div className="flex justify-between text-foreground"><span>Shipping</span><span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span></div>
-            <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand"><span>Total</span><span className="text-gold">${total.toFixed(2)}</span></div>
+            <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand"><span>Total</span><span className="text-gold-deep">${total.toFixed(2)}</span></div>
           </div>
         </div>
 
@@ -336,7 +336,7 @@ export default function CheckoutPage() {
         <button
           onClick={handlePayment}
           disabled={processing || !cardReady || !customerValid}
-          className="w-full py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {processing ? "Processing..." : `Pay $${total.toFixed(2)}`}
         </button>

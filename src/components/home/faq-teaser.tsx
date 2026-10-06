@@ -28,7 +28,7 @@ export default function FaqTeaser() {
         <div className="text-center">
           <Link
             href="/faq"
-            className="inline-flex items-center justify-center h-12 px-8 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
+            className="inline-flex items-center justify-center h-12 px-8 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
           >
             View All FAQs
           </Link>

@@ -69,7 +69,7 @@ function SearchContent() {
 
         {!loading && error && (
           <div className="text-center py-20">
-            <p className="text-red-500 mb-4">Couldn&apos;t load the catalog.</p>
+            <p className="text-danger mb-4">Couldn&apos;t load the catalog.</p>
             <button onClick={refresh} className="px-6 py-2.5 rounded-xl btn-tactile btn-primary-tactile">Retry</button>
           </div>
         )}

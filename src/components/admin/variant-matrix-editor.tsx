@@ -151,7 +151,7 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
                 onClick={() => toggleCell([value])}
                 className={"px-3 py-1.5 rounded-lg text-xs font-medium transition-colors " + (
                   exists
-                    ? "bg-gold text-white"
+                    ? "bg-gold-deep text-white"
                     : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                 )}
               >
@@ -211,7 +211,7 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
                           onClick={() => toggleCell([rowValue, colValue, ...extraValues])}
                           className={"w-8 h-8 rounded-md transition-all text-[10px] font-medium " + (
                             exists
-                              ? "bg-gold text-white shadow-sm scale-105"
+                              ? "bg-gold-deep text-white shadow-sm scale-105"
                               : "bg-warm-sand/30 text-foreground/50 hover:bg-warm-sand/50 hover:text-foreground/80"
                           )}
                           title={exists ? "Remove " + rowValue + " / " + colValue : "Add " + rowValue + " / " + colValue}
@@ -258,10 +258,10 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
               .map((v) => (
                 <div key={v.id} className="flex items-center gap-2 text-xs bg-warm-sand/30 rounded-lg px-3 py-1.5">
                   <span className="flex-1">{v.name}</span>
-                  <span className="text-gold">${v.price.toFixed(2)}</span>
+                  <span className="text-gold-deep">${v.price.toFixed(2)}</span>
                   <button
                     onClick={() => onChange(variants.filter((x) => x.id !== v.id))}
-                    className="text-red-400 hover:text-red-600"
+                    className="text-danger hover:text-danger"
                   >
                     ✕
                   </button>

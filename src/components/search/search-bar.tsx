@@ -74,7 +74,7 @@ export default function SearchBar({
         </div>
         <button
           type="submit"
-          className="px-6 py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile text-sm shrink-0"
+          className="px-6 py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile text-sm shrink-0"
         >
           Search
         </button>
@@ -115,7 +115,7 @@ export default function SearchBar({
                 type="button"
                 onClick={() => setCategoryId(null)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  !categoryId ? "bg-gold text-white" : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
+                  !categoryId ? "bg-gold-deep text-white" : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                 }`}
               >
                 All

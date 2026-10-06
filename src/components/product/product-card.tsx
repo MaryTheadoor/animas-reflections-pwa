@@ -49,19 +49,19 @@ export default function ProductCard({ product }: ProductCardProps) {
           const hasInventory = product.variants?.some((v) => v.inventory !== undefined);
           if (!hasInventory) return null;
           if (totalStock === 0) return (
-            <span className="absolute top-3 right-3 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Out of stock</span>
+            <span className="absolute top-3 right-3 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Out of stock</span>
           );
           if (totalStock <= 3) return (
-            <span className="absolute top-3 right-3 bg-gold text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Only {totalStock} left</span>
+            <span className="absolute top-3 right-3 bg-gold-deep text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Only {totalStock} left</span>
           );
           if (totalStock <= 10) return (
-            <span className="absolute top-3 right-3 bg-teal/80 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">{totalStock} in stock</span>
+            <span className="absolute top-3 right-3 bg-teal-700 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">{totalStock} in stock</span>
           );
           return null;
         })()}
       </div>
 
-      <h3 className="font-bold text-primary text-sm leading-snug line-clamp-2 mb-1 group-hover:text-gold transition-colors">
+      <h3 className="font-bold text-primary text-sm leading-snug line-clamp-2 mb-1 group-hover:text-gold-deep transition-colors">
         {product.name}
       </h3>
 
@@ -72,7 +72,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       )}
 
       <div className="flex items-end justify-between mt-auto pt-3 border-t border-warm-sand/50">
-        <p className="text-gold font-bold text-lg leading-none">
+        <p className="text-gold-deep font-bold text-lg leading-none">
           {variants.length === 0
             ? "Price varies"
             : variants.length === 1 && (variants[0].price ?? 0) > 0
@@ -81,7 +81,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 ? `Starting at $${minPrice.toFixed(2)}`
                 : "Price varies"}
         </p>
-        <span className="text-xs font-semibold text-gold bg-gold/10 px-3 py-1.5 rounded-full group-hover:bg-gold group-hover:text-white transition-colors">
+        <span className="text-xs font-semibold text-gold-ink bg-gold/10 px-3 py-1.5 rounded-full group-hover:bg-gold-deep group-hover:text-white transition-colors">
           View Product
         </span>
       </div>

@@ -416,7 +416,7 @@ function CustomizerContent() {
           </Link>
           <Link
             href="/shop"
-            className="text-sm font-medium hover:text-gold transition-colors"
+            className="text-sm font-medium hover:text-gold-deep transition-colors"
           >
             Back to Shop
           </Link>
@@ -651,7 +651,7 @@ function CustomizerContent() {
                     setDesignText(undefined);
                     setDesignState(DEFAULT_DESIGN_STATE);
                   }}
-                  className="mt-3 w-full px-4 py-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                  className="mt-3 w-full px-4 py-2 text-xs text-danger hover:text-danger hover:bg-red-50 rounded-xl transition-colors"
                 >
                   Clear Design
                 </button>
@@ -674,7 +674,7 @@ function CustomizerContent() {
                             className="accent-gold w-4 h-4"
                           />
                           <span className="text-sm text-primary">{mod.name}</span>
-                          <span className="ml-auto text-sm text-gold font-medium">
+                          <span className="ml-auto text-sm text-gold-deep font-medium">
                             {formatModifierPrice(mod)}
                           </span>
                         </label>
@@ -714,7 +714,7 @@ function CustomizerContent() {
                           className="accent-gold w-4 h-4"
                         />
                         <span className="text-sm text-primary">{addon.name}</span>
-                        <span className="ml-auto text-sm text-gold font-medium">+${addon.price.toFixed(2)}</span>
+                        <span className="ml-auto text-sm text-gold-deep font-medium">+${addon.price.toFixed(2)}</span>
                       </label>
                     ))}
               </div>
@@ -737,13 +737,13 @@ function CustomizerContent() {
                 )}
                 <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand">
                   <span>Total</span>
-                  <span className="text-gold">${totalPrice.toFixed(2)}</span>
+                  <span className="text-gold-deep">${totalPrice.toFixed(2)}</span>
                 </div>
               </div>
               <button
                 onClick={handleAddToCart}
                 disabled={!selectedProduct || (!designUrl && !designText)}
-                className="mt-4 w-full py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile disabled:opacity-40 disabled:cursor-not-allowed"
+                className="mt-4 w-full py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Add to Cart — ${totalPrice.toFixed(2)}
               </button>

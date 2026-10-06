@@ -54,7 +54,7 @@ function ConfirmationContent() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/shop"
-            className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
+            className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile"
           >
             Continue Shopping
           </Link>
@@ -69,7 +69,7 @@ function ConfirmationContent() {
         <div className="mt-12 text-sm text-foreground/80">
           <p>
             Questions about your order?{" "}
-            <Link href="/contact" className="text-gold hover:underline">
+            <Link href="/contact" className="text-gold-deep hover:underline">
               Contact us
             </Link>
           </p>

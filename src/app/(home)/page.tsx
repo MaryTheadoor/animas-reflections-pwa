@@ -60,7 +60,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animate-delay-300">
               <Link
                 href={HERO.cta_primary.href}
-                className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile text-lg"
+                className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile text-lg"
               >
                 {HERO.cta_primary.label}
               </Link>
@@ -125,7 +125,7 @@ export default function Home() {
             <h4 className="font-bold mb-3">Links</h4>
             <div className="flex flex-col gap-2 text-sm">
               {NAVIGATION.footer.map((link) => (
-                <Link key={link.href} href={link.href} className="text-foreground hover:text-gold transition-colors">
+                <Link key={link.href} href={link.href} className="text-foreground hover:text-gold-deep transition-colors">
                   {link.label}
                 </Link>
               ))}
@@ -142,7 +142,7 @@ export default function Home() {
                 href={SITE.socials.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground/80 hover:text-gold transition-colors"
+                className="text-foreground/80 hover:text-gold-deep transition-colors"
                 aria-label="Instagram"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">

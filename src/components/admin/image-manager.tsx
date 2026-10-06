@@ -285,7 +285,7 @@ export default function ImageManager() {
                 {mockups[mockupView] && (
                   <button
                     onClick={removeMockup}
-                    className="text-red-400 hover:text-red-600 transition-colors"
+                    className="text-danger hover:text-danger transition-colors"
                   >
                     Remove {mockupView} mockup
                   </button>
@@ -302,7 +302,7 @@ export default function ImageManager() {
               replaces the tint overlay in the customizer. Upload here, or pick a gallery image.
             </p>
             {selectedProduct.colors.length === 0 ? (
-              <p className="text-xs text-gold">
+              <p className="text-xs text-gold-deep">
                 This product has no colors yet — add colors in the Product editor first.
               </p>
             ) : (
@@ -327,7 +327,7 @@ export default function ImageManager() {
                                 )}
                               </div>
                               <div className="flex items-center justify-center gap-1">
-                                <label className="text-[9px] px-2 py-0.5 bg-gold text-white rounded cursor-pointer hover:bg-gold-light">
+                                <label className="text-[9px] px-2 py-0.5 bg-gold text-on-gold rounded cursor-pointer hover:bg-gold-light">
                                   Upload
                                   <input
                                     type="file"
@@ -343,7 +343,7 @@ export default function ImageManager() {
                                 {photo && (
                                   <button
                                     onClick={() => removeColorMockup(color, view)}
-                                    className="text-[9px] text-red-400 hover:text-red-600"
+                                    className="text-[9px] text-danger hover:text-danger"
                                     title={`Remove ${view} photo`}
                                   >
                                     ✕
@@ -391,14 +391,14 @@ export default function ImageManager() {
                       <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                         <button
                           onClick={() => assignMockup(url)}
-                          className="px-2 py-1 text-[10px] bg-gold text-white rounded-md"
+                          className="px-2 py-1 text-[10px] bg-gold text-on-gold rounded-md"
                           title={`Set as ${mockupView} mockup`}
                         >
                           Mockup
                         </button>
                         <button
                           onClick={() => deleteImage(url)}
-                          className="px-2 py-1 text-[10px] bg-red-500 text-white rounded-md"
+                          className="px-2 py-1 text-[10px] bg-red-600 text-white rounded-md"
                         >
                           Delete
                         </button>
@@ -456,7 +456,7 @@ export default function ImageManager() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs truncate">{f.file.name}</p>
                       {f.error ? (
-                        <p className="text-[10px] text-red-400">{f.error}</p>
+                        <p className="text-[10px] text-danger">{f.error}</p>
                       ) : (
                         <div className="mt-1 h-1 bg-warm-sand rounded-full overflow-hidden">
                           <div
@@ -469,7 +469,7 @@ export default function ImageManager() {
                     <button
                       onClick={() => removeFile(i)}
                       disabled={uploading}
-                      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-30"
+                      className="text-xs text-danger hover:text-danger disabled:opacity-30"
                     >
                       ✕
                     </button>
@@ -483,7 +483,7 @@ export default function ImageManager() {
               <button
                 onClick={uploadAll}
                 disabled={uploading || !remainingUploads}
-                className="mt-4 w-full py-2.5 bg-gold text-white rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
+                className="mt-4 w-full py-2.5 bg-gold text-on-gold rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
               >
                 {uploading
                   ? `Uploading ${remainingUploads} file(s)...`

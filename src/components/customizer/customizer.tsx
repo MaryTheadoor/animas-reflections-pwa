@@ -347,7 +347,7 @@ export default function Customizer({
               boxShadow: "0 0 0 9999px rgba(0,0,0,0.18)",
             }}
           >
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-gold whitespace-nowrap bg-cream/90 px-1.5 py-0.5 rounded-full">
+            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-gold-deep whitespace-nowrap bg-cream/90 px-1.5 py-0.5 rounded-full">
               Print Area
             </span>
           </div>
@@ -398,7 +398,7 @@ export default function Customizer({
                 onPointerDown={handleResizePointerDown}
                 title="Drag to resize"
               >
-                <svg className="w-3.5 h-3.5 text-gold" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="w-3.5 h-3.5 text-gold-deep" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22Z" />
                 </svg>
               </div>

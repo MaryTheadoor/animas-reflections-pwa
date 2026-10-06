@@ -106,7 +106,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="font-semibold text-sm">${(item.base_price * item.quantity).toFixed(2)}</span>
-                  <button onClick={() => removeItem(item.id)} className="text-xs text-red-600 hover:text-red-700">
+                  <button onClick={() => removeItem(item.id)} className="text-xs text-danger hover:opacity-80">
                     Remove
                   </button>
                 </div>
@@ -135,7 +135,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
             <Link
               href="/checkout"
               onClick={onClose}
-              className="block w-full text-center py-3 rounded-2xl bg-gold text-white font-semibold hover:bg-gold-light transition-colors"
+              className="block w-full text-center py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors"
             >
               Checkout
             </Link>

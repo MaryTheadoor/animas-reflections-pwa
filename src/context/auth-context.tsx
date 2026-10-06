@@ -175,7 +175,7 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
           {!user && (
             <Link
               href="/admin/login"
-              className="inline-block px-6 py-3 bg-gold text-white rounded-2xl font-semibold hover:bg-gold-light transition-colors"
+              className="inline-block px-6 py-3 bg-gold text-on-gold rounded-2xl font-semibold hover:bg-gold-light transition-colors"
             >
               Admin Login
             </Link>

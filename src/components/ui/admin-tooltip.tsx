@@ -42,7 +42,7 @@ export default function AdminTooltip({ content, dismissKey, children, side = "to
         type="button"
         onClick={() => setVisible(!visible)}
         onBlur={() => setTimeout(() => setVisible(false), 200)}
-        className="w-4 h-4 rounded-full bg-gold/20 text-gold flex items-center justify-center text-[10px] font-bold hover:bg-gold/40 transition-colors shrink-0"
+        className="w-4 h-4 rounded-full bg-gold/20 text-gold-ink flex items-center justify-center text-[10px] font-bold hover:bg-gold/40 transition-colors shrink-0"
         title="Help"
       >
         ?
@@ -53,7 +53,7 @@ export default function AdminTooltip({ content, dismissKey, children, side = "to
           {dismissKey && (
             <button
               onClick={handleDismiss}
-              className="mt-2 text-[10px] text-gold hover:text-gold-light"
+              className="mt-2 text-[10px] text-gold-deep hover:text-gold-deep"
             >
               Got it, don&apos;t show again
             </button>
