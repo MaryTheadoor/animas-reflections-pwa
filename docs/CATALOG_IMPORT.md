@@ -1,15 +1,17 @@
-# Catalog Import — migration from other e-commerce platforms
+# Catalog Import — migrating a catalog in from a data sheet
 
 **Status:** planned, not implemented. Development note, 2026-10-06.
 **Owner decision recorded:** yes — we are adding this feature.
+**Shape (2026-10-06):** a **manual, admin-operated file upload**. Not a backend job, not a
+Square API integration, not a staged sync — see §1.1 for the scope and its exclusions.
 
 ---
 
 ## 1. Intent
 
-Add a **bulk catalog import** so we can migrate an existing store from another
-e-commerce platform by exporting its catalog and importing it here, instead of
-retyping products one at a time through the admin.
+Add a **catalog import** so an existing store's products can be migrated here from a data
+sheet instead of being retyped one at a time through the admin. The operator exports the
+catalog by hand, prepares the sheet, and uploads the file in the admin.
 
 Sources we should expect, in rough priority order:
 
@@ -22,6 +24,10 @@ Sources we should expect, in rough priority order:
 | BigCommerce / Wix / Squarespace | CSV | similar to Shopify |
 | Our own template | CSV (and ideally XLSX / pasted sheet) | canonical column names |
 
+**The current migration is from Square** (the Square *website builder* products, per §1.1).
+The other platforms are future work, and the manual-pipeline shape means the operator can
+normalise any of them into our template before uploading.
+
 Because every source names and shapes its fields differently, importing is **two
 problems, not one**:
 
@@ -33,64 +39,73 @@ problems, not one**:
 **Nothing should be silently dropped.** If a source column cannot be mapped, the
 import must say so rather than quietly discarding data.
 
-### 1.1 Source routes (owner input, 2026-10-06)
+### 1.1 Scope: a manual, admin-operated file import (owner clarification, 2026-10-06)
 
-The client proposed two routes and stated the goal plainly: **get comprehensive product
-data off the existing sites and into ours as conveniently as possible**, with the two
-routes covering each other's edge cases. There is also a third, and a clear precedence
-order between them.
+**Corrected.** An earlier revision of this note proposed pulling the Square catalog
+server-side as the primary route. The owner has clarified the intended shape, and that
+recommendation is **cut**:
 
-**Context that reframes Route 1:** the client noted the catalog lives in Square's
-*website builder* products rather than the POS products. That is **not two separate
-catalogs** — in Square it is the **`ecom_visibility` attribute** on catalog objects, and
-both populations live in one Catalog API. The deleted sync filtered precisely on
-`ecom_visibility === "VISIBLE"`, i.e. the website population. So "website products" is
-addressable directly, not a special case to hack around.
+> "this Is a manual pipeline. I'm not expecting to add an import button or do this in the
+> backend. It would be overseen by admin directly. Not opposed to a stag and sync
+> protocol, but that's a separate aspect than what I'm describing. We should have a file
+> upload for importing and we will export data sheets manually."
 
-**Scale check (measured 2026-10-06):** the live Firestore catalog has **42 products**.
-`docs/SCOPE.md` records the Square side at **~405 website-visible + 74 POS-only**
-(needs re-measuring before the run). So this is roughly a **10× catalog expansion** — a
-migration, not a touch-up. That is why preview, reporting, and batching in §4 and §5 are
-not optional niceties.
+The pipeline is therefore:
 
-| Route | What it is | Best for | Risks |
-|---|---|---|---|
-| **1. Square Catalog API pull** (recommended primary) | One-off server-side `catalog.search` for `ITEM` + `CATEGORY`, filtered to `ecom_visibility === "VISIBLE"` | Structured truth: names, variations, prices, SKUs, categories, images, and the website/POS distinction | Needs the Square token and the **right environment** (see below) |
-| **2. Native Square CSV export** | Dashboard item export → our CSV importer | Independent cross-check; works without API credentials; `csv.ts` already tolerates Square's column names | **Unverified whether the export carries `ecom_visibility`** — if not, it cannot tell website products from POS-only |
-| **3. Scrape the live site → LLM assemble** | Read rendered product pages, have an LLM normalise into import shape | What exports lack: stored marketing copy, description prose, rendered image URLs, and products live on the site but missing from the export. Also a **verification oracle** — scrape name/price/options and diff against what was imported | Lossy for variant matrices; an LLM can invent plausible prices/SKUs |
+```
+operator exports a data sheet by hand (Square / other platform)
+  → operator prepares or normalises it   (an LLM may help — outside the app)
+  → operator UPLOADS the file in the admin
+  → app: parse → translate → report → write
+```
 
-**Precedence — do not let the LLM outrank structured data:**
+**In scope**
 
-1. Square Catalog API (structured truth)
-2. Square CSV export (independent structured check)
-3. Scraped / LLM-assembled data — **fills gaps and verifies only; never overrides 1 or 2
-   on prices, SKUs, inventory counts, or ids.** Every LLM-derived field must be tagged as
-   such in the import report and reviewed before commit.
+- A **file upload** in the admin, accepting a data sheet (CSV first)
+- A tolerant parser, and the **translation layer** (§4) — the substantive work
+- The per-field **report** (§4.5): the operator's evidence that nothing was silently dropped
+- The Firestore write, performed by the authenticated admin
 
-**Route 1 already has a working precedent in git.** `functions/src/sync.ts` (755 lines,
-recoverable at `e7e1100^`) used `client.catalog.search({ objectTypes: ["ITEM" | "CATEGORY"] })`
-server-side and mapped Square objects into our product shape. It also contains the
-hardest part of the translation layer as heuristics:
+**Out of scope, explicitly**
 
-- `extractColors()` — colour patterns (`Burgundy`, `Royal`, `Neon`, …) parsed out of flat variant names
-- `extractSizes()` — size patterns out of variant names
-- `extractTags()` — product-type tagging from name + description + categories (`tee`, `hoodie`, `sticker`, …)
-- `detectBrand()` + `BRAND_PATTERNS` / `getBrandCategoryName()` — a hardcoded brand→category map naming **Biscuit Hockey**, I'M OK R U, Durango Lacrosse, Durango Hockey, Durango Roller Girls, Dunphy Stock FAM, GREEN BUDDHA, LITTLE STRANGER, Jordan Branch Music, ET Art
+- **Backend / Cloud Function work** — no server-side bulk importer
+- **A Square API integration**, or any "pull from Square" action
+- **A staged sync protocol** and ongoing re-synchronisation — the owner describes this as
+  "a separate aspect", i.e. not this feature
+- Re-establishing Square as a source of truth: Firestore remains the master catalog
+  (`e7e1100`, 2026-08-19)
 
-That brand map is directly relevant to the now-confirmed brand taxonomy ("Biscuit Hockey"
-is a brand, not a product type) and should seed the brand list rather than being
-re-derived.
+**Two facts from the cut route still matter**
 
-**Use it as a one-off importer, not a revived sync.** Commit `e7e1100` (2026-08-19,
-"Phase 1 catalog overhaul") deliberately removed the Square sync and made **Firestore the
-master catalog**, with Square reduced to a push target (`createSquareProduct`). Keep that
-architecture: migration is a one-time, previewable, reported import — not Square
-reclaiming source-of-truth status.
+1. The website-vs-POS split is the **`ecom_visibility` attribute** within one Square
+   catalog, not two catalogs. That is relevant when *choosing what to export*: the website
+   products are the `VISIBLE` ones, and `docs/SCOPE.md` recorded the split as
+   ~405 website-visible vs 74 POS-only. Confirm the export includes the ones we want and
+   exclude POS-only noise.
+2. **Scale (measured 2026-10-06):** the live catalog holds **42 products** against ~405 on
+   the Square side — roughly a **10× expansion**. Batching (§5.4) and the report are
+   therefore load-bearing, not polish.
 
-**Blocker to settle first:** an API pull is useless if the deployment is pointing at
-sandbox. `SQUARE_ENVIRONMENT` (`functions/src/index.ts:23`) defaults to `"sandbox"`, so
-confirm it is `production` in `functions/.env` before trusting any pull — the same
-unresolved question that gates the end-to-end checkout test.
+**Tolerance is a convenience; the report is the point.** In a manual pipeline the operator
+can pre-normalise the sheet (with or without an LLM), so arbitrary platform dialects matter
+less than they would in an automated pipeline. What cannot be delegated to their preparation
+is knowing whether the import understood every column — hence §4.5.
+
+**Reference material in git (knowledge, not a route).** The removed
+`functions/src/sync.ts` — 755 lines, recoverable at `e7e1100^` — encodes how *this*
+catalog's flat Square variant names carry meaning:
+
+- `extractColors()` — colour patterns (`Burgundy`, `Royal`, `Neon`, …) found in variant names
+- `extractSizes()` — size patterns found in variant names
+- `extractTags()` — product-type tagging from name + description + categories
+- `detectBrand()` + `BRAND_PATTERNS` / `getBrandCategoryName()` — a brand→category map naming
+  **Biscuit Hockey**, Durango Lacrosse, Durango Hockey, Durango Roller Girls, Dunphy Stock
+  FAM, GREEN BUDDHA, LITTLE STRANGER, Jordan Branch Music, ET Art
+
+That brand map should **seed the brand taxonomy** ("Biscuit Hockey is a brand", confirmed
+2026-10-06) rather than be re-derived, and these heuristics are the starting point for
+turning a Square-shaped sheet into our structured variants. Read the file for the mapping
+knowledge — do not resurrect its sync behaviour.
 
 ---
 
@@ -182,27 +197,34 @@ file bytes
   → commit            (batched Firestore upsert)
 ```
 
-### 4.2 Dialect profiles, not a single mapping
+### 4.2 Header aliases, and profiles as optional extensibility
 
-Each source gets a **profile**: an ordered list of accepted header aliases per
-canonical field, plus any reshaping rules.
+Because the pipeline is manual (§1.1), the operator can normalise a sheet to our template
+before uploading, so arbitrary platform dialects are **not the critical path**. What is
+needed is a pragmatic resolution layer: an ordered list of accepted header aliases per
+canonical field, resolving **specific alias → generic alias → absent (and report it)**.
+
+The recovered `csv.ts` already normalises headers (lowercase, strip `space _ -`) and
+already accepts Square's `item_name` / `variation_name` / `item_price` / `item_sku` — so
+Square sheets work without pre-normalising.
+
+Keep the resolution layer **declarative** rather than a pile of
+`if (col === "item_name" || col === "Name")` branches, so a future platform is an
+addition, not a rewrite:
 
 ```ts
 interface ImportProfile {
-  id: string;                      // "square" | "shopify" | "woocommerce" | "generic"
+  id: string;                      // "square" | "shopify" | "generic"
   label: string;
-  detect(headers: string[]): number;         // confidence score, pick the best
+  detect(headers: string[]): number;                 // confidence score, pick the best
   fieldAliases: Record<CanonicalField, string[]>;
   reshape?: Record<string, (rows, ctx) => unknown>;  // platform-specific quirks
 }
 ```
 
-This keeps platform-specific knowledge **declarative and testable** instead of a pile
-of `if (col === "item_name" || col === "Name")` branches scattered through the
-importer. Adding Etsy later should mean adding a profile, not editing the pipeline.
-
-Resolution order for each canonical field: **profile alias → generic alias → absent
-(report it)**.
+Building the profile registry is worth doing only when a second real source appears.
+For the Square migration, one `generic` profile plus Square aliases is sufficient — don't
+build four profiles for sources nobody has asked to import yet.
 
 ### 4.3 Canonical intermediate fields
 
@@ -286,11 +308,15 @@ An import that cannot tell the operator what it did not understand is not finish
 6. **Categories.** Nearly all platforms classify products. Do we create missing
    categories, or require a mapping to existing ones first? Silent category creation
    from a messy export is how you end up with 60 categories.
-7. **Client-side vs server-side.** The existing importer writes from the browser. Bulk
-   import is better as an **admin callable function**: it bypasses client rules for
-   batching, keeps the write path server-authoritative, and gives one place to enforce
-   admin gating. (Note the storage-rules lesson — cross-service rule checks were
-   verified broken; make gating depend on the admin claim, not a Firestore lookup.)
+7. **Client-side writes (this is the chosen path).** Per §1.1 the import runs from the
+   browser as the authenticated admin — no backend function. That is fine, and it keeps
+   the feature small, but it carries three consequences to handle deliberately:
+   - Writes go through `firestore.rules`, so the products collection must permit admin
+     writes (it already does — this line hardened rules to admin-only writes).
+   - The 500-writes-per-batch limit applies client-side too, so chunking is still required.
+   - Gating must depend on the **admin claim**, not a Firestore lookup — the storage-rules
+     lesson: cross-service `firestore.exists()` checks were verified broken against the
+     live bucket.
 8. **`productType` is a closed union** (`apparel | sticker | sign | jewelry |
    accessory | other`). Source platforms have free-text types, so type needs either
    an explicit mapping table or a safe default of `"other"` plus a report warning —
@@ -304,53 +330,63 @@ An import that cannot tell the operator what it did not understand is not finish
 
 ## 6. Open decisions
 
-1. **Which platforms first?** — **ANSWERED 2026-10-06: Square**, and specifically the
-   Square *website builder* products. That is the `ecom_visibility === "VISIBLE"`
-   population in the Square Catalog API (see §1.1), so Route 1 covers it directly.
-   Shopify and the rest stay as profiles for later; only the Square route is in scope now.
-2. **Should the LLM-assembled route be allowed to write at all, or only to propose?**
-   §1.1 sets the rule (never authoritative for prices/SKUs/inventory/ids) but the
-   mechanism is open: a separate review queue, or LLM output landed in the report as
-   suggestions only. Recommend: **suggestions only, human-confirmed**, for the first run.
-3. **Does the Square CSV export include `ecom_visibility`?** If not, Route 2 cannot
-   distinguish website products from POS-only, and Route 1 becomes the only route that
-   can. TO VERIFY before relying on the export.
-4. **Source of truth for identity** — external id, handle, or name? And what happens on
-   collision with an existing product: update, skip, or abort?
-5. **Images**: remote URLs or re-host into Firebase Storage?
-6. **Categories**: auto-create, or map-only with an explicit mapping step?
-7. **Delete-on-absent?** If a product exists here but not in the file, does the import
-   remove it, deactivate it, or leave it? (Default should be *leave it*.)
-8. **XLSX / Google Sheets** support — needs a parser dependency (e.g. SheetJS). Worth it
-   or CSV-only?
-9. **Add-ons/modifiers in the source**: Square exposes modifier lists separately from
-   items. Do we import them in this feature or leave them to be recreated by hand?
-10. **Where the importer lives** — admin-only callable function (recommended) vs the
-    existing client-side write path.
+1. **The sheet's shape.** Since the operator prepares it by hand, do we standardise on our
+   own template (simplest, least tolerant), or keep tolerance for raw platform exports
+   (Square / Shopify / Woo column names)? Recommend: accept **our template and Square's
+   column names** — the recovered `csv.ts` already handles both.
+2. **Identity, and the collision rule.** Which field keys a product (id, handle, name), and
+   when a row keys to a product that already exists, do we update, skip, or abort? With 42
+   products already in Firestore and ~405 incoming, collisions are likely and the default
+   matters.
+3. **Images**: keep the source URLs, or re-host into Firebase Storage? Re-hosting is the
+   durable option but needs CORS and failure handling; source URLs are fast but break when
+   the old store is cancelled.
+4. **Categories**: auto-create from the sheet, or a map-only step against existing
+   categories? Silent creation from a messy export is how you end up with 60 categories.
+5. **Delete-on-absent?** If a product exists here but not in the sheet, does the import
+   remove it, deactivate it, or leave it? Default: **leave it.**
+6. **File format**: CSV only, or CSV + XLSX? XLSX needs a parser dependency (e.g. SheetJS).
+   The export step is manual, so CSV should be easy to produce either way.
+7. **Add-ons/modifiers.** Square exposes modifier lists separately from items. In a manual
+   pipeline, does the operator carry them in the sheet, or are they recreated by hand?
+8. **Does the Square export distinguish website items from POS-only?** Not verified. If it
+   does not, the operator must filter the sheet before upload — the website products are the
+   `ecom_visibility = VISIBLE` ones (§1.1).
+9. **Where the upload lives** — extend the existing `Products → Import CSV` control (already
+   built on the other line) or give it its own admin section. Placement only, no behaviour
+   difference.
+10. **Is a read-only preview wanted now?** The owner classifies staging as "a separate
+    aspect". A preview is still the cheapest way to trust a ~400-product write, so this note
+    recommends keeping it even if a full staged-sync protocol is deferred.
 
 ---
 
 ## 7. Suggested phasing
 
-Revised 2026-10-06 for the source routes in §1.1 — the Square Catalog API pull is the
-primary path, so it moves to the front and the CSV work becomes the cross-check.
+Revised 2026-10-06 for the manual, file-upload scope in §1.1. The server-side catalog pull
+is out; the recovered CSV upload path is the foundation.
 
 | Phase | Deliverable | Why this order |
 |---|---|---|
-| 1 | **Read-only Square probe.** Confirm `SQUARE_ENVIRONMENT=production`, then count and sample the `ecom_visibility === "VISIBLE"` `ITEM` and `CATEGORY` objects. No writes. | Settles the sandbox question and replaces the stale ~405 estimate with a real number, before any code is written. If the environment is wrong, everything downstream is wasted work. |
-| 2 | Recover `sync.ts`'s mapper + heuristics (`extractColors` / `extractSizes` / `extractTags` / `detectBrand` / brand map) as a **one-off importer module**, emitting canonical rows + the full report as a **dry run** | The hardest translation logic already exists; get it running read-only first |
-| 3 | Harden: `stripUndefined()` on every payload, money/encoding/bool handling, **derive option dimensions from Square variations**, chunked writes | Correctness before any write touches Firestore |
-| 4 | Commit path: identity + dedupe rules, upsert, category and brand mapping (seed the brand list from `BRAND_PATTERNS`), image strategy | The parts needing explicit human decisions (§6.4–6.6) |
-| 5 | Optional: recover `csv.ts` + admin import UI from the other line as the **independent cross-check** route, then diff against the Phase 4 result | A second route is the cheapest way to catch silent mapping errors |
-| 6 | Gap-fill: scrape the live site, LLM proposes missing products/descriptions, **human-confirmed** into the report | Last, because it is the least authoritative route (§1.1 precedence) |
-| 7 | Later: profiles for other platforms (Shopify, Woo, Etsy); XLSX | Out of scope until the Square migration is done and proven |
+| 1 | Recover `csv.ts` + the `Products → Import CSV` file-upload UI from the other line (commit `86b1362`) onto this branch | It **is** the upload importer described in §1.1 — a working starting point, and its parser is solid |
+| 2 | Generalise the translation layer: the canonical row (§4.3), **derive option dimensions from flat rows**, and the **report** (§4.5) | This is the real work. The recovered importer groups rows by name but neither derives options nor reports unmapped columns |
+| 3 | Harden: `stripUndefined()` on every payload, money/encoding/bool handling, chunked writes for >500 products | Correctness before the first real ~400-product run |
+| 4 | Add the Square variant-name heuristics (`extractColors` / `extractSizes` / `extractTags` / `detectBrand`) and seed the brand list from `BRAND_PATTERNS` | Reuses mapping knowledge already tuned to *this* catalog |
+| 5 | Identity + collision rules, category and brand mapping, image strategy (§6.2–6.4) | The decisions that need the operator's input |
+| 6 | Practice run on the real sheet — dry run first, then eyeball the imported catalog against the live Square site | In a manual pipeline, the acceptance test is the operator recognising their own catalog |
+| 7 | Later: XLSX support, other platform dialects | Only if the manual CSV path proves insufficient |
 
 ## 8. Definition of done
 
-- Importing a real export from a supported platform twice in a row is idempotent
-  (no duplicates, no drift).
+- Uploading the same real sheet twice in a row is idempotent (no duplicates, no drift).
 - Every source column is either mapped or **listed** in the report as unmapped.
 - Every defaulted field is named in the report.
-- A dry run is always available and never writes.
+- A read-only pass over the file is available and never writes (§6.10).
 - No `undefined` reaches Firestore; a malformed row fails that row, not the run.
 - The run survives >500 products (batching) and reports progress.
+- The operator can recognise their own catalog in the result — for a manual pipeline that
+  is the real acceptance test.
+
+---
+**Scope recap:** manual, admin-operated, file-upload import. No backend, no Square API
+integration, no staged sync (§1.1).
