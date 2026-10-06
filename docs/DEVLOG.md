@@ -1520,13 +1520,22 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
    `functions/lib/`), and `createSquareProduct` is a single-product push to Square.
    The working CSV importer lives on the other line (`86b1362`).
 4. **Wrote `docs/CATALOG_IMPORT.md`** — the development note requested: a plan to import
-   CSV / sheet catalog exports from other e-commerce platforms in order to migrate
-   stores, including the programmatic translation layer (dialect profiles, canonical
-   intermediate row, derived option dimensions, and a mandatory mapped/defaulted/
-   unmapped report). Records the target schema from `src/types/index.ts`, nine
-   codebase-specific hazards (`stripUndefined`, encoding, money parsing, 500-write
-   batching, image strategy, category creation, client-vs-server write path, closed
-   `productType` union, variant round-tripping), and eight open decisions.
+   catalog data sheets in order to migrate a store from another e-commerce platform,
+   including the programmatic translation layer (header aliases, canonical intermediate
+   row, derived option dimensions, and a mandatory mapped/defaulted/unmapped report).
+   Records the target schema from `src/types/index.ts`, nine codebase-specific hazards
+   (`stripUndefined`, encoding, money parsing, 500-write batching, image strategy,
+   category creation, client-side write path, closed `productType` union, variant
+   round-tripping), and ten open decisions.
+5. **Scope correction on that note (same day, owner input)** — the pipeline is **manual and
+   admin-operated**: the operator exports a sheet by hand, prepares it, and **uploads the
+   file**. No backend/functions work, no Square API integration, no staged sync. This cut
+   the server-side Square Catalog API pull I had first recommended as the primary route.
+   Two facts survived the cut: Square's website-vs-POS split is the `ecom_visibility`
+   attribute (relevant when choosing what to export), and the migration is ~42 → ~405
+   products. The recoverable `sync.ts` mapper is retained as **reference knowledge only** —
+   its `extractColors`/`extractSizes`/`extractTags`/`detectBrand` heuristics and brand map
+   (which should seed the confirmed brand taxonomy), not as a route to resurrect.
 
 ### Decisions Made
 - The import is **two problems**: a parser and a **translation layer**. The translation
@@ -1534,10 +1543,13 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - Nothing may be silently dropped — every unmapped source column and every defaulted
   field must appear in the import report. An import that cannot report what it did not
   understand is not finished.
-- Platform differences belong in **declarative profiles** keyed by header aliases, not
-  in branching inside the pipeline, so a new platform is an addition rather than an edit.
-- Bulk import should be an **admin callable function**, not a client-side write path
-  (batching + server-authoritative writes + admin-claim gating).
+- Field resolution stays **declarative** (header aliases) rather than branching inside the
+  pipeline — but profiles are optional extensibility, not the critical path, because the
+  operator pre-normalises the sheet.
+- **Client-side writes are the chosen path** — no admin callable function — since the
+  owner scoped this as a manual, admin-operated feature. Consequences handled explicitly:
+  rules must allow admin writes, the 500-write batch limit applies client-side, and gating
+  must use the admin claim (never a cross-service `firestore.exists()` lookup).
 
 ### Files Changed
 | File | Change |
