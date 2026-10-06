@@ -381,6 +381,11 @@ html.dark .nav-dock-theme {
 .rich-desc b, .rich-desc strong { font-weight: 600; }
 .rich-desc i, .rich-desc em { font-style: italic; }
 .rich-desc br { display: block; content: ""; margin-top: 0.25rem; }
+/* Headings and links come from the admin toolbar (H2 / H3 / Link). Without these
+   they render at browser-default sizes, which dwarfs the surrounding text-sm copy. */
+.rich-desc h2 { font-size: 1.05rem; font-weight: 700; margin: 0.55rem 0 0.25rem; }
+.rich-desc h3 { font-size: 0.95rem; font-weight: 600; margin: 0.45rem 0 0.2rem; }
+.rich-desc a { color: var(--color-primary); text-decoration: underline; }
 
 /* ─── Admin description editor formatting ───────────────────────── */
 /* Mirror .rich-desc so list buttons show bullets/numbers while editing. */
@@ -389,3 +394,6 @@ html.dark .nav-dock-theme {
 .desc-editor li { margin-bottom: 0.15rem; }
 .desc-editor b, .desc-editor strong { font-weight: 600; }
 .desc-editor i, .desc-editor em { font-style: italic; }
+.desc-editor h2 { font-size: 1.05rem; font-weight: 700; margin: 0.55rem 0 0.25rem; }
+.desc-editor h3 { font-size: 0.95rem; font-weight: 600; margin: 0.45rem 0 0.2rem; }
+.desc-editor a { color: var(--color-primary); text-decoration: underline; }

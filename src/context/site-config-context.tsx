@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { CatalogOptions, AddonDefaults, CustomerField } from "@/types";
@@ -126,54 +126,67 @@ const FALLBACK: SiteConfig = {
 const SiteConfigContext = createContext<{
   config: SiteConfig;
   loading: boolean;
+  refresh: () => Promise<void>;
 }>({
   config: FALLBACK,
   loading: true,
+  refresh: async () => {},
 });
 
 export function SiteConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<SiteConfig>(FALLBACK);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    getDoc(doc(db, "config", "site"))
-      .then((snap) => {
-        if (snap.exists()) {
-          const data = snap.data() as Record<string, unknown>;
-          const merged: SiteConfig = {
-            announcement_text: String(data.announcement_text ?? FALLBACK.announcement_text),
-            announcement_active: data.announcement_active !== false,
-            primary_color: String(data.primary_color || FALLBACK.primary_color),
-            accent_color: String(data.accent_color || FALLBACK.accent_color),
-            background_color: String(data.background_color || FALLBACK.background_color),
-            gold_color: String(data.gold_color || FALLBACK.gold_color),
-            plum_color: String(data.plum_color || FALLBACK.plum_color),
-            cream_color: String(data.cream_color || FALLBACK.cream_color),
-            warm_sand_color: String(data.warm_sand_color || FALLBACK.warm_sand_color),
-            text_color: String(data.text_color || FALLBACK.text_color),
-            heading_font: String(data.heading_font || FALLBACK.heading_font),
-            body_font: String(data.body_font || FALLBACK.body_font),
-            shipping_tier_stickers: Number(data.shipping_tier_stickers ?? FALLBACK.shipping_tier_stickers),
-            shipping_tier_apparel: Number(data.shipping_tier_apparel ?? FALLBACK.shipping_tier_apparel),
-            free_shipping_threshold: Number(data.free_shipping_threshold ?? FALLBACK.free_shipping_threshold),
-            addon_price: Number(data.addon_price ?? FALLBACK.addon_price),
-            hero_heading: String(data.hero_heading || FALLBACK.hero_heading),
-            hero_subheading: String(data.hero_subheading || FALLBACK.hero_subheading),
-            about_heading: String(data.about_heading || FALLBACK.about_heading),
-            about_body: String(data.about_body || FALLBACK.about_body),
-            fundraising_heading: String(data.fundraising_heading || FALLBACK.fundraising_heading),
-            fundraising_subheading: String(data.fundraising_subheading || FALLBACK.fundraising_subheading),
-            footer_tagline: String(data.footer_tagline || FALLBACK.footer_tagline),
-            catalog_options: (data.catalog_options as CatalogOptions) || FALLBACK.catalog_options,
-            addon_defaults: (data.addon_defaults as AddonDefaults) || FALLBACK.addon_defaults,
-            customer_fields: (data.customer_fields as CustomerField[]) || FALLBACK.customer_fields,
-          };
-          setConfig(merged);
-        }
-        setLoading(false);
-      })
-      .catch(() => { setLoading(false); });
+  // Exposed as refresh() so an admin action that writes config/site (e.g. promoting a
+  // custom colour into the site-wide library) can pull the new value without a reload.
+  const load = useCallback(async () => {
+    try {
+      const snap = await getDoc(doc(db, "config", "site"));
+      if (snap.exists()) {
+        const data = snap.data() as Record<string, unknown>;
+        const merged: SiteConfig = {
+          announcement_text: String(data.announcement_text ?? FALLBACK.announcement_text),
+          announcement_active: data.announcement_active !== false,
+          primary_color: String(data.primary_color || FALLBACK.primary_color),
+          accent_color: String(data.accent_color || FALLBACK.accent_color),
+          background_color: String(data.background_color || FALLBACK.background_color),
+          gold_color: String(data.gold_color || FALLBACK.gold_color),
+          plum_color: String(data.plum_color || FALLBACK.plum_color),
+          cream_color: String(data.cream_color || FALLBACK.cream_color),
+          warm_sand_color: String(data.warm_sand_color || FALLBACK.warm_sand_color),
+          text_color: String(data.text_color || FALLBACK.text_color),
+          heading_font: String(data.heading_font || FALLBACK.heading_font),
+          body_font: String(data.body_font || FALLBACK.body_font),
+          shipping_tier_stickers: Number(data.shipping_tier_stickers ?? FALLBACK.shipping_tier_stickers),
+          shipping_tier_apparel: Number(data.shipping_tier_apparel ?? FALLBACK.shipping_tier_apparel),
+          free_shipping_threshold: Number(data.free_shipping_threshold ?? FALLBACK.free_shipping_threshold),
+          addon_price: Number(data.addon_price ?? FALLBACK.addon_price),
+          hero_heading: String(data.hero_heading || FALLBACK.hero_heading),
+          hero_subheading: String(data.hero_subheading || FALLBACK.hero_subheading),
+          about_heading: String(data.about_heading || FALLBACK.about_heading),
+          about_body: String(data.about_body || FALLBACK.about_body),
+          fundraising_heading: String(data.fundraising_heading || FALLBACK.fundraising_heading),
+          fundraising_subheading: String(data.fundraising_subheading || FALLBACK.fundraising_subheading),
+          footer_tagline: String(data.footer_tagline || FALLBACK.footer_tagline),
+          catalog_options: (data.catalog_options as CatalogOptions) || FALLBACK.catalog_options,
+          addon_defaults: (data.addon_defaults as AddonDefaults) || FALLBACK.addon_defaults,
+          customer_fields: (data.customer_fields as CustomerField[]) || FALLBACK.customer_fields,
+        };
+        setConfig(merged);
+      }
+    } catch {
+      // Leave the fallback config in place; the storefront degrades rather than breaks.
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    // load() only calls setState after awaiting the Firestore read, so nothing is set
+    // synchronously during the effect; the rule cannot see through the async boundary.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
 
   // Apply CSS variables to :root for all theme settings.
   // setIfChanged avoids unnecessary style recalculations when the value matches.
@@ -195,7 +208,7 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
   }, [config]);
 
   return (
-    <SiteConfigContext.Provider value={{ config, loading }}>
+    <SiteConfigContext.Provider value={{ config, loading, refresh: load }}>
       {children}
     </SiteConfigContext.Provider>
   );
@@ -209,4 +222,10 @@ export function useSiteConfig(): SiteConfig {
 export function useSiteConfigLoading(): boolean {
   const { loading } = useContext(SiteConfigContext);
   return loading;
+}
+
+/** Re-reads config/site. Use after an admin action writes it directly. */
+export function useSiteConfigRefresh(): () => Promise<void> {
+  const { refresh } = useContext(SiteConfigContext);
+  return refresh;
 }

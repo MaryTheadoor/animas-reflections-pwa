@@ -12,9 +12,10 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebas
 import { httpsCallable } from "firebase/functions";
 import Image from "next/image";
 import VariantMatrixEditor from "./variant-matrix-editor";
+import PrintZoneEditor from "./print-zone-editor";
 import { db, storage, functions } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
-import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { useSiteConfig, useSiteConfigRefresh } from "@/hooks/useSiteConfig";
 import { ADDON_PRICE, DEFAULT_COLOR_TINTS } from "@/lib/constants";
 import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, ProductAddon } from "@/types";
 import { PRODUCT_TYPE_LABELS } from "@/types";
@@ -79,6 +80,9 @@ export default function ProductManager({ categories }: Props) {
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Which view the visual print-zone editor is showing.
+  const [zoneView, setZoneView] = useState<"front" | "back" | "sleeve" | "sideL" | "sideR">("front");
+
   // CSV catalog import — manual pipeline: the operator exports a data sheet from the
   // source platform, prepares it, and uploads the file here. See docs/CATALOG_IMPORT.md.
   const [csvBusy, setCsvBusy] = useState(false);
@@ -121,6 +125,34 @@ export default function ProductManager({ categories }: Props) {
 
   // ── Add-on editor ────────────────────────────────────────────────────────
   const siteConfig = useSiteConfig();
+  const refreshSiteConfig = useSiteConfigRefresh();
+
+  // Promotes an inline "custom color" to the site-wide Color Library (config/site
+  // catalog_options.colors) so it becomes selectable on every product. Requires
+  // the caller to be an admin (saveSiteConfig is admin-gated).
+  const saveColorToLibrary = async (colorName: string) => {
+    const colors = siteConfig.catalog_options?.colors ?? [];
+    if (colors.some((c) => c.name.toLowerCase() === colorName.toLowerCase())) {
+      alert(`${colorName} is already in the site color library`);
+      return;
+    }
+    const hex = form.colorTints?.[colorName] ?? "#000000";
+    try {
+      const callable = httpsCallable(functions, "saveSiteConfig");
+      await callable({
+        ...siteConfig,
+        catalog_options: {
+          ...siteConfig.catalog_options,
+          colors: [...colors, { name: colorName, hex }],
+        },
+      } as unknown as Record<string, unknown>);
+      refreshSiteConfig();
+      alert(`Saved "${colorName}" to the site color library. It's now available on every product.`);
+    } catch (err) {
+      alert("Failed to save to color library: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+  };
+
   const defaultAddonPrice = siteConfig.addon_price ?? ADDON_PRICE;
   // Working list = the product's configured add-ons, or the site-standard ones
   // (as a starting template) when the product hasn't been configured yet. Any edit
@@ -863,6 +895,15 @@ export default function ProductManager({ categories }: Props) {
                 className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors" title="Bullet list">• List</button>
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); document.execCommand("insertOrderedList"); }}
                 className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors" title="Numbered list">1. List</button>
+              <span className="w-px bg-primary/10 mx-0.5 self-stretch" />
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); document.execCommand("formatBlock", false, "h2"); }}
+                className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors font-semibold" title="Heading (large)">H2</button>
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); document.execCommand("formatBlock", false, "h3"); }}
+                className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors font-semibold" title="Heading (small)">H3</button>
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); const url = window.prompt("Link URL (https://…)"); if (url) document.execCommand("createLink", false, url); }}
+                className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors underline" title="Insert link">Link</button>
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { descRef.current?.focus(); document.execCommand("removeFormat"); }}
+                className="px-2 py-0.5 text-xs rounded bg-warm-sand/50 hover:bg-warm-sand transition-colors" title="Clear formatting">Clear</button>
             </div>
             <div
               ref={descRef}
@@ -1035,61 +1076,97 @@ export default function ProductManager({ categories }: Props) {
 
           {/* Print Zones — printable area coordinates per view (Phase 6) */}
           <div>
-            <label className="block text-xs font-medium text-primary mb-2">
-              Print Zones (printable area per view, as % of mockup)
-            </label>
+            <div className="flex items-center gap-1.5 mb-2">
+              <label className="text-xs font-medium text-primary">
+                Print Zones (as % of mockup)
+              </label>
+              <AdminTooltip
+                content="The printable area per view (front/back/sleeve/sides). Drag the box to move it, drag the corner to resize. The customizer only lets customers place a design inside this area. Leave a view blank to use the default zone; upload a mockup image in Images to preview precisely."
+                dismissKey="print-zones"
+              >
+                <span className="sr-only">Help</span>
+              </AdminTooltip>
+            </div>
             <p className="text-[10px] text-foreground/70 mb-2">
-              Defines where the customer can place a design in the customizer. Leave a view blank to use the default zone.
+              Drag the box to move the print area, drag the corner to resize. Leave a view blank to use the default zone.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="flex flex-wrap gap-1 mb-3">
               {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => {
-                const zone = form.printZones?.[view];
-                const setZoneField = (field: "x_percent" | "y_percent" | "width_percent" | "height_percent", value: number) => {
-                  const currentZones = form.printZones ?? ({} as NonNullable<typeof form.printZones>);
-                  const currentZone = currentZones[view] ?? { x_percent: 30, y_percent: 25, width_percent: 40, height_percent: 50 };
-                  updateField("printZones", { ...currentZones, [view]: { ...currentZone, [field]: value } });
-                };
-                const clearZone = () => {
-                  if (!form.printZones) return;
-                  const rest = { ...form.printZones };
-                  delete rest[view];
-                  updateField("printZones", Object.keys(rest).length ? rest : undefined);
-                };
+                const hasZone = !!form.printZones?.[view];
                 return (
-                  <div key={view} className="border border-primary/10 rounded-lg p-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-medium text-foreground capitalize">
-                        {view === "sideL" ? "Left Side" : view === "sideR" ? "Right Side" : view}
-                      </span>
-                      {zone && (
-                        <button onClick={clearZone} className="text-[10px] text-danger hover:text-danger">reset</button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      {([
-                        ["x_percent", "X %"],
-                        ["y_percent", "Y %"],
-                        ["width_percent", "W %"],
-                        ["height_percent", "H %"],
-                      ] as const).map(([field, label]) => (
-                        <div key={field}>
-                          <label className="block text-[9px] text-foreground/70">{label}</label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={zone?.[field] ?? ""}
-                            placeholder="—"
-                            onChange={(e) => setZoneField(field, parseFloat(e.target.value) || 0)}
-                            className="w-full px-1.5 py-1 rounded border border-primary/20 focus:border-gold outline-none text-[11px]"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <button
+                    key={view}
+                    onClick={() => setZoneView(view)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                      zoneView === view ? "bg-primary text-white" : "border border-primary/15 text-foreground hover:bg-warm-sand/50"
+                    } ${hasZone ? "" : " opacity-70"}`}
+                  >
+                    {view === "sideL" ? "Left" : view === "sideR" ? "Right" : view}
+                    {hasZone ? "" : " (default)"}
+                  </button>
                 );
               })}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <PrintZoneEditor
+                mockupUrl={form.mockupImages?.[zoneView] ?? form.images?.[0]}
+                zone={form.printZones?.[zoneView]}
+                onChange={(z) => updateField("printZones", { ...(form.printZones ?? {}), [zoneView]: z })}
+                label={zoneView}
+              />
+              <div className="space-y-1">
+                {(() => {
+                  const zone = form.printZones?.[zoneView];
+                  const setZoneField = (field: "x_percent" | "y_percent" | "width_percent" | "height_percent", value: number) => {
+                    const currentZones = form.printZones ?? ({} as NonNullable<typeof form.printZones>);
+                    const currentZone = currentZones[zoneView] ?? { x_percent: 30, y_percent: 25, width_percent: 40, height_percent: 50 };
+                    updateField("printZones", { ...currentZones, [zoneView]: { ...currentZone, [field]: value } });
+                  };
+                  const clearZone = () => {
+                    if (!form.printZones) return;
+                    const rest = { ...form.printZones };
+                    delete rest[zoneView];
+                    updateField("printZones", Object.keys(rest).length ? rest : undefined);
+                  };
+                  return (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-medium text-foreground capitalize">
+                          {zoneView === "sideL" ? "Left Side" : zoneView === "sideR" ? "Right Side" : zoneView} — % of mockup
+                        </span>
+                        {zone && (
+                          <button onClick={clearZone} className="text-[10px] text-danger hover:opacity-80">
+                            Use default
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          ["x_percent", "X %"],
+                          ["y_percent", "Y %"],
+                          ["width_percent", "W %"],
+                          ["height_percent", "H %"],
+                        ] as const).map(([field, lbl]) => (
+                          <div key={field}>
+                            <label className="block text-[9px] text-foreground/70">{lbl}</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={zone?.[field] ?? ""}
+                              placeholder="—"
+                              onChange={(e) => setZoneField(field, parseFloat(e.target.value) || 0)}
+                              className="w-full px-1.5 py-1 rounded border border-primary/20 focus:border-gold outline-none text-[11px]"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-foreground/60 pt-1">Tip: the zone maps to the preview box (portrait mockups fit best).</p>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           </div>
 
@@ -1417,7 +1494,14 @@ export default function ProductManager({ categories }: Props) {
                   <span key={c} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full text-[10px]">
                     <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: colorSwatch(c) }} />
                     {c}
-                    <button onClick={() => toggleColor(c)} className="text-danger hover:text-danger ml-0.5">&times;</button>
+                    <button
+                      onClick={() => saveColorToLibrary(c)}
+                      className="text-gold-deep hover:underline ml-1"
+                      title="Save to the site color library (reusable on all products)"
+                    >
+                      Save
+                    </button>
+                    <button onClick={() => toggleColor(c)} className="text-danger hover:opacity-80 ml-0.5">&times;</button>
                   </span>
                 ))}
               </div>
@@ -1695,6 +1779,18 @@ export default function ProductManager({ categories }: Props) {
                       <option value="text">Text input</option>
                       <option value="file">File upload</option>
                     </select>
+                    <input
+                      type="text"
+                      value={mod.group ?? ""}
+                      onChange={(e) => {
+                        const mods = [...(form.modifiers ?? [])];
+                        mods[idx] = { ...mod, group: e.target.value };
+                        updateField("modifiers", mods);
+                      }}
+                      placeholder="Group (e.g. Add-ons)"
+                      className="w-28 px-2 py-1 rounded border border-primary/10 bg-white text-xs focus:border-gold outline-none"
+                      title="Optional group name — modifiers sharing a group render together in the customizer."
+                    />
                     {(mod.inputType === "text" || mod.inputType === "file") && (
                       <input
                         type="text"
