@@ -33,6 +33,65 @@ problems, not one**:
 **Nothing should be silently dropped.** If a source column cannot be mapped, the
 import must say so rather than quietly discarding data.
 
+### 1.1 Source routes (owner input, 2026-10-06)
+
+The client proposed two routes and stated the goal plainly: **get comprehensive product
+data off the existing sites and into ours as conveniently as possible**, with the two
+routes covering each other's edge cases. There is also a third, and a clear precedence
+order between them.
+
+**Context that reframes Route 1:** the client noted the catalog lives in Square's
+*website builder* products rather than the POS products. That is **not two separate
+catalogs** — in Square it is the **`ecom_visibility` attribute** on catalog objects, and
+both populations live in one Catalog API. The deleted sync filtered precisely on
+`ecom_visibility === "VISIBLE"`, i.e. the website population. So "website products" is
+addressable directly, not a special case to hack around.
+
+**Scale check (measured 2026-10-06):** the live Firestore catalog has **42 products**.
+`docs/SCOPE.md` records the Square side at **~405 website-visible + 74 POS-only**
+(needs re-measuring before the run). So this is roughly a **10× catalog expansion** — a
+migration, not a touch-up. That is why preview, reporting, and batching in §4 and §5 are
+not optional niceties.
+
+| Route | What it is | Best for | Risks |
+|---|---|---|---|
+| **1. Square Catalog API pull** (recommended primary) | One-off server-side `catalog.search` for `ITEM` + `CATEGORY`, filtered to `ecom_visibility === "VISIBLE"` | Structured truth: names, variations, prices, SKUs, categories, images, and the website/POS distinction | Needs the Square token and the **right environment** (see below) |
+| **2. Native Square CSV export** | Dashboard item export → our CSV importer | Independent cross-check; works without API credentials; `csv.ts` already tolerates Square's column names | **Unverified whether the export carries `ecom_visibility`** — if not, it cannot tell website products from POS-only |
+| **3. Scrape the live site → LLM assemble** | Read rendered product pages, have an LLM normalise into import shape | What exports lack: stored marketing copy, description prose, rendered image URLs, and products live on the site but missing from the export. Also a **verification oracle** — scrape name/price/options and diff against what was imported | Lossy for variant matrices; an LLM can invent plausible prices/SKUs |
+
+**Precedence — do not let the LLM outrank structured data:**
+
+1. Square Catalog API (structured truth)
+2. Square CSV export (independent structured check)
+3. Scraped / LLM-assembled data — **fills gaps and verifies only; never overrides 1 or 2
+   on prices, SKUs, inventory counts, or ids.** Every LLM-derived field must be tagged as
+   such in the import report and reviewed before commit.
+
+**Route 1 already has a working precedent in git.** `functions/src/sync.ts` (755 lines,
+recoverable at `e7e1100^`) used `client.catalog.search({ objectTypes: ["ITEM" | "CATEGORY"] })`
+server-side and mapped Square objects into our product shape. It also contains the
+hardest part of the translation layer as heuristics:
+
+- `extractColors()` — colour patterns (`Burgundy`, `Royal`, `Neon`, …) parsed out of flat variant names
+- `extractSizes()` — size patterns out of variant names
+- `extractTags()` — product-type tagging from name + description + categories (`tee`, `hoodie`, `sticker`, …)
+- `detectBrand()` + `BRAND_PATTERNS` / `getBrandCategoryName()` — a hardcoded brand→category map naming **Biscuit Hockey**, I'M OK R U, Durango Lacrosse, Durango Hockey, Durango Roller Girls, Dunphy Stock FAM, GREEN BUDDHA, LITTLE STRANGER, Jordan Branch Music, ET Art
+
+That brand map is directly relevant to the now-confirmed brand taxonomy ("Biscuit Hockey"
+is a brand, not a product type) and should seed the brand list rather than being
+re-derived.
+
+**Use it as a one-off importer, not a revived sync.** Commit `e7e1100` (2026-08-19,
+"Phase 1 catalog overhaul") deliberately removed the Square sync and made **Firestore the
+master catalog**, with Square reduced to a push target (`createSquareProduct`). Keep that
+architecture: migration is a one-time, previewable, reported import — not Square
+reclaiming source-of-truth status.
+
+**Blocker to settle first:** an API pull is useless if the deployment is pointing at
+sandbox. `SQUARE_ENVIRONMENT` (`functions/src/index.ts:23`) defaults to `"sandbox"`, so
+confirm it is `production` in `functions/.env` before trusting any pull — the same
+unresolved question that gates the end-to-end checkout test.
+
 ---
 
 ## 2. What already exists in the repository
@@ -245,35 +304,46 @@ An import that cannot tell the operator what it did not understand is not finish
 
 ## 6. Open decisions
 
-1. **Which platforms first?** Square (because the current catalog came from Square) and
-   Shopify are the highest value. Confirm with the client which store(s) she is
-   actually migrating from — if the answer is only Square Online, the profile work is
-   much smaller.
-2. **Source of truth for identity** — external id, handle, or name? And what happens on
+1. **Which platforms first?** — **ANSWERED 2026-10-06: Square**, and specifically the
+   Square *website builder* products. That is the `ecom_visibility === "VISIBLE"`
+   population in the Square Catalog API (see §1.1), so Route 1 covers it directly.
+   Shopify and the rest stay as profiles for later; only the Square route is in scope now.
+2. **Should the LLM-assembled route be allowed to write at all, or only to propose?**
+   §1.1 sets the rule (never authoritative for prices/SKUs/inventory/ids) but the
+   mechanism is open: a separate review queue, or LLM output landed in the report as
+   suggestions only. Recommend: **suggestions only, human-confirmed**, for the first run.
+3. **Does the Square CSV export include `ecom_visibility`?** If not, Route 2 cannot
+   distinguish website products from POS-only, and Route 1 becomes the only route that
+   can. TO VERIFY before relying on the export.
+4. **Source of truth for identity** — external id, handle, or name? And what happens on
    collision with an existing product: update, skip, or abort?
-3. **Images**: remote URLs or re-host into Firebase Storage?
-4. **Categories**: auto-create, or map-only with an explicit mapping step?
-5. **Delete-on-absent?** If a product exists here but not in the file, does the import
+5. **Images**: remote URLs or re-host into Firebase Storage?
+6. **Categories**: auto-create, or map-only with an explicit mapping step?
+7. **Delete-on-absent?** If a product exists here but not in the file, does the import
    remove it, deactivate it, or leave it? (Default should be *leave it*.)
-6. **XLSX / Google Sheets** support — needs a parser dependency (e.g. SheetJS). Worth it
+8. **XLSX / Google Sheets** support — needs a parser dependency (e.g. SheetJS). Worth it
    or CSV-only?
-7. **Add-ons/modifiers in the source**: Square exports modifier lists separately from
+9. **Add-ons/modifiers in the source**: Square exposes modifier lists separately from
    items. Do we import them in this feature or leave them to be recreated by hand?
-8. **Where the importer lives** — admin-only callable function (recommended) vs the
-   existing client-side write path.
+10. **Where the importer lives** — admin-only callable function (recommended) vs the
+    existing client-side write path.
 
 ---
 
 ## 7. Suggested phasing
 
+Revised 2026-10-06 for the source routes in §1.1 — the Square Catalog API pull is the
+primary path, so it moves to the front and the CSV work becomes the cross-check.
+
 | Phase | Deliverable | Why this order |
 |---|---|---|
-| 1 | Recover `csv.ts` + admin import UI from the other line onto the current branch | Working parser and a real UI to hang the rest on |
-| 2 | Canonical-row layer + `Generic` profile + full report + **dry-run preview** | The report and preview are what make an import trustworthy; build them before adding dialects |
-| 3 | Money/encoding/bools hardening + `stripUndefined()` on every payload + batching | Correctness before scale |
-| 4 | Dialect profiles: Square, then Shopify | Each is a small declarative addition once §4.2 exists |
-| 5 | Category + `productType` mapping step, image strategy | The parts that need explicit human decisions |
-| 6 | Optional: XLSX / full-sheet import | Needs a dependency; defer until CSV is proven |
+| 1 | **Read-only Square probe.** Confirm `SQUARE_ENVIRONMENT=production`, then count and sample the `ecom_visibility === "VISIBLE"` `ITEM` and `CATEGORY` objects. No writes. | Settles the sandbox question and replaces the stale ~405 estimate with a real number, before any code is written. If the environment is wrong, everything downstream is wasted work. |
+| 2 | Recover `sync.ts`'s mapper + heuristics (`extractColors` / `extractSizes` / `extractTags` / `detectBrand` / brand map) as a **one-off importer module**, emitting canonical rows + the full report as a **dry run** | The hardest translation logic already exists; get it running read-only first |
+| 3 | Harden: `stripUndefined()` on every payload, money/encoding/bool handling, **derive option dimensions from Square variations**, chunked writes | Correctness before any write touches Firestore |
+| 4 | Commit path: identity + dedupe rules, upsert, category and brand mapping (seed the brand list from `BRAND_PATTERNS`), image strategy | The parts needing explicit human decisions (§6.4–6.6) |
+| 5 | Optional: recover `csv.ts` + admin import UI from the other line as the **independent cross-check** route, then diff against the Phase 4 result | A second route is the cheapest way to catch silent mapping errors |
+| 6 | Gap-fill: scrape the live site, LLM proposes missing products/descriptions, **human-confirmed** into the report | Last, because it is the least authoritative route (§1.1 precedence) |
+| 7 | Later: profiles for other platforms (Shopify, Woo, Etsy); XLSX | Out of scope until the Square migration is done and proven |
 
 ## 8. Definition of done
 
