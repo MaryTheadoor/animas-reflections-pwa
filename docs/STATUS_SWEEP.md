@@ -162,6 +162,33 @@ new tokens; (4) full lint/test/build + live admin smoke test before it reaches `
 
 ---
 
+## 3.1 Recovery progress (2026-10-06)
+
+The full inventory found **12 missing capabilities**. Recovering them one at a time is
+the slower path, but the items below needed no design decision, so they were taken
+first. Each was verified in the deployed bundle.
+
+| Item | Class | Status |
+|---|---|---|
+| CSV catalog import (parser, writer, tests, admin upload UI) | B | ✅ recovered `32d29ab` |
+| Server-side inventory enforcement + out-of-stock product page | B | ✅ recovered `15a5ec9` |
+| Modifier groups (Square ModifierList parity) | B | ✅ recovered `15a5ec9` |
+| Visual print-zone editor | B | ✅ recovered `15a5ec9` |
+| Rich-text toolbar: H2 / H3 / Link / Clear | B | ✅ recovered `15a5ec9` |
+| Reusable colour library | B | ✅ recovered `15a5ec9` (required adding `site-config` `refresh()`) |
+| `tsconfig` scripts exclude | B | ⛔ **not needed** — `tsc --noEmit` is clean here; their exclude would only reduce coverage |
+| Help Hub | B | ✅ recovered earlier `e70949d` |
+| Theme editor (editable light/dark palette + fonts) | B→C | ⬜ outstanding — needs the a11y-token + specificity work (§3 C5) |
+| Copy editor (page-by-page storefront copy) | B | ⬜ outstanding — **structural conflict** (§3 B3): taking their pages deletes our per-route SEO metadata |
+| Editable SEO fields applied to `<head>` | B | ⬜ outstanding — collides with our build-time SEO registry |
+| Docs (`THEME_EDITOR.md`, `PROJECT_ANALYSIS.md`) | A | ⬜ outstanding — low value, port with the theme work |
+
+**One decision still gates the remainder:** who owns page `title` / `description` — our
+build-time SEO registry, or the runtime copy editor? Recommendation is the registry,
+with the copy editor editing page copy only. See the analysis in the session notes.
+
+---
+
 ## 4. Outstanding issues
 
 ### 4.1 Launch blockers (P0)
