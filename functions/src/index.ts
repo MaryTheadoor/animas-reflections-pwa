@@ -448,6 +448,10 @@ export const health = onRequest(
       status: "ok",
       timestamp: Date.now(),
       squareConfigured: !!squareAccessToken.value(),
+      // Which Square environment the backend actually talks to. Not a secret, and the
+      // one fact worth confirming before trusting any Square data (sandbox items, prices
+      // and modifier lists are a different universe from production).
+      squareEnvironment: squareEnvironment.value(),
     });
   }
 );
