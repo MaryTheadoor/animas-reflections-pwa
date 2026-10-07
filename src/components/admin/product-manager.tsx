@@ -96,15 +96,20 @@ export default function ProductManager({ categories }: Props) {
     setCsvResult(null);
     try {
       const text = await file.text();
-      // Categories are passed so sheet category names resolve to real category ids;
-      // unmatched names come back in `warnings` rather than being created silently.
-      const res = await importCatalogCsv(text, categories);
+      // Categories let sheet category names resolve to real ids; existing products let a
+      // row that names something we already have UPDATE it instead of creating a duplicate.
+      const res = await importCatalogCsv(
+        text,
+        categories,
+        products.map((p) => ({ id: p.id, name: p.name })),
+      );
       setCsvResult(res);
       loadProducts();
     } catch (err) {
       setCsvResult({
         created: 0,
         updated: 0,
+        matchedExisting: 0,
         errors: [err instanceof Error ? err.message : "Import failed"],
         warnings: [],
         unmappedColumns: [],

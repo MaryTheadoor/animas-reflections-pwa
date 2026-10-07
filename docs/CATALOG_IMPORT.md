@@ -560,3 +560,88 @@ they had on Square. That is the safe failure, but it is not a migration.
 3. **Decide the modifiers path** (10.5): separate export plus a mapping, or recreate by hand.
 4. Consider whether the quantity price-break variations should become real variants at all,
    or whether those products should be simplified to a single variant with a note.
+
+## 11. Real Square export: column coverage, 2026-10-07
+
+The client supplied the actual export (`MLMCJB94HS9H2_catalog-2026-10-07-1525.csv`):
+**161 columns, 524 rows**. Section 10 diagnosed the symptoms; this is the cause — the
+importer recognised only **8** of the 41 populated columns.
+
+### 11.1 What was missing, and what it costs
+
+| Column(s) | Rows | Was | Consequence |
+|---|---|---|---|
+| `Token` | 524 | ignored | No stable per-variation identity |
+| `Categories` (hierarchical, comma-separated) | 384 | **ignored** | Every imported product landed uncategorised |
+| `Archived` | 524 | **ignored** | **147 archived items would import as ACTIVE** |
+| `Square Online Item Visibility` | 512 | ignored | Same class of problem |
+| `Current Quantity <location>` | 16 | **ignored** | Inventory never imported |
+| `Option Name 1` / `Option Value 1` | 18 | ignored | Structured options missed where they exist |
+| `Weight (lb)` | 140 | ignored | Weight never imported (and lb ≠ our oz) |
+| `Item Type` ("Physical good") | 524 | warned 366× | Noisy, and no union equivalent |
+| `Modifier Set - …` | 123 cols × 524 | **reported as unmapped** | 123 columns of noise drowning the real report |
+
+### 11.2 Fixes applied
+
+- **Header normalisation now strips every non-alphanumeric character.** It previously kept
+  parentheses, so `"Weight (lb)"` normalised to `weight(lb)` and matched nothing. Caught by a
+  test, not by reading.
+- **`resolveField()`** resolves a header by exact alias, then by prefix — because Square names
+  the stock column after the location (`Current Quantity Animas Reflections LLC`), which an
+  exact alias cannot survive.
+- **Identity from `Token`** → `variant.squareVariationId`, so variants stay linked to Square.
+- **Category resolution** now handles the real cell format: several comma-separated entries,
+  each possibly a `" > "` hierarchy, each possibly carrying a trailing `(SOMEID)`. Every entry
+  is tried deepest-level-first, with and without the parenthetical.
+- **`Archived` beats `Square Online Item Visibility`**, and either can mark a product inactive.
+- **`Weight (lb)` → `weightOz`** (×16, keyed off the header saying lb).
+- **Square's generic `Item Type` values are treated as "not stated"** so name-based inference
+  applies, instead of warning 366 times about a value that could never map.
+- **Modifier-set columns are recognised, not imported**, and the report says so once, with
+  how many sets are actually applied to at least one item.
+
+### 11.3 Dry run over the real file, after the fixes
+
+```
+rows 524 · headers 161 · unmapped headers 20   (was 153)
+products 366 · variants 524
+  category resolved .... 101   (was 0)
+  inventory present ....  16   (was 0)
+  inactive (archived) .. 147   (was 0 — all would have been active)
+  weight present .......  78   (was 0)
+  description present .. 209
+  seoTitle present .....  89
+  squareVariationId .... 366
+  images present .......   0
+  options declared .....   3
+errors 0 · warnings 26  (unmatched categories only)
+```
+
+The 20 remaining unmapped headers are genuinely irrelevant Square metadata
+(`Customer-facing Name`, `Permalink`, `GTIN`, shipping/pickup toggles, tax).
+
+### 11.4 Three findings that are about the source, not the code
+
+1. **This export contains no image column at all.** Images cannot migrate from it. They need
+   the Square Catalog API, or manual upload.
+2. **Options really are absent, not merely unparsed.** Only 18 rows carry `Option Name/Value`,
+   so 3 products end up with declared dimensions. The rest of this catalog has one variation
+   each, named "Regular".
+3. **147 of 524 items are archived** — importing them as active would have put retired stock
+   on the storefront.
+
+### 11.5 Idempotency — the duplicate problem, solved
+
+The importer now resolves identity in this order: the sheet's own `id`, then an
+**existing product of the same name**, then a slug of the name. `importCatalogCsv` takes the
+existing product list to build that name index.
+
+Dry run result: **366 of 366 products resolve to an existing product id, so a re-import
+updates them in place instead of creating duplicates.** That also rescues the current state,
+where 366 rows were imported with random UUID ids under the older logic.
+
+For an existing product the importer writes a **patch, not a replacement**: `createdAt` is
+never reset, and a field the sheet left blank never blanks the stored value — so descriptions,
+images, print zones and other admin curation survive an import. One consequence to know:
+**a matched product's `variants` array is replaced by the sheet's**, so inventory set by hand
+on those variants is overwritten. The report says so when it happens.

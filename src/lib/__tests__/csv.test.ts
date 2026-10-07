@@ -167,3 +167,75 @@ describe("csvToProducts — heuristics", () => {
     expect(products[0].variants[0].options).toBeUndefined();
   });
 });
+
+describe("csvToProducts — Square export columns", () => {
+  it("keeps the Square variation Token as the variant's squareVariationId", () => {
+    const csv = "Token,Item Name,Variation Name,Price\nUVMBEKTJ5TCWTXR45MK6KLFS,Tee,L,20.00";
+    const { products } = csvToProducts(csv);
+    expect(products[0].variants[0].squareVariationId).toBe("UVMBEKTJ5TCWTXR45MK6KLFS");
+  });
+
+  it("prefers explicit Option Name/Value columns over parsing the label", () => {
+    const csv = [
+      "Item Name,Variation Name,Option Name 1,Option Value 1,Price",
+      "Tee,Whatever,Size,Small,20.00",
+      "Tee,Whatever,Size,Large,21.00",
+    ].join("\n");
+    const { products } = csvToProducts(csv);
+    expect(products[0].variants.map((v) => v.options)).toEqual([
+      { Size: "Small" },
+      { Size: "Large" },
+    ]);
+    expect(products[0].options?.[0]).toMatchObject({ name: "Size", values: ["Small", "Large"] });
+  });
+
+  it("resolves a ' > ' category hierarchy against the leaf, then the parent", () => {
+    const csv = "Item Name,Price,Categories\nTee,20.00,Bands > LITTLE STRANGER FAN BASED FUNDRAISING";
+    const leaf = csvToProducts(csv, { categoryMap: new Map([["little stranger fan based fundraising", "cat-leaf"]]) });
+    expect(leaf.products[0].categoryId).toBe("cat-leaf");
+    const parent = csvToProducts(csv, { categoryMap: new Map([["bands", "cat-parent"]]) });
+    expect(parent.products[0].categoryId).toBe("cat-parent");
+  });
+
+  it("treats an archived item as inactive, and archived beats visibility", () => {
+    const archived = csvToProducts("Item Name,Price,Archived\nOld Tee,10.00,Y");
+    expect(archived.products[0].active).toBe(false);
+    const both = csvToProducts("Item Name,Price,Archived,Square Online Item Visibility\nTee,10.00,Y,visible");
+    expect(both.products[0].active).toBe(false);
+  });
+
+  it("treats a non-visible online item as inactive", () => {
+    const { products } = csvToProducts("Item Name,Price,Square Online Item Visibility\nTee,10.00,hidden");
+    expect(products[0].active).toBe(false);
+  });
+
+  it("finds the location-suffixed stock column by prefix and records inventory", () => {
+    const csv = "Item Name,Price,Current Quantity Animas Reflections LLC\nTee,20.00,7";
+    const { products, unmappedColumns } = csvToProducts(csv);
+    expect(products[0].variants[0].inventory).toBe(7);
+    expect(unmappedColumns).toEqual([]);
+  });
+
+  it("converts weight from pounds to ounces", () => {
+    const { products } = csvToProducts("Item Name,Price,Weight (lb)\nTee,20.00,0.5");
+    expect(products[0].weightOz).toBe(8);
+  });
+
+  it("recognises modifier-set columns without treating them as unmapped noise", () => {
+    const csv = [
+      "Item Name,Price,Modifier Set - Choose Size",
+      "Tee,20.00,Y",
+    ].join("\n");
+    const { unmappedColumns, warnings } = csvToProducts(csv);
+    expect(unmappedColumns).toEqual([]);
+    expect(warnings.some((w) => w.includes("modifier set"))).toBe(true);
+  });
+
+  it("reuses an existing product's id when the name matches, so a re-import updates it", () => {
+    const csv = "Item Name,Price\nBella + Canvas Unisex Jersey T-Shirt,40.00";
+    const existingByName = new Map([["bella + canvas unisex jersey t-shirt", "07db885e-799f-4899-bb65-f1f7b5a74bb0"]]);
+    const { products } = csvToProducts(csv, { existingByName });
+    // not a fresh slug id — this row targets the document that already exists
+    expect(products[0].id).toBe("07db885e-799f-4899-bb65-f1f7b5a74bb0");
+  });
+});
