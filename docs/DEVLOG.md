@@ -1585,3 +1585,99 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] Remove the stale `functions/lib/{sync,product-pipeline}.js*` orphans
 - [ ] Carry-over: G2 real-card checkout test, G1 catalog population, G4/G5 images,
       G15 Lighthouse, G19/G22/G23, G20 DNS cutover, G21 analytics
+
+---
+
+## Session 33 — 2026-10-06/07 | Lost-functionality recovery, admin security fix, catalog import
+
+> Numbering note: `origin/master` also reaches 33. Numbers are per-line until the two are
+> reconciled — see `docs/STATUS_SWEEP.md` §1.
+
+### Context Restored From
+- `docs/STATUS_SWEEP.md` (the two-line divergence), the client's answers, and a full
+  lost-functionality inventory produced by diffing `development` against `origin/master`
+
+### Actions Taken
+1. **CRITICAL security fix — live privilege escalation.** The admin checks accepted any
+   email ending in `@animasreflections.com`, and public email/password signup is enabled, so
+   an attacker could register an address on a domain they do not own and inherit full admin.
+   Removed from all three sites (`isUserAdmin`, `requireAdmin`, `isAlwaysAdmin`) and
+   deployed. Verified the provider really was enabled by probing the public Identity Toolkit
+   with a malformed email (got `INVALID_EMAIL`, not `OPERATION_NOT_ALLOWED`) — **no account
+   was created**. Confirmed the allowlist held only gmail addresses before deploying, so
+   nobody was locked out. Post-deploy: the wildcard literal is absent from all 11 live
+   chunks, with positive controls.
+2. **Recovered the six isolated items** lost in the divergence (`15a5ec9`): server-side
+   inventory enforcement + out-of-stock product page, modifier groups, the visual
+   print-zone editor, the rich-text toolbar (H2/H3/Link/Clear), and the reusable colour
+   library (which needed a `site-config` `refresh()` adding first). Investigated the
+   `tsconfig` scripts exclude and **found it unnecessary here** — `tsc --noEmit` is clean,
+   so copying it would only have reduced coverage.
+3. **CSV catalog import — recovered and completed.** Phase 1 recovered the parser, writer,
+   tests and upload UI. Phase 2 fixed three real defects the recovered code carried:
+   re-import duplicated the catalog (name-keyed grouping but a random product id), the
+   sheet's category was parsed then discarded (`categoryId: ""`), and variants were written
+   with a meaningless `options: {}`. Phase 4 recovered the size/colour/brand/type heuristics
+   from the deleted `sync.ts` into `src/lib/catalog-heuristics.ts` so imports arrive with
+   real variant dimensions and brand-derived categories.
+4. **Help tab.** New "Migrating a catalog from Square" entry plus a step-by-step migration
+   tutorial, written to describe actual behaviour — including the defects fixed in the same
+   session, which is why it landed last.
+5. **Sweep.** Live bundle verified for every feature; stale claims in this session's own
+   docs corrected (a "planned, not implemented" status line, a "no importer at all"
+   paragraph, and a Help limitation note that the heuristics had made untrue).
+
+### Decisions Made
+- **Update the existing product** on an import collision (deterministic slug id), and
+  **map categories to existing only, reporting the rest** — never auto-create, so a messy
+  export cannot invent categories.
+- **`detectBrand` returns null rather than a default brand.** The recovered version
+  defaulted to "Animas Reflections", which would have filed every generic product under a
+  brand category.
+- **Only declare option dimensions with more than one value.** A single-valued dimension
+  ("One Size", or a colour every variant shares) would put a pointless one-option selector
+  on the storefront.
+- **Drop the recovered `extractTags` word-frequency tags** — it added every 3+ letter word
+  of the product name ("classic", "tee"), which pollutes search.
+- Service worker caching keeps masking deploys; hard-refresh is still required to see admin
+  changes.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| src/context/auth-context.tsx, functions/src/index.ts | removed the admin domain wildcard + DO-NOT warnings |
+| functions/src/pricing.ts, src/app/product/page.tsx | inventory enforcement + out-of-stock UI |
+| src/types/index.ts, src/app/customizer/page.tsx, product-manager.tsx | modifier groups |
+| src/components/admin/print-zone-editor.tsx | NEW — visual print-zone editor |
+| src/context/site-config-context.tsx, src/hooks/useSiteConfig.ts | `refresh()` / `useSiteConfigRefresh()` |
+| src/lib/csv.ts | deterministic ids, category resolution, derived options, full report |
+| src/lib/catalog-import.ts | category map in, `ImportReport` out |
+| src/lib/catalog-heuristics.ts | NEW — recovered size/colour/brand/type heuristics |
+| src/lib/help-content.ts, src/components/admin/help-guide.tsx | migration entry + tutorial |
+| src/app/globals.css | `.rich-desc` / `.desc-editor` h2/h3/a styles (neither line had them) |
+| docs/{CATALOG_IMPORT,STATUS_SWEEP,DEVLOG}.md | plan, findings, this record |
+
+### Commits This Session
+`40911cb` security fix · `15a5ec9` six recovered items · `2a362cb` import phase 2 + Help ·
+`9dc084d` import phase 4 heuristics · `a9f3a09` dimension filtering · plus doc commits.
+
+### Current State at Session End
+- Lint 0/0 | Tests **140/140** (11 suites) | tsc clean (app + functions) | Build 25 pages |
+  SEO gate green
+- Hosting + functions deployed and verified live; `development` @ `a9f3a09`, pushed
+- **Recovery tally: 8 of 12 done, 1 unnecessary, 3 outstanding** — all three gated on the
+  same decision (who owns page title/description)
+- Local `master` is still a stale, diverged leftover (holds `7e71997`, cannot be pushed)
+
+### Pending / Next Session
+- [ ] **Decide who owns page `title`/`description`** — this unblocks the theme editor, the
+  copy editor and editable SEO, the last three recoverable items
+- [ ] The six-plus-five recoveries could still be superseded by a full reconciliation; every
+  isolated item is now proven portable, so a merge would mostly be the three collisions
+- [ ] Clean up: stale `functions/lib/{sync,product-pipeline}.js*` orphans; the local `master`
+  branch; the untracked 230 MB zip
+- [ ] Confirm `SQUARE_ENVIRONMENT=production` in `functions/.env` (still open, and blocking
+  a trustworthy checkout test)
+- [ ] Decide whether to fix the service-worker cache strategy
+- [ ] Carry-over: G2 real-card checkout test, G1 catalog population, G4/G5 images,
+  G15 Lighthouse, G19/G22/G23, G20 DNS cutover, G21 analytics

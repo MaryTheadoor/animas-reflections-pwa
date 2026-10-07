@@ -1,6 +1,8 @@
 # Catalog Import — migrating a catalog in from a data sheet
 
-**Status:** planned, not implemented. Development note, 2026-10-06.
+**Status:** **shipped and deployed** (2026-10-07). Phases 1, 2 and 4 of §7 are done; the
+service-worker-caching caveat below applies to seeing it in the admin. Remaining future
+work is other platforms and XLSX. See §9 for the implementation record.
 **Owner decision recorded:** yes — we are adding this feature.
 **Shape (2026-10-06):** a **manual, admin-operated file upload**. Not a backend job, not a
 Square API integration, not a staged sync — see §1.1 for the scope and its exclusions.
@@ -121,11 +123,16 @@ the line currently deployed:
 | `src/components/admin/product-manager.tsx` | `Products → Import CSV` UI + downloadable template | |
 | `src/lib/__tests__/csv.test.ts` | Parser tests | |
 
-**Important:** this line has **no importer at all**. `createSquareProduct` is a
-single-product push *to* Square, not an import. The older Square→Firestore sync
-pipeline was deleted: `functions/src/` now contains only `index.ts` and `pricing.ts`,
-and `functions/lib/` still holds stale compiled orphans (`sync.js`,
-`product-pipeline.js`) from the removed modules.
+**Historical note (superseded — see §9):** at the time this section was written, this line
+had **no importer at all**. `createSquareProduct` is a single-product push *to* Square, not
+an import, and the older Square→Firestore sync pipeline had been deleted — `functions/src/`
+contains only `index.ts` and `pricing.ts`, while `functions/lib/` still holds stale compiled
+orphans (`sync.js`, `product-pipeline.js`) from the removed modules. That is why the work
+started by recovering the parser and UI from the other line.
+
+Also since added on this line: `src/lib/catalog-heuristics.ts` (§9 phase 4) — the size,
+colour, brand and product-type patterns lifted from the deleted sync, used to derive
+structured variant options and brand categories during import.
 
 So the starting point is: **recover `csv.ts` + the import UI from the other line, then
 build the translation layer on top.** `csv.ts`'s parser and header normalisation are

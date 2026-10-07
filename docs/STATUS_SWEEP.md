@@ -170,11 +170,11 @@ first. Each was verified in the deployed bundle.
 
 | Item | Class | Status |
 |---|---|---|
-| CSV catalog import (parser, writer, tests, admin upload UI) | B | ✅ recovered `32d29ab` |
+| CSV catalog import (parser, writer, tests, admin upload UI) | B | ✅ recovered `32d29ab`, then **completed**: phases 2 (`2a362cb`) and 4 (`9dc084d`, `a9f3a09`) — deterministic ids, category resolution, structured variant options, brand mapping, full report, Help entry |
 | Server-side inventory enforcement + out-of-stock product page | B | ✅ recovered `15a5ec9` |
 | Modifier groups (Square ModifierList parity) | B | ✅ recovered `15a5ec9` |
 | Visual print-zone editor | B | ✅ recovered `15a5ec9` |
-| Rich-text toolbar: H2 / H3 / Link / Clear | B | ✅ recovered `15a5ec9` |
+| Rich-text toolbar: H2 / H3 / Link / Clear | B | ✅ recovered `15a5ec9` (plus the missing `h2`/`h3`/`a` styles, which neither line had) |
 | Reusable colour library | B | ✅ recovered `15a5ec9` (required adding `site-config` `refresh()`) |
 | `tsconfig` scripts exclude | B | ⛔ **not needed** — `tsc --noEmit` is clean here; their exclude would only reduce coverage |
 | Help Hub | B | ✅ recovered earlier `e70949d` |
@@ -182,6 +182,9 @@ first. Each was verified in the deployed bundle.
 | Copy editor (page-by-page storefront copy) | B | ⬜ outstanding — **structural conflict** (§3 B3): taking their pages deletes our per-route SEO metadata |
 | Editable SEO fields applied to `<head>` | B | ⬜ outstanding — collides with our build-time SEO registry |
 | Docs (`THEME_EDITOR.md`, `PROJECT_ANALYSIS.md`) | A | ⬜ outstanding — low value, port with the theme work |
+
+**Recovery tally: 8 of 12 done, 1 found unnecessary, 3 outstanding** — and all three
+outstanding ones are gated on the same decision (who owns page `title`/`description`).
 
 **One decision still gates the remainder:** who owns page `title` / `description` — our
 build-time SEO registry, or the runtime copy editor? Recommendation is the registry,
