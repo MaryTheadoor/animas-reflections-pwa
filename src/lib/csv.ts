@@ -32,8 +32,9 @@ export interface CatalogCsvRow {
   featured?: boolean;
   images: string[];
   weightOz?: number;
-  /** Square modifier-set names applied to this item (the "Modifier Set - X" = Y columns). */
-  modifierSets?: string[];
+  /** Square modifier sets applied to this item (the "Modifier Set - X" = Y columns).
+   *  `squareListId` is set when Square disambiguated a duplicated name with an id. */
+  modifierRefs?: { name: string; squareListId?: string }[];
   seoTitle?: string;
   seoDescription?: string;
 }
@@ -277,16 +278,19 @@ export function mapCatalogRow(headers: string[], cells: string[]): CatalogCsvRow
 
   // Square's modifier-set associations: one column per set, Y/N per item. Only the
   // *association* is here — the choices and their prices need the Square Catalog API.
-  const modifierSets: string[] = [];
+  // Square appends " - <ID>" to the column when two sets share a name, and that id is the
+  // only reliable way to tell them apart, so it is kept rather than discarded.
+  const modifierRefs: { name: string; squareListId?: string }[] = [];
   headers.forEach((header, i) => {
     if (resolveField(header) !== "__modifierSet") return;
     if ((cells[i] ?? "").trim().toUpperCase() !== "Y") return;
-    const name = header
-      .replace(/^modifier\s*set\s*[-\u2013\u2014:]\s*/i, "")
-      // Square appends the set id when two sets share a name.
-      .replace(/\s*[-\u2013\u2014]\s*[A-Z0-9]{20,}$/, "")
-      .trim();
-    if (name && !modifierSets.includes(name)) modifierSets.push(name);
+    const raw = header.replace(/^modifier\s*set\s*[-\u2013\u2014:]\s*/i, "").trim();
+    const idMatch = raw.match(/^(.*?)\s*[-\u2013\u2014]\s*([A-Z0-9]{20,})$/);
+    const name = (idMatch ? idMatch[1] : raw).trim();
+    if (!name) return;
+    const squareListId = idMatch?.[2];
+    const seen = modifierRefs.some((r) => r.name === name && r.squareListId === squareListId);
+    if (!seen) modifierRefs.push(squareListId ? { name, squareListId } : { name });
   });
 
   return {
@@ -308,7 +312,7 @@ export function mapCatalogRow(headers: string[], cells: string[]): CatalogCsvRow
       .concat(splitList(get("image2")))
       .concat(splitList(get("image3"))),
     weightOz,
-    modifierSets: modifierSets.length > 0 ? modifierSets : undefined,
+    modifierRefs: modifierRefs.length > 0 ? modifierRefs : undefined,
     seoTitle: get("seoTitle") || undefined,
     seoDescription: get("seoDescription") || undefined,
   };
@@ -440,11 +444,14 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
     // A later row can carry the weight even when the first did not.
     if (product.weightOz === undefined && row.weightOz !== undefined) product.weightOz = row.weightOz;
 
-    // Modifier-set associations accumulate across the product's rows.
-    if (row.modifierSets?.length) {
-      const sets = new Set(product.squareModifierSets ?? []);
-      for (const s of row.modifierSets) sets.add(s);
-      product.squareModifierSets = [...sets];
+    // Modifier-set associations accumulate across the product's rows. A ref is unique by
+    // (name, id) so the same set listed on several rows is not duplicated.
+    if (row.modifierRefs?.length) {
+      const refs = [...(product.squareModifierRefs ?? [])];
+      for (const r of row.modifierRefs) {
+        if (!refs.some((e) => e.name === r.name && e.squareListId === r.squareListId)) refs.push(r);
+      }
+      product.squareModifierRefs = refs;
     }
 
     product.name = product.name || row.name;

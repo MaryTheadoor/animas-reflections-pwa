@@ -730,3 +730,54 @@ Per request:
   *Merge selected (n)* and *Merge all*.
 - A merge now clears the scan rather than showing stale groups, and the confirm dialog states
   the group count, the number of redundant products, and any inventory disagreements.
+
+---
+
+## 13. Add-ons (modifier sets) — pipeline built, run, verified — 2026-10-07
+
+### 13.1 How the two halves connect
+
+Square keeps modifier lists apart from items and offers **no export for them**, so a single
+source cannot supply an add-on migration:
+
+| Half | Source |
+|---|---|
+| **Which item uses which set** | the item export's `Modifier Set - <name>` Y/N columns |
+| **What is inside each set** (choices + prices) | the Square Catalog API — `MODIFIER_LIST` objects |
+
+`fetchSquareModifiers` (admin callable) supplies the second half; the importer now records
+the first onto each product as `squareModifierRefs`, and **Import Square add-ons** joins them.
+
+### 13.2 The run, measured from the live catalog
+
+| | |
+|---|---|
+| Products | 385 |
+| With add-ons attached | **183** |
+| Add-on entries | **4,122** |
+| Distinct add-on groups | **84** |
+| Input types | 4,027 `toggle`, 95 `text` |
+| Prices preserved | 2,779 at $0, plus real ones ($3, $5, $10, $14, $16, $19…) |
+| `squareModifierRefs` left unresolved | **0** |
+
+Rendered correctly in the customizer, e.g. *ADULT SIZE* → Extra Small $0 … XXL $3, XXXL $3,
+XXXXL $5; *ADD NAME & NUMBER…* → Back $5, Sleeve $4.
+
+### 13.3 The duplicated-name defect, and its fix
+
+**Square allows two modifier lists to share a name, and disambiguates them in the export only
+by suffixing the column with the list id.** Measured against the real file:
+
+- 123 modifier-set columns, **94 distinct base names, 12 names shared by 2–8 columns each**
+  (`Please Select Color` ×8, `Choose Logo Placement` ×5, `Please Select Design` ×5, …)
+- 42 columns carried an id suffix
+- **163 of the 183** items that use add-ons touch a colliding name — and in every one of those
+  cases the column carried the id, so the exact list was knowable all along
+
+The first implementation stripped that id and matched by name, with the name→list map keeping
+the last entry — so a product could receive a *different* same-named set's choices.
+
+**Fixed** (`23. …` below): the ref keeps the id, resolution prefers `squareListId`, and a name
+is trusted **only when exactly one list carries it**. A genuinely ambiguous set is reported and
+skipped rather than guessed at, on the principle that attaching the wrong add-ons is worse than
+attaching none.

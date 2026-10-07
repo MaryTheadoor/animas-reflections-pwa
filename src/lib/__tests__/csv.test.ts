@@ -254,4 +254,23 @@ describe("csvToProducts — Square export columns", () => {
     const { unresolvedCategories } = csvToProducts(csv, { createCategories: true });
     expect(unresolvedCategories[0].name).toBe("Durango High School Alpine Ski Team");
   });
+
+  it("keeps a modifier set's Square id when the column carried one", () => {
+    const csv = [
+      "Item Name,Price,Modifier Set - Please Select Color - ABCDEFGHIJKLMNOPQRSTUVWX,Modifier Set - Extras",
+      "Tee,20.00,Y,Y",
+    ].join("\n");
+    const { products } = csvToProducts(csv);
+    // The id is the only way to tell two same-named Square sets apart, so it must survive.
+    expect(products[0].squareModifierRefs).toEqual([
+      { name: "Please Select Color", squareListId: "ABCDEFGHIJKLMNOPQRSTUVWX" },
+      { name: "Extras" },
+    ]);
+  });
+
+  it("records no modifier refs when every set column is N", () => {
+    const csv = "Item Name,Price,Modifier Set - Extras\nTee,20.00,N";
+    const { products } = csvToProducts(csv);
+    expect(products[0].squareModifierRefs).toBeUndefined();
+  });
 });

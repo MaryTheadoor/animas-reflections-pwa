@@ -12,10 +12,16 @@
  *   Square choice      → one `ProductModifier` (inputType "toggle", priceType "fixed")
  *   Square TEXT list   → one `ProductModifier` with inputType "text"
  *
- * **Known semantic gap:** Square's `selectionType` (SINGLE/MULTIPLE) and its
- * min/max-selection rules are not represented in our model, which permits any combination.
- * A single-choice list therefore arrives as a group of individually toggleable add-ons
- * rather than a radio group. Noted in the import report rather than silently lost.
+ * **Resolution order matters.** Square lets two lists share a name; when it does, the item
+ * export suffixes the column with the list id (`… - 4YXGF6OQDCYL7YJAUCKEZED3`). So a
+ * recorded `squareListId` is matched first and is authoritative. A name is only trusted
+ * when exactly one list carries it — if several do, the set is reported as ambiguous rather
+ * than guessed at, because attaching the wrong list is worse than attaching none.
+ *
+ * **Known semantic gap:** Square's `selectionType` (SINGLE/MULTIPLE) and its min/max rules
+ * are not representable in our model, which allows any combination. A single-choice list
+ * therefore arrives as a group of individually toggleable add-ons rather than a radio group.
+ * Flagged in the result rather than silently lost.
  */
 
 import type { ProductModifier } from "@/types";
@@ -37,13 +43,21 @@ export interface SquareModifierList {
   modifiers: SquareModifierChoice[];
 }
 
+/** A set a product uses, as recorded from the item export. */
+export interface SquareModifierRef {
+  name: string;
+  squareListId?: string;
+}
+
 export interface AddonBuildResult {
   modifiers: ProductModifier[];
-  /** Set names that matched a Square list. */
+  /** Sets matched to a Square list (by id, or by an unambiguous name). */
   matchedSets: string[];
-  /** Set names the export referenced but Square did not return. */
+  /** Sets Square did not return at all. */
   missingSets: string[];
-  /** True when at least one matched list is a single-choice list (see the module note). */
+  /** Sets whose name matched more than one Square list and carried no id — skipped. */
+  ambiguousSets: string[];
+  /** True when a matched list is a single-choice list (see the module note). */
   hasSelectOne: boolean;
 }
 
@@ -51,21 +65,42 @@ function normalize(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-/** Build a product's add-ons from the Square modifier-set names the export recorded. */
+/** Build a product's add-ons from the Square modifier-set references the export recorded. */
 export function buildModifiersForProduct(
-  setNames: string[],
+  refs: SquareModifierRef[],
   lists: SquareModifierList[],
 ): AddonBuildResult {
-  const byName = new Map(lists.map((l) => [normalize(l.name), l]));
+  const byId = new Map(lists.map((l) => [l.id, l]));
+  const byName = new Map<string, SquareModifierList[]>();
+  for (const l of lists) {
+    const key = normalize(l.name);
+    if (!byName.has(key)) byName.set(key, []);
+    byName.get(key)!.push(l);
+  }
+
   const modifiers: ProductModifier[] = [];
   const matchedSets: string[] = [];
   const missingSets: string[] = [];
+  const ambiguousSets: string[] = [];
   let hasSelectOne = false;
 
-  for (const setName of setNames) {
-    const list = byName.get(normalize(setName));
+  for (const ref of refs) {
+    let list: SquareModifierList | undefined;
+    if (ref.squareListId) {
+      list = byId.get(ref.squareListId);
+    }
     if (!list) {
-      missingSets.push(setName);
+      const candidates = byName.get(normalize(ref.name)) ?? [];
+      if (candidates.length === 1) {
+        list = candidates[0];
+      } else if (candidates.length > 1) {
+        // Never guess between same-named sets.
+        ambiguousSets.push(ref.name);
+        continue;
+      }
+    }
+    if (!list) {
+      missingSets.push(ref.name);
       continue;
     }
     matchedSets.push(list.name);
@@ -100,5 +135,5 @@ export function buildModifiersForProduct(
     }
   }
 
-  return { modifiers, matchedSets, missingSets, hasSelectOne };
+  return { modifiers, matchedSets, missingSets, ambiguousSets, hasSelectOne };
 }

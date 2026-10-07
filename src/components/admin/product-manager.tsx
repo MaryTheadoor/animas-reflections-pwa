@@ -7,6 +7,7 @@ import {
   doc,
   setDoc,
   deleteDoc,
+  deleteField,
 } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
@@ -100,11 +101,12 @@ export default function ProductManager({ categories }: Props) {
     lists: number;
     updated: number;
     missing: string[];
+    ambiguous: string[];
     selectOne: number;
   } | null>(null);
 
   const handleImportSquareAddons = async () => {
-    const candidates = products.filter((p) => (p.squareModifierSets ?? []).length > 0);
+    const candidates = products.filter((p) => (p.squareModifierRefs ?? []).length > 0);
     if (candidates.length === 0) {
       alert(
         "No products carry Square modifier-set information yet. Import the Square CSV first — it records which sets each item uses — then run this to pull the choices.",
@@ -130,16 +132,23 @@ export default function ProductManager({ categories }: Props) {
       let updated = 0;
       let selectOne = 0;
       const missing = new Set<string>();
+      const ambiguous = new Set<string>();
       for (const p of candidates) {
-        const built = buildModifiersForProduct(p.squareModifierSets ?? [], data.lists);
+        const built = buildModifiersForProduct(p.squareModifierRefs ?? [], data.lists);
         for (const m of built.missingSets) missing.add(m);
+        for (const a of built.ambiguousSets) ambiguous.add(a);
         if (built.hasSelectOne) selectOne++;
         if (built.modifiers.length === 0) continue;
         await setDoc(
           doc(db, "products", p.id),
-          // Clearing the set list records that this product has been resolved; a later
-          // re-import re-populates it from the sheet, so nothing is lost.
-          stripUndefined({ modifiers: built.modifiers, squareModifierSets: [] }),
+          // Removing the ref list records that this product has been resolved, and also
+          // clears the earlier name-only field so it does not linger. A re-import
+          // re-populates it from the sheet, so nothing is lost.
+          {
+            modifiers: built.modifiers,
+            squareModifierRefs: deleteField(),
+            squareModifierSets: deleteField(),
+          },
           { merge: true },
         );
         updated++;
@@ -149,6 +158,7 @@ export default function ProductManager({ categories }: Props) {
         lists: data.lists.length,
         updated,
         missing: [...missing],
+        ambiguous: [...ambiguous],
         selectOne,
       });
       await loadProducts();
@@ -900,6 +910,13 @@ export default function ProductManager({ categories }: Props) {
             <div className="mt-1">
               <span className="font-medium">Sets the sheet referenced but Square did not return:</span>
               <div>{addonResult.missing.slice(0, 20).join(", ")}{addonResult.missing.length > 20 ? ` (+${addonResult.missing.length - 20} more)` : ""}</div>
+            </div>
+          )}
+          {addonResult.ambiguous.length > 0 && (
+            <div className="mt-1 text-danger">
+              <span className="font-medium">Skipped — more than one Square set shares this name and the sheet gave no id:</span>
+              <div>{addonResult.ambiguous.slice(0, 20).join(", ")}{addonResult.ambiguous.length > 20 ? ` (+${addonResult.ambiguous.length - 20} more)` : ""}</div>
+              <div className="text-foreground/70">Those add-ons were not attached, which is safer than attaching the wrong set. Rename the duplicates in Square, or set them by hand here.</div>
             </div>
           )}
         </div>
