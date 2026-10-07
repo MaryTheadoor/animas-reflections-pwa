@@ -98,3 +98,56 @@ describe("csvToProducts", () => {
     expect(warnings.some((w) => w.includes("spaceship"))).toBe(true);
   });
 });
+
+describe("csvToProducts — heuristics", () => {
+  const brandCsv = [
+    "name,variant,price",
+    "Biscuit Hockey Tee,L,20.00",
+    "Biscuit Hockey Tee,X-Large,21.00",
+    "Biscuit Hockey Tee,M,20.00",
+  ].join("\n");
+
+  it("derives structured variant options from flat labels", () => {
+    const { products } = csvToProducts(brandCsv);
+    const tee = products[0];
+    const size = tee.options?.find((o) => o.name === "Size");
+    expect(size).toBeDefined();
+    expect(size!.type).toBe("select");
+    expect(size!.values).toEqual(["L", "XL", "M"]);
+    expect(tee.variants.map((v) => v.options?.Size)).toEqual(["L", "XL", "M"]);
+  });
+
+  it("declares a Color dimension, typed as a swatch, when labels carry colours", () => {
+    const colourCsv = "name,variant,price\nCap,Navy,15.00\nCap,Red,15.00";
+    const { products } = csvToProducts(colourCsv);
+    const colour = products[0].options?.find((o) => o.name === "Color");
+    expect(colour).toBeDefined();
+    expect(colour!.type).toBe("color");
+    expect(colour!.values).toEqual(["navy", "red"]);
+  });
+
+  it("uses a detected brand as the category when the sheet omits one", () => {
+    const categoryMap = new Map([["biscuit hockey", "cat-bh"]]);
+    const { products } = csvToProducts(brandCsv, { categoryMap });
+    expect(products[0].categoryId).toBe("cat-bh");
+  });
+
+  it("reports a detected brand whose category does not exist, rather than inventing it", () => {
+    const { products, warnings } = csvToProducts(brandCsv);
+    expect(products[0].categoryId).toBe("");
+    expect(warnings.some((w) => w.includes("Biscuit Hockey"))).toBe(true);
+  });
+
+  it("infers the product type when the sheet is silent", () => {
+    const { products, warnings } = csvToProducts(brandCsv);
+    expect(products[0].productType).toBe("apparel");
+    expect(warnings.some((w) => w.includes("inferred"))).toBe(true);
+  });
+
+  it("warns when multi-variant labels reveal no dimensions to build from", () => {
+    const opaque = "name,variant,price\nWidget,Alpha,5.00\nWidget,Beta,6.00";
+    const { products, warnings } = csvToProducts(opaque);
+    expect(products[0].options).toBeUndefined();
+    expect(warnings.some((w) => w.includes("no option dimensions were set"))).toBe(true);
+  });
+});

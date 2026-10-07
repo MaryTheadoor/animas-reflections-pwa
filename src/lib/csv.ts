@@ -1,4 +1,10 @@
 import type { ManagedProduct, ProductType } from "@/types";
+import {
+  deriveOptionValues,
+  detectBrand,
+  detectProductType,
+  extractTags,
+} from "@/lib/catalog-heuristics";
 
 /**
  * CSV catalog import — one row per product variant; rows are grouped into one
@@ -205,6 +211,8 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
   const warnings: string[] = [];
   const byKey = new Map<string, ManagedProduct>();
   const unresolvedCategories = new Set<string>();
+  let inferredTypeCount = 0;
+  const noOptions: string[] = [];
 
   for (const row of rows) {
     const key = row.id || row.name.toLowerCase();
@@ -212,16 +220,18 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
     const now = new Date().toISOString();
 
     if (!product) {
-      const type = (row.productType || "other").toLowerCase() as ProductType;
-      if (row.productType && !VALID_PRODUCT_TYPES.includes(type)) {
+      const stated = (row.productType || "").toLowerCase() as ProductType;
+      if (row.productType && !VALID_PRODUCT_TYPES.includes(stated)) {
         warnings.push(`Unknown productType "${row.productType}" on "${row.name}" → imported as "other"`);
       }
+      // No brand fallback here: deriveTags needs the resolved category, which we do not
+      // have yet. Both are filled in the post-pass below.
       product = {
         id: row.id || slugifyKey(row.name),
         name: row.name,
         description: row.description ?? "",
         categoryId: resolveCategory(row.category, opts, unresolvedCategories),
-        productType: VALID_PRODUCT_TYPES.includes(type) ? type : "other",
+        productType: VALID_PRODUCT_TYPES.includes(stated) ? stated : "other",
         colors: row.colors.map((c) => c.toLowerCase()).filter((c, i, a) => a.indexOf(c) === i),
         tags: [],
         images: row.images.filter(Boolean),
@@ -251,26 +261,91 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
       if (row.price === undefined) {
         errors.push(`Row for "${row.name}"${row.variant ? ` (${row.variant})` : ""} is missing a price`);
       }
+      // Decompose the flat label into whatever dimensions it actually implies, so the
+      // variant matrix can round-trip the product instead of seeing one opaque name.
+      const { size, colors } = deriveOptionValues(variantName);
+      const variantOptions: Record<string, string> = {};
+      if (size) variantOptions.Size = size;
+      if (colors.length > 0) variantOptions.Color = colors[0];
+
       product.variants.push({
         id: crypto.randomUUID(),
         name: variantName,
         price: row.price ?? 0,
         sku: row.sku ?? "",
         inventory: row.inventory,
-        // No structured options are written: a flat sheet gives one variant label per
-        // row, and decomposing "L / Navy" into {Size, Color} needs the Square
-        // variant-name heuristics. The original wrote `options: {}` here, which
-        // claimed the variant was modelled when it was not, and stopped the variant
-        // matrix editor from round-tripping the product.
+        options: Object.keys(variantOptions).length > 0 ? variantOptions : undefined,
       });
     } else {
       errors.push(`Row for "${row.name}" has no variant data (variant/price/sku/inventory)`);
     }
   }
 
+  // ── Post-pass: fill what can only be known once the whole product is grouped ──
+  for (const product of byKey.values()) {
+    // 1. Brand → category, but only when the sheet did not name one. The brand patterns
+    //    mirror the live category names, so this resolves through the same map and a miss
+    //    is reported rather than created.
+    if (!product.categoryId) {
+      const brand = detectBrand(product.name);
+      if (brand) {
+        const id = opts.categoryMap?.get(brand.toLowerCase());
+        if (id) product.categoryId = id;
+        else unresolvedCategories.add(brand);
+      }
+    }
+
+    // 2. Product type: infer it when the sheet was silent rather than defaulting to "other".
+    if (product.productType === "other") {
+      const inferred = detectProductType([product.name, product.description]);
+      if (inferred !== "other") {
+        product.productType = inferred;
+        inferredTypeCount++;
+      }
+    }
+
+    // 3. Tags for search.
+    const categoryName = product.categoryId
+      ? [...(opts.categoryMap?.entries() ?? [])].find(([, id]) => id === product.categoryId)?.[0]
+      : undefined;
+    product.tags = extractTags(product.name, product.description, categoryName ? [categoryName] : []);
+
+    // 4. Declare the option dimensions the variants actually vary across.
+    const dimensions = new Map<string, { type: "select" | "color"; values: Set<string> }>();
+    for (const v of product.variants) {
+      for (const [name, value] of Object.entries(v.options ?? {})) {
+        if (!dimensions.has(name)) {
+          dimensions.set(name, { type: name === "Color" ? "color" : "select", values: new Set() });
+        }
+        dimensions.get(name)!.values.add(value);
+      }
+    }
+    if (dimensions.size > 0) {
+      product.options = [...dimensions.entries()].map(([name, d]) => ({
+        id: name.toLowerCase(),
+        name,
+        type: d.type,
+        values: [...d.values],
+        required: true,
+      }));
+    } else if (product.variants.length > 1) {
+      noOptions.push(product.name);
+    }
+  }
+
   for (const c of unresolvedCategories) {
     warnings.push(
       `Category "${c}" does not exist, so those products were imported without one. Create the category (or correct the sheet) and re-import — they will update in place.`,
+    );
+  }
+  if (inferredTypeCount > 0) {
+    warnings.push(
+      `Product type was inferred (not stated in the sheet) for ${inferredTypeCount} product${inferredTypeCount === 1 ? "" : "s"}.`,
+    );
+  }
+  if (noOptions.length > 0) {
+    warnings.push(
+      `These products have more than one variant but their variant labels did not reveal a size or colour, so no option dimensions were set: ${noOptions.slice(0, 10).join(", ")}${noOptions.length > 10 ? ` (+${noOptions.length - 10} more)` : ""}. Set their options in the product editor.`,
     );
   }
 

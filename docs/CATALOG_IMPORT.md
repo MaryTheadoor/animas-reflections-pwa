@@ -428,14 +428,35 @@ entry plus a step-by-step migration tutorial — export, create categories first
 read the report, correct-and-re-import. It states the remaining limitation plainly rather
 than describing the feature aspirationally.
 
-**Still outstanding — the one open piece:**
-- **Structured variant options.** Decomposing a sheet label like `"L / Navy"` into
-  `{Size: "L", Color: "Navy"}` plus the product's declared `options` dimensions needs the
-  Square variant-name heuristics (`extractColors` / `extractSizes` / `extractTags`) and
-  the `BRAND_PATTERNS` brand map from the deleted `functions/src/sync.ts` (recoverable at
-  `e7e1100^`). Until then, imported variants are name-only and must be wired to matrix
-  dimensions per product by hand. This is §7 phase 4.
-- Migrating to another platform (Shopify/Woo/Etsy column sets) and XLSX remain future work.
+**Phase 4 (structured options + brand mapping): done and deployed.**
+The heuristics from the deleted `functions/src/sync.ts` (`e7e1100^`) are recovered into
+`src/lib/catalog-heuristics.ts` — size patterns, colour patterns, brand patterns, type
+patterns — and wired into the importer's post-pass:
+
+- **Variant options.** A flat label is decomposed (`"L / Navy"` → `{Size: "L", Color: "navy"}`),
+  each variant carries that map, and the product declares the dimensions the variants
+  actually vary across as `ProductOption[]` (Size as a select, Color typed as a swatch), so
+  the variant matrix round-trips an imported product.
+- **Brand → category.** When the sheet names no category, a brand detected in the product
+  name is resolved through the same category map (so a miss is reported, never created).
+- **Tags and productType** are inferred when the sheet is silent.
+- Multi-variant products whose labels reveal no dimensions are named in the report.
+
+**Two corrections made while porting**, both worth knowing:
+1. The recovered size patterns were ordered so that `Large` was tested **before** `XL`, and
+   because "X-Large" contains "Large" it resolved to `L`. Reordered so the extended forms
+   are tested first. Caught by a test, not by reading.
+2. The recovered `detectBrand` defaulted to `"Animas Reflections"` when nothing matched,
+   which would have filed every generic product under a brand category. It now returns
+   `null` and the category is left for the report to flag.
+
+**Also dropped deliberately:** the old `extractTags` added every 3+ letter word of the
+product name as a tag (producing noise like "classic", "tee" on nearly every product).
+Only recognised type tags are now emitted, since tags feed search.
+
+**Remaining future work:** other platforms (Shopify/Woo/Etsy column sets) and XLSX.
+
+Tests: 121 → 138 (a new `catalog-heuristics` suite plus importer integration cases).
 
 ---
 **Scope recap:** manual, admin-operated, file-upload import. No backend, no Square API
