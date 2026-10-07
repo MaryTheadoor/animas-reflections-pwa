@@ -1681,3 +1681,94 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] Decide whether to fix the service-worker cache strategy
 - [ ] Carry-over: G2 real-card checkout test, G1 catalog population, G4/G5 images,
   G15 Lighthouse, G19/G22/G23, G20 DNS cutover, G21 analytics
+
+---
+
+## Session 34 — 2026-10-07 | Square catalog migration: modifiers, duplicates, design editing
+
+> Numbering note: `origin/master` also reaches 34. Numbers are per-line until the two are
+> reconciled — see `docs/STATUS_SWEEP.md` §1.
+
+### Context Restored From
+- `docs/CATALOG_IMPORT.md`, `docs/STATUS_SWEEP.md`, the client's real Square export
+  (`AR square_catalog-2026-10-07-1525.csv`, 161 columns / 524 rows), and the live Firestore
+  catalog read back through the public products endpoint
+
+### Actions Taken
+1. **Mapped the real export properly.** Only 8 of 41 populated columns were recognised.
+   Added: `Token` → `variant.squareVariationId`; `Categories` (comma-separated, `>`-nested,
+   `(SOMEID)`-suffixed) → category; `Archived` + `Square Online Item Visibility` → active;
+   the location-suffixed `Current Quantity …` (by prefix) → inventory; `Weight (lb)` → weightOz;
+   `Option Name/Value n` → structured options; Square's generic `Item Type` treated as
+   unstated. **147 archived items would otherwise have imported as active.**
+2. **Fixed a real bug inherited from the recovered code:** `(await getDoc(ref)).exists` read
+   the *method* as a property, so `created` could never increment — a first-ever import would
+   have reported "0 created". Also: header normalisation kept parentheses, so `Weight (lb)`
+   matched nothing.
+3. **Found and fixed the duplicate explosion.** A re-import had taken the catalog 408 → 600
+   products (259 redundant copies) because the name→id index *excluded* ambiguous names,
+   pushing those rows to fresh slug ids. It now picks the lowest id and reports the collision.
+4. **Built the add-on (modifier) pipeline.** `fetchSquareModifiers` reads `MODIFIER_LIST`
+   objects (BigInt conversion for money *and* min/max selections, environment in the reply);
+   the importer records which sets each item uses, keeping the Square id from the column; and
+   **Import Square add-ons** joins them. Run against the live catalog: **183 products, 4,122
+   add-ons, 84 groups**, rendered grouped with prices in the customizer.
+5. **Fixed the duplicated-set-name defect** it exposed: 12 set names are shared by 2–8 lists,
+   and **163 of the 183** products touch a colliding name. Resolution now prefers the recorded
+   list id and only trusts a bare name when exactly one list carries it; an ambiguous set is
+   reported and skipped rather than guessed at.
+6. **Reorganised the Products tab** (all action controls above the list, per request) and made
+   duplicate merges individual, batched (checkbox + Merge selected) or wholesale (Merge all).
+7. **Opt-in category creation** during import, off by default, so a messy export cannot invent
+   categories unless the operator chooses it.
+8. **Designs are editable after creation** — edit a design's name, category, description, tags,
+   or replace its image (image optional on edit), with blank description/tags now clearing
+   properly (written as null, because the write merges).
+9. **Recognised the modifier-set columns** instead of reporting 123 of them as unmapped noise.
+
+### Decisions Made
+- Identity for imports: sheet `id` → existing product by name → name slug, so re-imports
+  converge instead of proliferating (known issue #38).
+- An existing product receives a **patch**, never a replacement: `createdAt` is never reset and
+  a blank value never overwrites stored curation. A matched product's `variants` *are*
+  replaced, and the report says so.
+- Categories are mapped to existing ones by default, with creation opt-in per run.
+- Add-ons: Square choice → our toggle, Square list name → our `group`. Square's SINGLE/MULTIPLE
+  rule has no equivalent in our flat model, so it is reported rather than silently dropped.
+- Duplicated Square set names: prefer the id, and **refuse rather than guess** on an ambiguous
+  bare name.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| functions/src/index.ts | +`fetchSquareModifiers`; health now reports the Square environment |
+| src/lib/csv.ts | real Square column mapping, deterministic ids, category resolution/creation, `squareModifierRefs` |
+| src/lib/catalog-import.ts | convergence on ambiguous names, patch-not-replace, opt-in category creation |
+| src/lib/catalog-heuristics.ts | NEW — recovered size/colour/brand/type patterns |
+| src/lib/duplicate-products.ts | NEW — semantic duplicate grouping + merge plan |
+| src/lib/square-addons.ts | NEW — Square modifier lists → `ProductModifier` |
+| src/components/admin/product-manager.tsx | actions moved to the top, duplicate panel + batch merges, add-on import, category checkbox |
+| src/app/admin/page.tsx | editable designs |
+| src/types/index.ts | `squareModifierRefs`, `ProductModifier.group` |
+| PROJECT_CONTEXT.md | known issues 38–44 |
+| docs/CATALOG_IMPORT.md | §10–13: live findings, column coverage, duplicates, add-ons |
+
+### Current State at Session End
+- Lint 0/0 | Tests **171/171** (13 suites) | tsc clean (app + functions) | Build 25 pages | SEO gate green
+- Live catalog: 385 products · 183 with add-ons (4,122 entries) · 121 categorised · 147 inactive
+- Contrast audit refreshed and green: **25/25 combinations pass AA**
+- `functions/lib` orphaned build output for deleted modules removed
+- Hosting + functions deployed; `development` pushed
+- ⚠️ Untracked 230 MB `animas-reflections-pwa.zip` left in the repo root — the client's file,
+  deliberately not deleted
+
+### Pending / Next Session
+- [ ] Create the genuine missing categories (`Durango Lacrosse`, `I'M OK R U`, `ET Art`,
+  `BISCUIT HOCKEY`, `Teams`, `GREEN BUDDHA`) and re-import to place those products
+- [ ] Re-run **Import Square add-ons** so the id-based resolution takes effect (the run that
+  populated 183 products used the name-matching build)
+- [ ] Decide who owns page `title`/`description` — still the gate on the last three recoverable
+  items (theme editor, copy editor, editable SEO)
+- [ ] Carry-over: G2 real-card checkout test, G1 catalog population, G4/G5 images, G15
+  Lighthouse, G19/G22/G23, G20 DNS cutover, G21 analytics
+- [ ] Housekeeping: stale local `master`; the 230 MB zip
