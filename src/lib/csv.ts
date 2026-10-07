@@ -32,6 +32,8 @@ export interface CatalogCsvRow {
   featured?: boolean;
   images: string[];
   weightOz?: number;
+  /** Square modifier-set names applied to this item (the "Modifier Set - X" = Y columns). */
+  modifierSets?: string[];
   seoTitle?: string;
   seoDescription?: string;
 }
@@ -273,6 +275,20 @@ export function mapCatalogRow(headers: string[], cells: string[]): CatalogCsvRow
   const productType =
     rawType && SQUARE_ITEM_TYPES.has(normHeader(rawType)) ? undefined : rawType;
 
+  // Square's modifier-set associations: one column per set, Y/N per item. Only the
+  // *association* is here — the choices and their prices need the Square Catalog API.
+  const modifierSets: string[] = [];
+  headers.forEach((header, i) => {
+    if (resolveField(header) !== "__modifierSet") return;
+    if ((cells[i] ?? "").trim().toUpperCase() !== "Y") return;
+    const name = header
+      .replace(/^modifier\s*set\s*[-\u2013\u2014:]\s*/i, "")
+      // Square appends the set id when two sets share a name.
+      .replace(/\s*[-\u2013\u2014]\s*[A-Z0-9]{20,}$/, "")
+      .trim();
+    if (name && !modifierSets.includes(name)) modifierSets.push(name);
+  });
+
   return {
     id: get("id") || undefined,
     name: name.trim(),
@@ -292,6 +308,7 @@ export function mapCatalogRow(headers: string[], cells: string[]): CatalogCsvRow
       .concat(splitList(get("image2")))
       .concat(splitList(get("image3"))),
     weightOz,
+    modifierSets: modifierSets.length > 0 ? modifierSets : undefined,
     seoTitle: get("seoTitle") || undefined,
     seoDescription: get("seoDescription") || undefined,
   };
@@ -422,6 +439,13 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
 
     // A later row can carry the weight even when the first did not.
     if (product.weightOz === undefined && row.weightOz !== undefined) product.weightOz = row.weightOz;
+
+    // Modifier-set associations accumulate across the product's rows.
+    if (row.modifierSets?.length) {
+      const sets = new Set(product.squareModifierSets ?? []);
+      for (const s of row.modifierSets) sets.add(s);
+      product.squareModifierSets = [...sets];
+    }
 
     product.name = product.name || row.name;
     product.description = product.description || (row.description ?? "");

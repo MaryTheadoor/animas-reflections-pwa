@@ -8,7 +8,7 @@ import {
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import { SquareClient, SquareEnvironment, SquareError } from "square";
+import { SquareClient, SquareEnvironment, SquareError, type Square } from "square";
 import { defineString } from "firebase-functions/params";
 import {
   deriveOrder,
@@ -744,6 +744,84 @@ export const createSquareProduct = onCall(
         err instanceof Error ? `Square API error: ${err.message}` : "Failed to create Square product"
       );
     }
+  }
+);
+
+// ─── Square modifier lists ─────────────────────────────────────────
+
+/**
+ * Read-only: the Square modifier lists (add-on sets) with each choice's price.
+ *
+ * Square keeps modifier lists separate from items and offers no CSV export for them, which
+ * is why they need the API. The item -> list *associations* are already in the item export
+ * as the "Modifier Set - <name>" Y/N columns; this supplies the *contents* (the choices and
+ * what each costs), which the export cannot carry.
+ */
+export const fetchSquareModifiers = onCall(
+  { cors: true, region: "us-central1" },
+  async (request) => {
+    await requireAdmin(request);
+    const client = getSquareClient();
+
+    type ModifierDto = { id: string; name: string; price: number; onByDefault: boolean; hiddenOnline: boolean };
+    type ListDto = {
+      id: string;
+      name: string;
+      modifierType: string;
+      minSelected: number | null;
+      maxSelected: number | null;
+      modifiers: ModifierDto[];
+    };
+
+    const lists: ListDto[] = [];
+    let cursor: string | undefined;
+
+    do {
+      const page = await client.catalog.search({
+        objectTypes: ["MODIFIER_LIST"],
+        cursor,
+        limit: 200,
+      });
+
+      for (const object of page.objects ?? []) {
+        // CatalogObject is a discriminated union on `type`, so narrow before reaching
+        // for the modifier-list payload.
+        if (object.type !== "MODIFIER_LIST") continue;
+        const data = object.modifierListData;
+        if (!data) continue;
+        lists.push({
+          id: object.id ?? "",
+          name: data.name ?? "",
+          modifierType: data.modifierType ?? "LIST",
+          // These are BigInt too — convert before they cross the callable boundary.
+          minSelected: data.minSelectedModifiers == null ? null : Number(data.minSelectedModifiers),
+          maxSelected: data.maxSelectedModifiers == null ? null : Number(data.maxSelectedModifiers),
+          // flatMap rather than map so the union can be narrowed inside the callback.
+          modifiers: (data.modifiers ?? []).flatMap((m: Square.CatalogObject) => {
+            if (m.type !== "MODIFIER" || !m.modifierData) return [];
+            const md = m.modifierData;
+            const amount = md.priceMoney?.amount;
+            return [{
+              id: m.id ?? "",
+              name: md.name ?? "",
+              // priceMoney.amount is a BigInt in cents; our prices are dollars.
+              price: amount == null ? 0 : Number(amount) / 100,
+              onByDefault: md.onByDefault === true,
+              hiddenOnline: md.hiddenOnline === true,
+            }];
+          }),
+        });
+      }
+      cursor = page.cursor ?? undefined;
+    } while (cursor);
+
+    logger.info("fetchSquareModifiers", {
+      lists: lists.length,
+      environment: squareEnvironment.value(),
+    });
+    // The environment is returned so the caller can tell production data from sandbox at a
+    // glance rather than wondering why nothing matches.
+    return { environment: squareEnvironment.value(), lists };
   }
 );
 

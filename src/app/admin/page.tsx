@@ -175,6 +175,8 @@ function DashboardContent() {
   const [designDescription, setDesignDescription] = useState("");
   const [designTags, setDesignTags] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  /** Set when the form is editing an existing design rather than creating one. */
+  const [editingDesignId, setEditingDesignId] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
@@ -281,54 +283,86 @@ function DashboardContent() {
   };
 
   const handleDesignUpload = async () => {
-    if (!selectedFile) return;
+    const editing = editingDesignId ? designs.find((d) => d.id === editingDesignId) : undefined;
+    // On create an image is required; on edit it is optional — you may be changing only
+    // the name or category.
+    if (!editing && !selectedFile) { setUploadError("Choose an image file"); return; }
     if (!designName.trim() || !designCategory.trim()) { setUploadError("Name and category are required"); return; }
     if (!user) { setUploadError("You must be signed in to upload designs"); return; }
     setUploading(true); setUploadError(null); setUploadProgress(0); setUploadSuccess(false);
-    const designId = crypto.randomUUID();
+    const designId = editing?.id ?? crypto.randomUUID();
     const tags = designTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
     try {
-      const fileRef = ref(storage, `designs/${designId}_${selectedFile.name}`);
-      const task = uploadBytesResumable(fileRef, selectedFile);
+      // Keep the existing image unless a replacement file was chosen.
+      let imageUrl = editing?.image_url;
+      if (selectedFile) {
+        const fileRef = ref(storage, `designs/${designId}_${selectedFile.name}`);
+        const task = uploadBytesResumable(fileRef, selectedFile);
 
-      // Track progress
-      task.on("state_changed",
-        (snapshot) => {
-          setUploadProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
-        }
-      );
+        // Track progress
+        task.on("state_changed",
+          (snapshot) => {
+            setUploadProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
+          }
+        );
 
-      // Await completion
-      await task;
-      const url = await getDownloadURL(fileRef);
+        // Await completion
+        await task;
+        imageUrl = await getDownloadURL(fileRef);
+      }
+      if (!imageUrl) { setUploadError("No image on this design and none chosen"); setUploading(false); return; }
 
-      const newAsset: DesignAsset = {
+      // Blank description/tags are written as null so an edit can CLEAR them — with
+      // merge semantics an omitted field keeps its stored value. stripUndefined keeps
+      // null, so this is the way to remove one.
+      const asset = {
         id: designId,
         name: designName.trim(),
-        description: designDescription.trim() || undefined,
+        description: designDescription.trim() || null,
         category: designCategory.trim(),
-        image_url: url,
-        tags: tags.length > 0 ? tags : undefined,
-        created_at: new Date().toISOString(),
-      };
+        image_url: imageUrl,
+        tags: tags.length > 0 ? tags : null,
+        created_at: editing?.created_at ?? new Date().toISOString(),
+      } as unknown as DesignAsset;
 
-      // description/tags are undefined when left blank — strip them or the SDK
-      // rejects the write ("Unsupported field value: undefined"), which surfaced
-      // as the live design-upload errors.
-      await setDoc(doc(db, "designs", designId), stripUndefined(newAsset));
-      setDesigns((prev) => [...prev, newAsset]);
+      // merge so fields this form does not model (e.g. productId) survive an edit.
+      await setDoc(doc(db, "designs", designId), stripUndefined(asset), { merge: true });
+      setDesigns((prev) =>
+        editing ? prev.map((d) => (d.id === designId ? asset : d)) : [...prev, asset],
+      );
       setUploading(false);
       setUploadProgress(0);
+      setEditingDesignId(null);
       setDesignName(""); setDesignCategory(""); setDesignDescription(""); setDesignTags("");
       setSelectedFile(null);
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 4000);
     } catch (err) {
-      console.error("Design upload failed:", err);
+      console.error("Design save failed:", err);
       setUploading(false);
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     }
   };
+
+  /** Load a design into the form for editing. */
+  const startEditDesign = (d: DesignAsset) => {
+    setEditingDesignId(d.id);
+    setDesignName(d.name);
+    setDesignCategory(d.category);
+    setDesignDescription(d.description ?? "");
+    setDesignTags((d.tags ?? []).join(", "));
+    setSelectedFile(null);
+    setUploadError(null);
+    setUploadSuccess(false);
+  };
+
+  const cancelEditDesign = () => {
+    setEditingDesignId(null);
+    setDesignName(""); setDesignCategory(""); setDesignDescription(""); setDesignTags("");
+    setSelectedFile(null);
+    setUploadError(null);
+  };
+
   const removeDesign = async (id: string) => {
     if (!confirm("Delete this design?")) return;
     const target = designs.find((d) => d.id === id);
@@ -1080,7 +1114,20 @@ function DashboardContent() {
               </div>
             )}
             {uploadSuccess && (
-              <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-xl text-sm">Design published successfully! It will appear in the product editor under Printable Designs.</div>
+              <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-xl text-sm">
+                {editingDesignId ? "Design updated." : "Design published successfully! It will appear in the product editor under Printable Designs."}
+              </div>
+            )}
+
+            {editingDesignId && (
+              <div className="mb-4 p-3 bg-warm-sand/30 border border-warm-sand rounded-xl text-sm flex items-center justify-between gap-3">
+                <span>
+                  Editing <strong>{designs.find((d) => d.id === editingDesignId)?.name ?? "design"}</strong> — change any field, and choose a file only if you want to replace the image.
+                </span>
+                <button onClick={cancelEditDesign} className="text-xs text-primary hover:underline shrink-0">
+                  Cancel
+                </button>
+              </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -1097,16 +1144,24 @@ function DashboardContent() {
               <label className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${
                 selectedFile ? "border-gold bg-gold/5 text-gold-deep" : "border-primary/20 text-foreground hover:border-primary/40"
               }`}>
-                {selectedFile ? `File: ${selectedFile.name}` : "Choose Image File"}
+                {selectedFile
+                  ? `File: ${selectedFile.name}`
+                  : editingDesignId
+                    ? "Choose a file to replace the image (optional)"
+                    : "Choose Image File"}
                 <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
                   disabled={uploading} className="hidden" />
               </label>
               <button
                 onClick={handleDesignUpload}
-                disabled={uploading || !selectedFile || !designName.trim() || !designCategory.trim()}
+                disabled={uploading || (!editingDesignId && !selectedFile) || !designName.trim() || !designCategory.trim()}
                 className="px-6 py-2 rounded-xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors disabled:opacity-40 btn-tactile btn-gold-tactile text-sm shrink-0"
               >
-                {uploading ? `Uploading ${Math.round(uploadProgress)}%` : "Publish Design"}
+                {uploading
+                  ? `Uploading ${Math.round(uploadProgress)}%`
+                  : editingDesignId
+                    ? "Save Changes"
+                    : "Publish Design"}
               </button>
             </div>
           {designs.length > 0 && (
@@ -1136,6 +1191,13 @@ function DashboardContent() {
                       ))}
                     </div>
                   )}
+                  <button
+                    onClick={() => startEditDesign(d)}
+                    title="Edit this design's name, category, description, tags or image"
+                    className="absolute top-1 right-7 opacity-0 group-hover:opacity-100 bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] transition-opacity"
+                  >
+                    ✎
+                  </button>
                   <button onClick={() => removeDesign(d.id)}
                     className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-opacity">&times;</button>
                 </div>

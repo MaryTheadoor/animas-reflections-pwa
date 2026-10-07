@@ -22,6 +22,7 @@ import { PRODUCT_TYPE_LABELS } from "@/types";
 import AdminTooltip from "@/components/ui/admin-tooltip";
 import { importCatalogCsv, type ImportReport } from "@/lib/catalog-import";
 import { findDuplicateGroups, mergeGroup, type DuplicateGroup } from "@/lib/duplicate-products";
+import { buildModifiersForProduct, type SquareModifierList } from "@/lib/square-addons";
 
 const EMPTY_PRODUCT: ManagedProduct = {
   id: "",
@@ -90,6 +91,73 @@ export default function ProductManager({ categories }: Props) {
   const [csvResult, setCsvResult] = useState<ImportReport | null>(null);
   const [createCategories, setCreateCategories] = useState(false);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Square add-ons. The item export records WHICH modifier sets an item uses; the choices
+  // and prices live only in the Square Catalog API, so this fetches them and attaches them.
+  const [addonBusy, setAddonBusy] = useState(false);
+  const [addonResult, setAddonResult] = useState<{
+    environment: string;
+    lists: number;
+    updated: number;
+    missing: string[];
+    selectOne: number;
+  } | null>(null);
+
+  const handleImportSquareAddons = async () => {
+    const candidates = products.filter((p) => (p.squareModifierSets ?? []).length > 0);
+    if (candidates.length === 0) {
+      alert(
+        "No products carry Square modifier-set information yet. Import the Square CSV first — it records which sets each item uses — then run this to pull the choices.",
+      );
+      return;
+    }
+    if (
+      !confirm(
+        `Fetch add-on sets from Square and attach them to ${candidates.length} product${candidates.length === 1 ? "" : "s"}?\n\nExisting add-ons on those products are replaced.`,
+      )
+    ) {
+      return;
+    }
+    setAddonBusy(true);
+    setAddonResult(null);
+    try {
+      const callable = httpsCallable<Record<string, never>, { environment: string; lists: SquareModifierList[] }>(
+        functions,
+        "fetchSquareModifiers",
+      );
+      const { data } = await callable({});
+
+      let updated = 0;
+      let selectOne = 0;
+      const missing = new Set<string>();
+      for (const p of candidates) {
+        const built = buildModifiersForProduct(p.squareModifierSets ?? [], data.lists);
+        for (const m of built.missingSets) missing.add(m);
+        if (built.hasSelectOne) selectOne++;
+        if (built.modifiers.length === 0) continue;
+        await setDoc(
+          doc(db, "products", p.id),
+          // Clearing the set list records that this product has been resolved; a later
+          // re-import re-populates it from the sheet, so nothing is lost.
+          stripUndefined({ modifiers: built.modifiers, squareModifierSets: [] }),
+          { merge: true },
+        );
+        updated++;
+      }
+      setAddonResult({
+        environment: data.environment,
+        lists: data.lists.length,
+        updated,
+        missing: [...missing],
+        selectOne,
+      });
+      await loadProducts();
+    } catch (err) {
+      alert("Square add-on import failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setAddonBusy(false);
+    }
+  };
 
   // Duplicate products — semantic comparison (same name + same variants). Merging keeps the
   // richest copy, unions what the others held, and deletes the redundancy. Merges can be run
@@ -762,6 +830,19 @@ export default function ProductManager({ categories }: Props) {
             Create missing categories
           </label>
           <AdminTooltip
+            content="The Square item export says which modifier sets each item uses, but not what is inside them — Square keeps the choices and prices separately. This pulls those sets from the Square Catalog API and attaches them as grouped add-ons."
+            dismissKey="square-addons"
+            side="bottom"
+          >
+            <button
+              onClick={handleImportSquareAddons}
+              disabled={addonBusy}
+              className="px-3 py-2 text-xs font-medium text-primary border border-primary/20 rounded-lg hover:border-primary/40 transition-colors disabled:opacity-50"
+            >
+              {addonBusy ? "Fetching…" : "Import Square add-ons"}
+            </button>
+          </AdminTooltip>
+          <AdminTooltip
             content="Two products count as duplicates when the name and every variant (name, price, SKU) match — variant order does not matter. Merging keeps the most complete copy, combines what the others held, and deletes the rest."
             dismissKey="duplicates"
             side="bottom"
@@ -796,6 +877,29 @@ export default function ProductManager({ categories }: Props) {
               {csvResult.errors.slice(0, 30).map((er, i) => (
                 <div key={i}>• {er}</div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Square add-on import result */}
+      {addonResult && (
+        <div className="text-[11px] text-foreground/80 p-3 bg-warm-sand/20 rounded-xl border border-warm-sand">
+          <span className="text-green-700">
+            ✓ Attached Square add-ons to {addonResult.updated} product{addonResult.updated === 1 ? "" : "s"}
+          </span>
+          <span className="text-foreground/70">
+            {" "}· {addonResult.lists} modifier set{addonResult.lists === 1 ? "" : "s"} read from Square · environment: {addonResult.environment}
+          </span>
+          {addonResult.selectOne > 0 && (
+            <p className="mt-1 text-foreground/70">
+              {addonResult.selectOne} product{addonResult.selectOne === 1 ? "" : "s"} used a single-choice Square list. Square forced one selection; our add-ons are independent toggles, so those arrive as a group you can tick in any combination.
+            </p>
+          )}
+          {addonResult.missing.length > 0 && (
+            <div className="mt-1">
+              <span className="font-medium">Sets the sheet referenced but Square did not return:</span>
+              <div>{addonResult.missing.slice(0, 20).join(", ")}{addonResult.missing.length > 20 ? ` (+${addonResult.missing.length - 20} more)` : ""}</div>
             </div>
           )}
         </div>

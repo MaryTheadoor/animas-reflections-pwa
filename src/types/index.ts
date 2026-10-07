@@ -232,6 +232,11 @@ export interface ManagedProduct {
    *  @deprecated Prefer `modifiers` (supports pricing model + text/file inputs).
    *  Kept for backward compatibility with existing products. */
   productAddons?: ProductAddon[];
+  /** Square modifier-set names this product is associated with, as exported in the
+   *  "Modifier Set - <name>" columns of a Square item export. Recorded on import so the
+   *  add-on contents can be pulled from the Square Catalog API later (the export carries
+   *  only the association, never the choices). Cleared once `modifiers` is written. */
+  squareModifierSets?: string[];
   /** Per-product option dimensions that define variants (SKUs). When set,
    *  the variant matrix editor builds from these dimensions instead of the
    *  hardcoded size/color grid. When unset, falls back to site-standard
