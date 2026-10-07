@@ -150,4 +150,20 @@ describe("csvToProducts — heuristics", () => {
     expect(products[0].options).toBeUndefined();
     expect(warnings.some((w) => w.includes("no option dimensions were set"))).toBe(true);
   });
+
+  it("keeps dimensions with real choice and strips the single-valued ones", () => {
+    // Both variants are "One Size", so Size is not a choice; the colour is.
+    const csv = "name,variant,price\nCap,One Size Navy,15.00\nCap,One Size Red,15.00";
+    const { products } = csvToProducts(csv);
+    const cap = products[0];
+    expect(cap.options?.map((o) => o.name)).toEqual(["Color"]);
+    expect(cap.variants.map((v) => v.options)).toEqual([{ Color: "navy" }, { Color: "red" }]);
+  });
+
+  it("drops a single-valued dimension rather than adding a one-option selector", () => {
+    const single = "name,variant,price\nMug,One Size,12.00";
+    const { products } = csvToProducts(single);
+    expect(products[0].options).toBeUndefined();
+    expect(products[0].variants[0].options).toBeUndefined();
+  });
 });

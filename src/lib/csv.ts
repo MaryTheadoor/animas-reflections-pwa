@@ -320,16 +320,30 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
         dimensions.get(name)!.values.add(value);
       }
     }
-    if (dimensions.size > 0) {
-      product.options = [...dimensions.entries()].map(([name, d]) => ({
+    // Only dimensions with more than one value are real choices. A single-valued one
+    // (the very common "One Size", or a colour every variant shares) would put a
+    // pointless one-option selector on the storefront, so it is dropped and stripped
+    // from the variants to keep the declaration and the variants consistent.
+    const usable = [...dimensions.entries()].filter(([, d]) => d.values.size > 1);
+    if (usable.length > 0) {
+      const kept = new Set(usable.map(([name]) => name));
+      product.options = usable.map(([name, d]) => ({
         id: name.toLowerCase(),
         name,
         type: d.type,
         values: [...d.values],
         required: true,
       }));
-    } else if (product.variants.length > 1) {
-      noOptions.push(product.name);
+      for (const v of product.variants) {
+        if (!v.options) continue;
+        const filtered = Object.fromEntries(
+          Object.entries(v.options).filter(([name]) => kept.has(name)),
+        );
+        v.options = Object.keys(filtered).length > 0 ? filtered : undefined;
+      }
+    } else {
+      for (const v of product.variants) v.options = undefined;
+      if (product.variants.length > 1) noOptions.push(product.name);
     }
   }
 
