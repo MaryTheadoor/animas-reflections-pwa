@@ -21,6 +21,7 @@ import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, Product
 import { PRODUCT_TYPE_LABELS } from "@/types";
 import AdminTooltip from "@/components/ui/admin-tooltip";
 import { importCatalogCsv, type ImportReport } from "@/lib/catalog-import";
+import { findDuplicateGroups, mergeGroup, type DuplicateGroup } from "@/lib/duplicate-products";
 
 const EMPTY_PRODUCT: ManagedProduct = {
   id: "",
@@ -88,6 +89,54 @@ export default function ProductManager({ categories }: Props) {
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvResult, setCsvResult] = useState<ImportReport | null>(null);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Duplicate products — semantic comparison (same name + same variants). Merging keeps the
+  // richest copy, unions what the others held, and deletes the redundancy.
+  const [dupGroups, setDupGroups] = useState<DuplicateGroup[] | null>(null);
+  const [dupBusy, setDupBusy] = useState(false);
+
+  const handleScanDuplicates = () => {
+    setDupGroups(findDuplicateGroups(products));
+  };
+
+  const handleMergeDuplicates = async (group: DuplicateGroup) => {
+    const merged = mergeGroup(group);
+    const redundant = group.members.filter((m) => m.id !== merged.id);
+    const inventoryWarning = group.inventoryConsistent
+      ? ""
+      : "\n\nNote: the copies disagree about inventory; the highest count is kept.";
+    if (
+      !confirm(
+        `Merge ${group.members.length} copies of "${group.name}" into one product and delete ${redundant.length}?${inventoryWarning}`,
+      )
+    ) {
+      return;
+    }
+    setDupBusy(true);
+    try {
+      await setDoc(doc(db, "products", merged.id), stripUndefined(merged as unknown as Record<string, unknown>), { merge: true });
+      // The survivor now references the union of images, so only delete storage the
+      // survivor does not use — otherwise the merge would delete its own photos.
+      const keepUrls = collectProductUrls(merged);
+      for (const r of redundant) {
+        for (const url of collectProductUrls(r)) {
+          if (keepUrls.includes(url)) continue;
+          try {
+            const urlPath = decodeURIComponent(url.split("/o/")[1]?.split("?")[0] ?? "");
+            if (urlPath) await deleteObject(ref(storage, urlPath));
+          } catch { /* already deleted or an external URL — ignore */ }
+        }
+        await deleteDoc(doc(db, "products", r.id));
+      }
+      await loadProducts();
+      // Re-scan so the panel reflects the new state rather than stale groups.
+      setDupGroups(findDuplicateGroups(products.filter((p) => !redundant.some((r) => r.id === p.id))));
+    } catch (err) {
+      alert("Merge failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setDupBusy(false);
+    }
+  };
 
   const handleCsvFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -825,6 +874,75 @@ export default function ProductManager({ categories }: Props) {
                   {csvResult.errors.slice(0, 20).map((er, i) => (
                     <div key={i}>• {er}</div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Duplicate products ──
+          Compares products semantically: the same name AND the same set of variants (name,
+          price, SKU, order-independent). Merging keeps the richest copy, unions what the
+          others held, and deletes the rest. */}
+      {!editing && (
+        <div className="mb-4 p-3 bg-warm-sand/20 rounded-xl border border-warm-sand">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleScanDuplicates}
+              disabled={dupBusy}
+              className="px-3 py-1.5 text-xs font-medium text-primary border border-primary/20 rounded-lg hover:border-primary/40 transition-colors disabled:opacity-50"
+            >
+              Find duplicate products
+            </button>
+            <span className="text-[10px] text-foreground/70">
+              Two products count as duplicates when the name and every variant (name, price, SKU) match — variant order does not matter.
+            </span>
+          </div>
+
+          {dupGroups !== null && (
+            <div className="mt-3 text-[11px]">
+              {dupGroups.length === 0 ? (
+                <span className="text-green-700">✓ No duplicates found.</span>
+              ) : (
+                <div className="space-y-3">
+                  {dupGroups.map((g) => {
+                    return (
+                      <div key={g.fingerprint} className="bg-white rounded-lg border border-warm-sand p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-medium text-foreground">
+                            {g.name} <span className="text-foreground/70">· {g.members.length} copies</span>
+                          </span>
+                          <button
+                            onClick={() => handleMergeDuplicates(g)}
+                            disabled={dupBusy}
+                            className="px-3 py-1 text-xs font-medium bg-gold text-on-gold rounded-lg hover:bg-gold-light transition-colors disabled:opacity-50 shrink-0"
+                          >
+                            Merge &amp; delete {g.members.length - 1}
+                          </button>
+                        </div>
+                        <ul className="mt-2 space-y-0.5 text-foreground/80">
+                          {g.members.map((m) => (
+                            <li key={m.id}>
+                              {m.id === g.keeperId ? "✓ keep" : "− remove"}{" "}
+                              <span className="font-mono text-[10px]">{m.id}</span>
+                              {m.variants.length > 0 && (
+                                <span> · {m.variants.length} variant{m.variants.length === 1 ? "" : "s"}</span>
+                              )}
+                              {m.images.length > 0 && <span> · {m.images.length} image{m.images.length === 1 ? "" : "s"}</span>}
+                              {m.categoryId && <span> · categorised</span>}
+                            </li>
+                          ))}
+                        </ul>
+                        {!g.inventoryConsistent && (
+                          <p className="mt-1 text-danger">
+                            These copies disagree about inventory. Merging keeps the highest count per variant.
+                          </p>
+                        )}
+                        <p className="mt-1 text-foreground/70">Keeper chosen: the most complete copy. Its description, prices and category win; images, colours and tags are combined.</p>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
