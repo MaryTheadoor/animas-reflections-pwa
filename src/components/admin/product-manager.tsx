@@ -88,6 +88,7 @@ export default function ProductManager({ categories }: Props) {
   // source platform, prepares it, and uploads the file here. See docs/CATALOG_IMPORT.md.
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvResult, setCsvResult] = useState<ImportReport | null>(null);
+  const [createCategories, setCreateCategories] = useState(false);
   const csvInputRef = useRef<HTMLInputElement | null>(null);
 
   // Duplicate products — semantic comparison (same name + same variants). Merging keeps the
@@ -169,6 +170,7 @@ export default function ProductManager({ categories }: Props) {
         text,
         categories,
         products.map((p) => ({ id: p.id, name: p.name })),
+        createCategories,
       );
       setCsvResult(res);
       loadProducts();
@@ -750,6 +752,15 @@ export default function ProductManager({ categories }: Props) {
           >
             Download template
           </button>
+          <label className="flex items-center gap-1.5 text-[11px] text-foreground/80 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={createCategories}
+              onChange={(e) => setCreateCategories(e.target.checked)}
+              className="accent-gold"
+            />
+            Create missing categories
+          </label>
           <AdminTooltip
             content="Two products count as duplicates when the name and every variant (name, price, SKU) match — variant order does not matter. Merging keeps the most complete copy, combines what the others held, and deletes the rest."
             dismissKey="duplicates"

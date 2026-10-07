@@ -238,4 +238,20 @@ describe("csvToProducts — Square export columns", () => {
     // not a fresh slug id — this row targets the document that already exists
     expect(products[0].id).toBe("07db885e-799f-4899-bb65-f1f7b5a74bb0");
   });
+
+  it("reports the preferred leaf name to create when createCategories is on", () => {
+    const csv = "Item Name,Price,Categories\nTee,20.00,Bands > LITTLE STRANGER FAN BASED FUNDRAISING";
+    const { products, unresolvedCategories, warnings } = csvToProducts(csv, { createCategories: true });
+    expect(products[0].categoryId).toBe("");
+    expect(unresolvedCategories).toEqual([
+      { productId: "tee", name: "LITTLE STRANGER FAN BASED FUNDRAISING" },
+    ]);
+    expect(warnings.some((w) => w.includes("will be created"))).toBe(true);
+  });
+
+  it("strips a trailing id and picks the deepest leaf for a messy category", () => {
+    const csv = "Item Name,Price,Categories\nHoodie,50.00,\"Durango High School Alpine Team, Teams, Teams > Durango High School Alpine Ski Team (ABC123)\"";
+    const { unresolvedCategories } = csvToProducts(csv, { createCategories: true });
+    expect(unresolvedCategories[0].name).toBe("Durango High School Alpine Ski Team");
+  });
 });

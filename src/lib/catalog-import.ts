@@ -57,6 +57,7 @@ export async function importCatalogCsv(
   text: string,
   categories: ManagedCategory[] = [],
   existingProducts: ExistingProductRef[] = [],
+  createCategories = false,
 ): Promise<ImportReport> {
   const categoryMap = new Map<string, string>();
   for (const c of categories) {
@@ -82,10 +83,45 @@ export async function importCatalogCsv(
     }
   }
 
-  const { products, errors, warnings, unmappedColumns } = csvToProducts(text, {
+  const { products, errors, warnings, unmappedColumns, unresolvedCategories } = csvToProducts(text, {
     categoryMap,
     existingByName,
+    createCategories,
   });
+
+  // Create categories the sheet references but we do not have, when the operator asked for
+  // it. The id is `cat_<slug>` so a later import of the same sheet resolves to the same doc.
+  const createdCategoryNames: string[] = [];
+  if (createCategories) {
+    const idByName = new Map(categoryMap);
+    const productById = new Map(products.map((p) => [p.id, p]));
+    for (const { productId, name } of unresolvedCategories) {
+      const key = name.trim().toLowerCase();
+      let id = idByName.get(key);
+      if (!id) {
+        id = `cat_${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unnamed"}`;
+        const now = new Date().toISOString();
+        await setDoc(doc(db, "categories", id), {
+          id,
+          name: name.trim(),
+          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+          order: 0,
+          parentId: null,
+          createdAt: now,
+          updatedAt: now,
+        }, { merge: true });
+        idByName.set(key, id);
+        createdCategoryNames.push(name.trim());
+      }
+      const product = productById.get(productId);
+      if (product) product.categoryId = id;
+    }
+    if (createdCategoryNames.length > 0) {
+      warnings.push(
+        `Created ${createdCategoryNames.length} categor${createdCategoryNames.length === 1 ? "y" : "ies"} that did not exist: ${createdCategoryNames.join(", ")}.`,
+      );
+    }
+  }
 
   let created = 0;
   let matchedExisting = 0;

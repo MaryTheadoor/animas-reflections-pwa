@@ -196,6 +196,12 @@ export interface ImportOptions {
    * UUID ids as well as earlier imports).
    */
   existingByName?: Map<string, string>;
+  /**
+   * When true, a category the sheet references that does not exist is **created** by the
+   * writer, using a deterministic `cat_<slug>` id so a later import finds it again.
+   * `csvToProducts` is pure and never writes — it just reports what would be created.
+   */
+  createCategories?: boolean;
 }
 
 /** Index every header by the canonical field it resolves to (a field may have several). */
@@ -310,18 +316,35 @@ const SQUARE_ITEM_TYPES = new Set(["physicalgood", "service", "digitalgood", "do
  * So every entry is tried, deepest level first, with and without the parenthetical suffix.
  * Nothing is created — an unmatched name is reported.
  */
+/**
+ * The name a category would be created under: the deepest leaf of the last entry, with any
+ * trailing "(SOMEID)" removed. e.g. "Bands > LITTLE STRANGER FAN BASED FUNDRAISING" →
+ * "LITTLE STRANGER FAN BASED FUNDRAISING"; "Teams > Durango Lacrosse" → "Durango Lacrosse".
+ */
+function preferredCategoryName(name: string): string {
+  const last = name.split(",").map((s) => s.trim()).filter(Boolean).pop() ?? name;
+  const leaf = last.split(">").map((s) => s.trim()).filter(Boolean).pop() ?? last;
+  return leaf.replace(/\s*\([^)]*\)\s*$/, "").trim() || leaf.trim();
+}
+
+/**
+ * Resolve a sheet category to an existing category id. Returns the preferred name to create
+ * when nothing resolves, so the writer can (optionally) create it.
+ *
+ * Square's export is messier than a single path: one cell can hold several comma-separated
+ * entries, each possibly a " > " hierarchy, each possibly carrying a trailing "(SOMEID)".
+ * Every entry is tried, deepest level first, with and without the parenthetical suffix.
+ */
 function resolveCategory(
   name: string | undefined,
   opts: ImportOptions,
-  unresolved: Set<string>,
-): string {
-  if (!name || !name.trim()) return "";
+): { id: string; unresolvedName: string | null } {
+  if (!name || !name.trim()) return { id: "", unresolvedName: null };
   const cleaned = name.trim();
 
   const candidates: string[] = [];
   for (const group of cleaned.split(",")) {
     const parts = group.split(">").map((p) => p.trim()).filter(Boolean);
-    // deepest level first, then the whole path
     candidates.push(...[...parts].reverse(), group.trim());
   }
 
@@ -330,12 +353,11 @@ function resolveCategory(
     for (const variant of [candidate, withoutId]) {
       if (!variant) continue;
       const id = opts.categoryMap?.get(variant.toLowerCase());
-      if (id) return id;
+      if (id) return { id, unresolvedName: null };
     }
   }
 
-  unresolved.add(cleaned);
-  return "";
+  return { id: "", unresolvedName: preferredCategoryName(cleaned) };
 }
 
 /**
@@ -349,7 +371,9 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
   const errors: string[] = [];
   const warnings: string[] = [];
   const byKey = new Map<string, ManagedProduct>();
-  const unresolvedCategories = new Set<string>();
+  // productId → the category name that could not be resolved (what the writer may create).
+  const unresolvedByProduct = new Map<string, string>();
+  const unresolvedNames = new Set<string>();
   let inferredTypeCount = 0;
   const noOptions: string[] = [];
 
@@ -369,11 +393,17 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
       // the same name (so a re-import updates in place instead of duplicating), then a
       // slug of the name.
       const existingId = opts.existingByName?.get(row.name.trim().toLowerCase());
+      const resolvedCategory = resolveCategory(row.category, opts);
+      const productId = row.id || existingId || slugifyKey(row.name);
+      if (!resolvedCategory.id && resolvedCategory.unresolvedName) {
+        unresolvedByProduct.set(productId, resolvedCategory.unresolvedName);
+        unresolvedNames.add(resolvedCategory.unresolvedName);
+      }
       product = {
-        id: row.id || existingId || slugifyKey(row.name),
+        id: productId,
         name: row.name,
         description: row.description ?? "",
-        categoryId: resolveCategory(row.category, opts, unresolvedCategories),
+        categoryId: resolvedCategory.id,
         productType: VALID_PRODUCT_TYPES.includes(stated) ? stated : "other",
         colors: row.colors.map((c) => c.toLowerCase()).filter((c, i, a) => a.indexOf(c) === i),
         tags: [],
@@ -443,8 +473,12 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
       const brand = detectBrand(product.name);
       if (brand) {
         const id = opts.categoryMap?.get(brand.toLowerCase());
-        if (id) product.categoryId = id;
-        else unresolvedCategories.add(brand);
+        if (id) {
+          product.categoryId = id;
+        } else if (!unresolvedByProduct.has(product.id)) {
+          unresolvedByProduct.set(product.id, brand);
+          unresolvedNames.add(brand);
+        }
       }
     }
 
@@ -500,9 +534,9 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
     }
   }
 
-  for (const c of unresolvedCategories) {
+  for (const c of unresolvedNames) {
     warnings.push(
-      `Category "${c}" does not exist, so those products were imported without one. Create the category (or correct the sheet) and re-import — they will update in place.`,
+      `Category "${c}" does not exist, so those products were imported without one. ${opts.createCategories ? "It will be created." : "Create the category (or correct the sheet) and re-import — they will update in place."}`,
     );
   }
   if (inferredTypeCount > 0) {
@@ -516,7 +550,12 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
     );
   }
 
-  return { products: [...byKey.values()], errors, warnings };
+  return {
+    products: [...byKey.values()],
+    errors,
+    warnings,
+    unresolvedCategories: [...unresolvedByProduct.entries()].map(([productId, name]) => ({ productId, name })),
+  };
 }
 
 /** Parse + map a full CSV string into products, grouped by product. */
@@ -528,6 +567,7 @@ export function csvToProducts(text: string, opts: ImportOptions = {}, onError?: 
       errors: ["CSV must have a header row and at least one data row"],
       warnings: [] as string[],
       unmappedColumns: [] as string[],
+      unresolvedCategories: [] as { productId: string; name: string }[],
     };
   }
   const headers = rows[0];
@@ -568,5 +608,6 @@ export function csvToProducts(text: string, opts: ImportOptions = {}, onError?: 
     errors: [...errors, ...grouped.errors],
     warnings,
     unmappedColumns,
+    unresolvedCategories: grouped.unresolvedCategories,
   };
 }
