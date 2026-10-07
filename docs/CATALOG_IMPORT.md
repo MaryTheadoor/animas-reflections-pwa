@@ -468,3 +468,95 @@ Tests: 121 → 138 (a new `catalog-heuristics` suite plus importer integration c
 ---
 **Scope recap:** manual, admin-operated, file-upload import. No backend, no Square API
 integration, no staged sync (§1.1).
+
+---
+
+## 10. Live migration findings — real Square export, 2026-10-07
+
+The client exported their Square item library and imported it. The basic import works.
+Reading the imported documents back out of Firestore (products are public-read, so this
+needed no credentials) surfaced four things, two of them urgent.
+
+### 10.1 The run used the pre-Phase-2 bundle
+
+The import did **not** exercise the code shipped in phases 2 and 4. Three independent
+signatures all say so:
+
+| Signature | Count | Meaning |
+|---|---|---|
+| Imported variants with `options: {}` | **520** | The exact empty object Phase 2 removed |
+| Imported products with an empty `categoryId` | **366 of 366** | Phase 2 resolves categories |
+| Imported ids shaped like `randomUUID()` | **366 of 366** | Phase 2+ slugs the product name instead |
+
+**Almost certainly the service worker**: it keeps `CACHE_NAME` constant, so a returning
+visitor is served the previous JS bundle — the same thing that hid the Help tab until it was
+hard-refreshed. **The import is therefore not yet verified against the current logic.**
+
+### 10.2 ⚠ Do not re-import until the old rows are cleared
+
+The 366 imported documents carry UUID ids. The current code derives a **name slug** when the
+sheet has no `id` column, so re-importing the same file now would create **366 duplicates**
+rather than updating in place. Delete or migrate the old imported rows first.
+
+(The 42 pre-existing admin-made products are intact and untouched.)
+
+### 10.3 What actually propagated
+
+| Field | Result |
+|---|---|
+| Variants | ✅ 1,561 across 408 products |
+| Prices | ✅ 384 products have a variant price > 0 |
+| SKUs | ✅ 285 products carry SKUs |
+| **Inventory** | ❌ **0** — the export evidently has no stock column, so nothing to propagate |
+| **Categories** | ❌ 0 of 366 resolved (see 10.1) |
+| **Structured options** | ❌ none (see 10.1) |
+| Images | ⚠️ only 14 products have any, mostly the pre-existing ones |
+| **Modifiers / add-ons** | ❌ **0 — and the importer has no mapping for them at all** |
+
+### 10.4 The variant labels carry no size or colour
+
+This is the substantive finding, and it is about the source data, not the code. Running the
+recovered heuristics over the real labels:
+
+```
+products examined             : 366
+  any variant yields a size   :   5
+  any variant yields a colour :   3
+  multi-variant products      :  53
+    -> would get dimensions   :   2
+    -> would get none         :  51
+  unparsed labels: "Regular" x147, "4 Inch Slaps 1 - 25 Unit Price" x6,
+                   "5 - 7 Inch Slaps 1 - 25 Unit Price" x6, "3 Inch" x5,
+                   "Size" x4, "One Size" x2, ...
+```
+
+**450 of 524 distinct variant labels are the literal string `"Regular"`**, and the rest are
+quantity price-break tiers ("4 Inch Slaps 1 - 25 Unit Price"). This catalog's Square
+variations do not encode size or colour, so there are no dimensions to derive. The
+heuristics cannot invent them — and they correctly route those 51 products into the
+"needs your attention" report rather than fabricating a dimension.
+
+### 10.5 Modifiers cannot arrive via an item CSV
+
+Square holds modifier lists as a **separate entity from items**, so an item-library export
+does not carry them; and this importer has no modifier/add-on mapping in any case. Both
+sides need attention before add-ons can migrate:
+
+- export modifier lists separately (or read them from the Square Catalog API), and
+- add a mapping from them to `ProductModifier` (`name`, `priceType`, `price`, `inputType`,
+  `group`).
+
+Until then, migrated products inherit the **site-standard add-ons** (because `modifiers` is
+left `undefined`, which is the documented "inherit defaults" state) rather than the add-ons
+they had on Square. That is the safe failure, but it is not a migration.
+
+### 10.6 Recommended next steps
+
+1. **Delete the 366 imported rows** (or fix their ids), then re-import — after a hard refresh,
+   so the current bundle is actually used.
+2. **Identify the real option columns in the export.** If the Square CSV has per-row size or
+   colour columns, map them to variant options directly — far more reliable than parsing a
+   label, and it would fix the 10.4 gap. Needs the actual CSV to answer.
+3. **Decide the modifiers path** (10.5): separate export plus a mapping, or recreate by hand.
+4. Consider whether the quantity price-break variations should become real variants at all,
+   or whether those products should be simplified to a single variant with a note.
