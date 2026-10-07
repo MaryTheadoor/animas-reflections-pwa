@@ -63,18 +63,22 @@ export async function importCatalogCsv(
     categoryMap.set(c.name.trim().toLowerCase(), c.id);
   }
 
-  // Name → id. Duplicate names are ambiguous, so they are excluded and reported rather
-  // than silently resolving to whichever happened to be last.
+  // Name → id. When several existing products share a name we still pick one — the
+  // lowest id, so the choice is deterministic — because refusing to match would make a
+  // re-import create *another* copy instead of converging. The collision is reported so
+  // the admin can clear it with the duplicate merge.
   const existingByName = new Map<string, string>();
-  const ambiguous = new Set<string>();
-  for (const p of existingProducts) {
+  const collisions = new Map<string, string[]>();
+  for (const p of [...existingProducts].sort((a, b) => a.id.localeCompare(b.id))) {
     const key = p.name.trim().toLowerCase();
     if (!key) continue;
-    if (existingByName.has(key)) {
-      ambiguous.add(p.name.trim());
-      existingByName.delete(key);
-    } else if (!ambiguous.has(p.name.trim())) {
+    const first = existingByName.get(key);
+    if (first === undefined) {
       existingByName.set(key, p.id);
+    } else {
+      const list = collisions.get(key) ?? [first];
+      list.push(p.id);
+      collisions.set(key, list);
     }
   }
 
@@ -101,9 +105,9 @@ export async function importCatalogCsv(
     }
   }
 
-  if (ambiguous.size > 0) {
+  if (collisions.size > 0) {
     warnings.push(
-      `More than one existing product shares these names, so incoming rows for them created new products instead of updating: ${[...ambiguous].join(", ")}. Rename the duplicates and re-import to consolidate.`,
+      `${collisions.size} name${collisions.size === 1 ? "" : "s"} already had more than one product (${[...collisions.keys()].slice(0, 5).join(", ")}${collisions.size > 5 ? ", …" : ""}). Each incoming row updated one of them and left the others untouched — run “Find duplicate products” to collapse them.`,
     );
   }
   if (matchedExisting > 0) {

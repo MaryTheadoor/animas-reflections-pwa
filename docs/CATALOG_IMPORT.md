@@ -645,3 +645,88 @@ never reset, and a field the sheet left blank never blanks the stored value — 
 images, print zones and other admin curation survive an import. One consequence to know:
 **a matched product's `variants` array is replaced by the sheet's**, so inventory set by hand
 on those variants is overwritten. The report says so when it happens.
+
+---
+
+## 12. Duplicate explosion, and the category gap — 2026-10-07
+
+### 12.1 ⚠ The re-run multiplied the catalog: 408 → 600 products
+
+A re-run of the import **added ~192 products instead of only updating**. Measured from the
+live data:
+
+| | |
+|---|---|
+| Products | **600** (was 408) |
+| Distinct names | 341 |
+| Names with more than one product | **218** |
+| Redundant copies | **259** |
+
+Two generations are present: 544 products carry UUID ids (admin-made, or imported by the
+pre-Phase-2 code) and 56 carry slug ids (the current code).
+
+**Cause — a wrong call in `importCatalogCsv`, not a code error.** The name→id index
+deliberately *excluded* names shared by more than one existing product, to avoid picking
+a keeper arbitrarily. Those rows then fell through to a slug id and created a **third**
+copy. Refusing to choose is worse than choosing defensively: it makes every re-import
+proliferate.
+
+**Fix applied.** When several products share a name, the importer now targets the lowest id
+(deterministic) and **reports the collision**, so a re-import converges on one document
+instead of adding another. The duplicate merge is the tool for clearing what already piled up.
+
+**Why the earlier dry run missed it.** It exercised `csvToProducts` with a hand-built map and
+never ran the ambiguity branch that lives in `importCatalogCsv`. The lesson: a dry run has to
+go through the **real write path**, not a convenient subset of it.
+
+### 12.2 The category gap
+
+Of 366 imported products, 129 resolve to a live category. The export references **21 distinct
+category strings we do not have**. Split by what they actually are:
+
+**Genuine brands/collections the catalog expects — worth creating** (they are already in the
+brand patterns, so creating them also lets the brand fallback place products whose sheet
+category is junk):
+
+| Sheet category | Products |
+|---|---|
+| `Teams > Durango Lacrosse` | 38 |
+| `I'M OK R U` | 18 |
+| `ET Art` | 14 |
+| `BISCUIT HOCKEY` | 14 |
+| `Teams` | 8 |
+| `Bands > GREEN BUDDHA, … , GREEN BUDDHA` | 3 |
+| `Fly High AA Fundraiser (…), Fly High AA Fundraiser (…)` | 2 |
+| `Durango Lacrosse, Teams > Durango Lacrosse` | 4 · `Durango Lacrosse` 1 |
+| `Apparel, I'M OK R U` | 1 |
+
+**Near-misses — a naming mismatch, not a missing category:**
+
+- `Bands > LITTLE STRANGER FAN BASED FUNDRAISING` (58 products) — the deepest level is
+  longer than the live category `LITTLE STRANGER`, so it does not resolve. Either rename the
+  category or accept the miss.
+- `Custom Designs, Custom Designs > Custom Slaps, Custom Slaps` (24) — wants `Custom Slaps`,
+  which does not exist.
+
+**Not categories at all — do not create these:** `Fundraising Pricing` (31),
+`Custom` (22) + `Custom, Custom Designs` (10) + `Custom Designs` (2), `Donation` (1),
+`Shipping` (1), `T-Shirt` (1), `Durango High School Alpine Team, Teams, Teams > …` (1).
+
+The importer is behaving correctly throughout: it resolves what exists and **reports** the
+rest rather than inventing categories from a messy export. Create the genuine ones in the
+Categories tab and re-import — those products will be placed then.
+
+### 12.3 Products tab reorganised, and merges batched
+
+Per request:
+
+- **All the action controls moved above the product list** — `+ New Product`, `Import CSV`,
+  `Download template` and `Find duplicates` now sit in the toolbar next to the product count,
+  so nothing requires scrolling past hundreds of rows to reach.
+- **The import report and the duplicate panel now render at the top too**, directly under
+  the toolbar.
+- **Merging is now individual, batch, or all:** each group has its own *Merge this* button;
+  each group has a checkbox; and the panel header carries *Select all*,
+  *Merge selected (n)* and *Merge all*.
+- A merge now clears the scan rather than showing stale groups, and the confirm dialog states
+  the group count, the number of redundant products, and any inventory disagreements.
