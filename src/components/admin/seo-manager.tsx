@@ -5,6 +5,7 @@ import { deleteField, doc, getDoc, setDoc, type FieldValue } from "firebase/fire
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
+import { useSeoConfigRefresh } from "@/context/seo-context";
 import { stripUndefined } from "@/lib/firestore-utils";
 import { PAGE_SEO, SITE_URL, clip, pageTitle } from "@/lib/seo";
 import {
@@ -32,10 +33,17 @@ import {
      2. Keyword landing pages — the compact-keywords convention: one
         bottom-of-funnel phrase, one real URL, listed in sitemap.xml.
 
-   Everything is stored in the single Firestore doc config/seo and read at
-   BUILD time (src/lib/seo.ts), because this site is a static export and
-   social scrapers never run JavaScript. Nothing here is live until the
-   publish step (Section 3) rebuilds the site.
+   Everything is stored in the single Firestore doc config/seo.
+
+   Two things read it. The build snapshots it (scripts/fetch-seo-config.mjs →
+   src/lib/seo-content.generated.ts), which is what social scrapers and non-JS
+   clients see. The running site also reads the document directly and applies
+   the title/description/og tags to <head> (src/lib/seo-runtime.ts), so an edit
+   here reaches a visitor on their next navigation WITHOUT a rebuild.
+
+   The publish step (Section 3) is still what makes an edit permanent: it
+   rebuilds the static HTML that scrapers and crawlers receive, and it is the
+   only way a NEW keyword page can come into existence.
 
    Write path: setDoc(config/seo, stripUndefined({ pages, keywords,
    updatedAt, updatedBy }), { merge: true }). Firestore rejects undefined,
@@ -219,6 +227,8 @@ function Counter({ len, max, clipped = false }: { len: number; max: number; clip
 
 export default function SeoManager() {
   const { user } = useAuth();
+  // Publishes the head override to the running site (see the header comment).
+  const refreshRuntimeSeo = useSeoConfigRefresh();
 
   const [drafts, setDrafts] = useState<Drafts>({ pages: {}, keywords: [] });
   const [snapshot, setSnapshot] = useState<string>(() => fingerprint({ pages: {}, keywords: [] }));
@@ -468,8 +478,10 @@ export default function SeoManager() {
 
       await setDoc(doc(db, "config", SEO_CONFIG_DOC), payload, { merge: true });
 
-      // Re-read so the form shows exactly what the server stored.
+      // Re-read so the form shows exactly what the server stored, and push the
+      // new tags to this tab so the change is visible before any rebuild.
       await load(false);
+      await refreshRuntimeSeo();
       setSaveMessage({
         kind: "ok",
         text: "Saved. The copy is in Firestore — run Publish to rebuild the site and make it live.",
