@@ -38,7 +38,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
     title: "Getting started",
     category: "Basics",
     keywords: ["welcome", "start", "overview", "admin", "dashboard"],
-    body: "The Admin dashboard is where you run the whole store.\n\nThe tabs across the top are: Products, Categories, SEO, Settings, Designs, Images, Orders, Users, Admins, and Help.\n\nStart by opening the Products tab and turning on the shop: add a product (name, price, variants), then set it Active. The public storefront updates automatically once the site is published.",
+    body: "The Admin dashboard is where you run the whole store.\n\nThe tabs across the top are: Products, Categories, SEO, Settings, Designs, Images, Orders, Users, Admins, Content & Theme, and Help.\n\nStart by opening the Products tab and turning on the shop: add a product (name, price, variants), then set it Active. The public storefront updates automatically once the site is published. To change the site's words, colours or fonts, use the Content & Theme tab.",
   },
   {
     id: "products",
@@ -132,18 +132,25 @@ export const HELP_ENTRIES: HelpEntry[] = [
     body: "Customers create accounts to see their orders and saved addresses.\n\nAdmins are controlled by the allowlist in the Admins tab. Only emails in that list can access the admin dashboard and upload product photos — add or remove admins there. This is the secure way to grant access (never rely on an email domain alone).",
   },
   {
+    id: "content-theme",
+    title: "Editing site copy, colours & fonts",
+    category: "Admin",
+    keywords: ["copy", "content", "text", "wording", "theme", "colors", "colours", "font", "dark mode", "announcement", "contrast", "accessibility"],
+    body: "The Content & Theme tab is where the site's words, colours and fonts are edited. It is the ONLY place they live — the Settings tab used to carry duplicates of these controls, and every one of them was dead.\n\nCopy — pick a page (Home, About, Contact, FAQ, Fundraising, Terms, Privacy, Biscuit Hockey, I'M OK R U, Navigation, Global), then edit its fields. Each field has a Reset that restores the built-in wording, and \"+\" adds a row to the repeatable lists (FAQ questions, Terms/Privacy sections, fundraising steps). Saving is instant: the storefront reads the copy live, with no rebuild.\n\nTheme — Light and Dark sub-tabs, a colour picker plus hex box per token, and font dropdowns. Edits preview on the page as you change them; Save applies them everywhere.\n\nThe contrast floor: if a colour you pick cannot be read on its background (WCAG AA, 4.5:1), it is not published as-is. The readable default is used instead and a note appears listing what changed and why, so the site cannot end up with unreadable text. Page titles and meta descriptions are NOT here — they are per-page and live in the SEO tab.",
+  },
+  {
     id: "settings",
     title: "Site settings & catalog options",
     category: "Admin",
-    keywords: ["settings", "colors", "sizes", "product types", "shipping", "announcement", "font", "theme"],
-    body: "Settings controls site-wide options: the announcement bar and its text, brand colours, heading and body fonts, shipping tiers and the free-shipping threshold, and the Catalog Options (colours, sizes, product types, default add-ons).\n\nSaved through the site config and published with the storefront.",
+    keywords: ["settings", "sizes", "product types", "shipping", "catalog options", "threshold"],
+    body: "Settings controls store-wide options: the shipping tiers and free-shipping threshold, the default add-on price, the customer fields collected at checkout, and the Catalog Options (the colours, sizes and product types a product can use, plus the default add-ons).\n\nBrand colours, fonts and all site copy are edited in the Content & Theme tab instead.",
   },
   {
     id: "seo",
     title: "SEO, page metadata & keywords",
     category: "Admin",
     keywords: ["seo", "search", "meta", "title", "description", "keyword", "slug", "json-ld", "sitemap", "publish"],
-    body: "The SEO tab has three parts.\n\nPage metadata — title and description overrides for every indexable page, with live character counters and a per-page reset.\n\nKeyword landing pages — real static pages at /your-slug for the search terms you want to rank for, each listed in the sitemap and cross-linked from the Services page. A blank field always falls back to the built-in default, so a cleared box can never publish an empty title.\n\nPublish — dispatches a site rebuild. It needs a GitHub token saved in that section first.\n\nThe site ships generated sitemap.xml and robots.txt, and JSON-LD (Web site, Local Business, FAQ, and breadcrumbs) for search engines.",
+    body: "The SEO tab has three parts.\n\nPage metadata — title and description overrides for every indexable page, with live character counters and a per-page reset. A saved change takes effect for visitors on their next page load, with no rebuild. A blank field always falls back to the built-in default, so a cleared box can never publish an empty title.\n\nKeyword landing pages — real static pages at /your-slug for the search terms you want to rank for, each listed in the sitemap and cross-linked from the Services page.\n\nPublish — dispatches a site rebuild. Search engines and social scrapers read the built HTML and do not run JavaScript, so they only see an edited title or description after a Publish. Publishing is also what creates a NEW keyword page.\n\nThe site ships generated sitemap.xml and robots.txt, and JSON-LD (Web site, Local Business, FAQ, and breadcrumbs) for search engines.",
   },
 ];
 

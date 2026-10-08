@@ -36,7 +36,7 @@ export default function HelpGuide() {
                 className="w-full flex items-center justify-between px-4 py-3 text-left"
               >
                 <span className="text-sm font-medium text-primary">{t.title}</span>
-                <span className="text-xs text-foreground/50">{openTutorial === t.id ? "−" : "+"}</span>
+                <span className="text-xs text-foreground/70">{openTutorial === t.id ? "−" : "+"}</span>
               </button>
               {openTutorial === t.id && (
                 <div className="px-4 pb-4 border-t border-warm-sand pt-3">
@@ -76,7 +76,7 @@ export default function HelpGuide() {
                   className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
                 >
                   <span className="text-sm font-medium text-primary">{e.title}</span>
-                  <span className="text-xs text-foreground/50">{openEntry === e.id ? "−" : "+"}</span>
+                  <span className="text-xs text-foreground/70">{openEntry === e.id ? "−" : "+"}</span>
                 </button>
                 {openEntry === e.id && (
                   <div className="px-4 pb-4 border-t border-warm-sand pt-3 space-y-3">

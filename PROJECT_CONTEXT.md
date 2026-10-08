@@ -199,6 +199,10 @@
 42. **Square lets two modifier lists share a name, and the item export only disambiguates with an id (2026-10-07):** the `Modifier Set - <name> - <ID>` column suffix is authoritative. 12 set names in this catalog are shared by 2–8 lists, and **163 of the 183** products that use add-ons touch a colliding name. Match by the recorded id first; accept a name only when exactly **one** list carries it, and otherwise report the set as ambiguous rather than attaching a plausible-but-wrong one.
 43. **An imported product that already exists gets a PATCH, not a replacement (2026-10-07):** `patchForExisting()` never resets `createdAt` and never writes a blank value, so importing a sheet that omits descriptions or images cannot wipe curation done in the admin. Consequence to remember: a matched product's `variants` **are** replaced wholesale, so hand-set inventory on those variants is overwritten — the import report says so when it happens.
 44. **A dry run only counts if it goes through the REAL write path (learned the hard way, 2026-10-07):** the ambiguity bug in #38 was missed because the verification exercised the pure `csvToProducts` with a hand-built map and never ran the branch living in `importCatalogCsv` — it reported "366 of 366 would update" while the real run was creating copies. Verify against the same function the button calls, not a convenient subset of it.
+45. **A control that writes to Firestore but is read by nothing is a DEAD CONTROL, and it looks identical to a working one (2026-08-10-08):** the Settings tab exposed brand colours, fonts, announcement text and hero/about/footer copy; all of it was write-only, because the storefront reads copy through `useSiteContent()` and colours through `mergeTheme`. Worse, the live `config/site` sets every `theme.light` token, so the flat colour fields were shadowed even in the merge path. Before shipping an editor, grep for the CONSUMER of the field, not just its writer. (Same class as `fundraising_heading`, and as `metaTitle`/`metaDescription`/`ogImage`, which were one page's metadata applied site-wide.)
+46. **Two mechanisms writing the same CSS custom properties means the more specific one silently wins (2026-08-10-08):** `themeToCss` emits `html.dark {}` (0,1,0) while `globals.css` had an `html.dark body {}` block (0,1,1) — so dark-mode edits in the theme editor were overridden by the stylesheet for every token the block declared. Do not keep a "defaults" copy of a token in CSS AND in the data-driven path: the CSS block was deleted and its values moved into `DARK_THEME`.
+47. **Firebase-as-truth needs a floor for anything accessibility-critical (2026-08-10-08):** the live document shipped `theme.dark.goldDeep = #B45309`, which is 3.5:1 on the dark navy; the stylesheet it replaced had used 6.8:1. Making the document authoritative without a guard would have published the regression. `enforceContrast()` now measures the guarded pairs on every render of the theme CSS and falls back to the shipped value, reporting the substitution in the editor. An admin's colour is respected exactly when it is readable.
+48. **A page can need BOTH baked metadata and runtime-editable copy, and that forces a server/client split (2026-08-10-08):** `export const metadata` requires a server component; `useSiteContent()` requires a client one. The route's `page.tsx` keeps `metadataFor(path)` and renders a `*-view.tsx` client child that holds the copy. Verified the split still server-renders the copy into the static HTML (16 `<details>` on /faq, sections on /terms) — otherwise the split would have traded SEO for editability.
 
 ---
 
@@ -284,6 +288,35 @@ Synthetic data is for UI development only. Production always reads Firestore —
 - Project: https://console.firebase.google.com/project/animas-reflections-pwa
 - Hosting: https://animas-reflections-pwa.web.app
 - Authentication: Enable Email/Password + Google providers
+
+---
+
+## 14. CONTENT & THEME EDITOR (reconciled into `development` 2026-10-08)
+
+- **Phase 1 (done):** editable **light + dark** theme + fonts, data-driven via
+  `config/site.theme` — see `docs/THEME_EDITOR.md`. Dark tokens used to be hardcoded in the
+  `html.dark body` block of `globals.css`; they now live in `DARK_THEME` so the editor can
+  actually change them. That block held the accessibility values (`goldDeep`/`goldInk`
+  #E68A00, `danger` #f87171, `onGold` deliberately unchanged), which moved into `DARK_THEME`
+  with it.
+- **Phase 2 (done):** page-by-page **copy editor** (`config/site.content` overrides over
+  `src/lib/content.ts`), wired to home, about, contact, custom, biscuit-hockey, im-ok-r-u,
+  faq, terms, privacy, fundraising, `navigation.footer` and the announcement bar.
+- **Phase 2b (done):** **structured list content** — FAQ items (q/a), Terms/Privacy
+  sections (title/body), fundraising How-it-works steps editable via repeatable rows.
+- **Phase 3 (done):** per-field Reset and the "?" help button (→ Help tab).
+- **Contrast floor (new):** `enforceContrast()` in `src/lib/site-defaults.ts` measures the
+  guarded pairs on every `themeToCss()` and substitutes the shipped default when a saved
+  colour fails WCAG AA, reporting what moved in the editor. It exists because the live
+  document really does carry `theme.dark.goldDeep = #B45309` — 3.5:1, where the default is
+  6.8:1. Keep its pair list in step with `_webbridge/contrast.py`.
+- **Removed as dead controls:** the Settings tab's brand colours, fonts, announcement text
+  and hero/about/footer copy inputs. They wrote `config/site` fields the storefront no
+  longer reads (the live document sets every `theme.light` token, so even the colours were
+  shadowed), and `metaTitle`/`metaDescription`/`ogImage` in the copy editor are gone too —
+  per-page SEO lives in the SEO tab.
+- **Known limitations:** the top nav dock uses fixed links/icons; footer
+  `RETURN_POLICY`/`PAYMENT_METHODS` and the `/services/` hero copy are still static.
 
 ---
 END OF CONTEXT FILE

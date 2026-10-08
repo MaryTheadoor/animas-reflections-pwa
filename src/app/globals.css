@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
-/* ─── Animas Reflections Brand Theme ────────────────────────────── */
+/* ─── Animas Reflections Brand Theme ──────────────────────────────
+
+   These are the SHIPPED defaults. At runtime SiteConfigProvider injects
+   src/lib/site-defaults.ts → themeToCss() as an unlayered :root / html.dark
+   block, which overrides everything below. Keep the two in step: this block is
+   what a visitor sees before hydration and what the theme editor starts from. */
 
 @theme {
   --color-cream: #FAF6F0;
@@ -19,8 +24,8 @@
      Deliberately NOT remapped under html.dark — a light-on-gold label would
      only reach 3.2:1. */
   --color-on-gold: #111827;
-  /* Semantic danger colour: passes AA on light surfaces; remapped under
-     html.dark (see Dark Mode) because red-600 fails on the dark navy. */
+  /* Semantic danger colour: passes AA on light surfaces; DARK_THEME remaps it
+     to the lighter red because red-600 fails on the dark navy. */
   --color-danger: #dc2626;
   --color-plum: #935B8A;
   --color-plum-light: #A86B9F;
@@ -117,24 +122,15 @@ body::before {
 
 /* ─── Dark Mode ──────────────────────────────────────────────────── */
 
-html.dark body {
-  --color-cream: #0F172A;
-  --color-warm-sand: #1E293B;
-  --color-primary: #F1F5F9;
-  --color-primary-light: #FFFFFF;
-  --color-foreground: #F1F5F9;
-  --color-white: #1E293B;
-  /* Gold-family text tokens flip to a light gold on the dark navy: #E68A00
-     reaches 6.8:1 on #0F172A where gold-deep would only manage 3.6:1. */
-  --color-gold-deep: #E68A00;
-  --color-gold-ink: #E68A00;
-  /* Danger flips to the lighter red for 6.5:1 on the dark background. */
-  --color-danger: #f87171;
-  background: #0F172A;
-}
+/* Dark-mode COLOUR TOKENS are data-driven now: config/site.theme is folded into
+   a full palette by mergeTheme() and injected as an unlayered stylesheet by
+   SiteConfigProvider (see themeToCss in src/lib/site-defaults.ts). The shipped
+   light/dark values live in LIGHT_THEME / DARK_THEME there, which is where the
+   gold-deep → #E68A00 and danger → #f87171 remaps are documented.
+   Only non-token component overrides live here. */
 
 html.dark body::before {
-  background-color: #0F172A;
+  background-color: var(--color-cream);
   background-image: none;
 }
 

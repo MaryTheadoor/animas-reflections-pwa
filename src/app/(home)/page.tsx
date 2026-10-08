@@ -9,16 +9,13 @@ import BandMerchTeaser from "@/components/home/band-merch-teaser";
 import FaqTeaser from "@/components/home/faq-teaser";
 import {
   SITE,
-  HERO,
-  OUR_STORY,
-  NAVIGATION,
   PAYMENT_METHODS,
   RETURN_POLICY,
 } from "@/lib/content";
-import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { useSiteContent } from "@/hooks/useSiteConfig";
 
 export default function Home() {
-  const siteConfig = useSiteConfig();
+  const c = useSiteContent();
   return (
     <div
       className="flex flex-col flex-1 bg-ambient"
@@ -52,23 +49,23 @@ export default function Home() {
               priority
             />
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight font-display mb-6 animate-fade-in-up animate-delay-100 text-foreground">
-              {siteConfig.hero_heading || HERO.heading}
+              {c.home.heroHeading}
             </h1>
             <p className="text-lg text-foreground mb-10 max-w-lg mx-auto leading-relaxed animate-fade-in-up animate-delay-200">
-              {siteConfig.hero_subheading || "Design your own t-shirt, hoodie, bag, purse, ornament, coaster, dog scarf, long sleeve tee, print on wood, metal, jewelry and more!"}
+              {c.home.heroSubheading}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animate-delay-300">
               <Link
-                href={HERO.cta_primary.href}
+                href={c.home.heroCtaHref}
                 className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile text-lg"
               >
-                {HERO.cta_primary.label}
+                {c.home.heroCtaLabel}
               </Link>
               <Link
-                href={HERO.cta_secondary.href}
+                href={c.home.heroCta2Href}
                 className="inline-flex items-center justify-center h-14 px-10 rounded-2xl bg-primary text-white font-semibold hover:bg-primary-light transition-colors btn-tactile btn-primary-tactile text-lg"
               >
-                {HERO.cta_secondary.label}
+                {c.home.heroCta2Label}
               </Link>
             </div>
           </div>
@@ -98,12 +95,12 @@ export default function Home() {
               />
             </div>
             <div>
-              <h2 className="text-3xl font-bold font-display mb-2">{OUR_STORY.heading}</h2>
-              <p className="text-gold-deep font-semibold mb-4">{OUR_STORY.subheading}</p>
-              <p className="text-foreground leading-relaxed">{siteConfig.about_body || OUR_STORY.body}</p>
+              <h2 className="text-3xl font-bold font-display mb-2">{c.home.aboutHeading}</h2>
+              <p className="text-gold-deep font-semibold mb-4">{c.home.aboutSubheading}</p>
+              <p className="text-foreground leading-relaxed">{c.home.aboutBody}</p>
               <div className="mt-4 text-sm text-foreground">
-                <p>{SITE.phone}</p>
-                <p>{SITE.email}</p>
+                <p>{c.global.phone}</p>
+                <p>{c.global.email}</p>
               </div>
             </div>
           </div>
@@ -118,13 +115,13 @@ export default function Home() {
       <footer className="bg-white border-t border-warm-sand py-12 px-6 mt-auto">
         <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
           <div>
-            <h4 className="font-bold font-display mb-3">{SITE.name}</h4>
-            <p className="text-sm text-foreground leading-relaxed">{SITE.description}</p>
+            <h4 className="font-bold font-display mb-3">{c.global.name}</h4>
+            <p className="text-sm text-foreground leading-relaxed">{c.global.description}</p>
           </div>
           <div>
             <h4 className="font-bold mb-3">Links</h4>
             <div className="flex flex-col gap-2 text-sm">
-              {NAVIGATION.footer.map((link) => (
+              {c.navigation.footer.map((link) => (
                 <Link key={link.href} href={link.href} className="text-foreground hover:text-gold-deep transition-colors">
                   {link.label}
                 </Link>
