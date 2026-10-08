@@ -212,7 +212,7 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
                           className={"w-8 h-8 rounded-md transition-all text-[10px] font-medium " + (
                             exists
                               ? "bg-gold-deep text-white shadow-sm scale-105"
-                              : "bg-warm-sand/30 text-foreground/50 hover:bg-warm-sand/50 hover:text-foreground/80"
+                              : "bg-warm-sand/30 text-foreground/70 hover:bg-warm-sand/50 hover:text-foreground/80"
                           )}
                           title={exists ? "Remove " + rowValue + " / " + colValue : "Add " + rowValue + " / " + colValue}
                         >

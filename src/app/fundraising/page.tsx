@@ -3,10 +3,12 @@
 import { useCatalog } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
+import { useSiteContent } from "@/hooks/useSiteConfig";
 import { FUNDRAISING } from "@/lib/content";
 
 export default function FundraisingPage() {
   const { products } = useCatalog();
+  const c = useSiteContent();
   const fundraiserProducts = products.filter((product) =>
     FUNDRAISING.featuredCategories.some((catId) =>
       product.categoryId === catId
@@ -18,13 +20,13 @@ export default function FundraisingPage() {
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="text-center pt-8 sm:pt-12 mb-12">
           <h1 className="text-4xl sm:text-5xl font-bold font-display mb-3">
-            {FUNDRAISING.heading}
+            {c.fundraising.heading}
           </h1>
           <p className="text-gold-deep font-semibold text-lg mb-6">
-            {FUNDRAISING.subheading}
+            {c.fundraising.subheading}
           </p>
           <p className="text-foreground max-w-2xl mx-auto leading-relaxed">
-            {FUNDRAISING.intro}
+            {c.fundraising.intro}
           </p>
         </div>
 
@@ -34,7 +36,7 @@ export default function FundraisingPage() {
             How Our Fundraising Program Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {FUNDRAISING.howItWorks.map((step) => (
+            {c.fundraising.howItWorks.map((step) => (
               <div key={step.title} className="bg-warm-sand/30 rounded-2xl p-5">
                 <h3 className="font-bold text-primary mb-2">{step.title}</h3>
                 <p className="text-sm text-foreground leading-relaxed">{step.body}</p>
@@ -53,7 +55,7 @@ export default function FundraisingPage() {
               Whether you&apos;re raising money for uniforms, trips, equipment, programs, or events — we can help.
             </p>
             <div className="space-y-2">
-              {FUNDRAISING.whoFor.map((item) => (
+              {c.fundraising.whoFor.map((item) => (
                 <div key={item} className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-2.5">
                   <svg className="w-4 h-4 text-gold-deep shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
@@ -72,7 +74,7 @@ export default function FundraisingPage() {
               Your catalog can include high-quality custom items such as:
             </p>
             <div className="space-y-2">
-              {FUNDRAISING.products.map((item) => (
+              {c.fundraising.products.map((item) => (
                 <div key={item} className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-2.5">
                   <svg className="w-4 h-4 text-gold-deep shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
@@ -93,7 +95,7 @@ export default function FundraisingPage() {
             This is fundraising made simple, transparent, and effective!
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {FUNDRAISING.whyUs.map((item) => (
+            {c.fundraising.whyUs.map((item) => (
               <div key={item} className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-3">
                 <svg className="w-5 h-5 text-gold-deep shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />

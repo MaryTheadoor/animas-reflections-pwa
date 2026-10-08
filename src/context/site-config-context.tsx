@@ -4,26 +4,10 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { CatalogOptions, AddonDefaults, CustomerField } from "@/types";
+import { mergeTheme, themeToCss, type SiteTheme, type MergeThemeInput } from "@/lib/site-defaults";
+import { mergeContent, type SiteContent } from "@/lib/content-schema";
 
 export interface SiteConfig {
-  // Announcement
-  announcement_text: string;
-  announcement_active: boolean;
-
-  // ── Brand Colors ──
-  primary_color: string;
-  accent_color: string;
-  background_color: string;
-  gold_color: string;
-  plum_color: string;
-  cream_color: string;
-  warm_sand_color: string;
-  text_color: string;
-
-  // ── Typography ──
-  heading_font: string;
-  body_font: string;
-
   // ── Shipping ──
   shipping_tier_stickers: number;
   shipping_tier_apparel: number;
@@ -32,49 +16,33 @@ export interface SiteConfig {
   // ── Pricing ──
   addon_price: number;
 
-  // ── Website Copy ──
-  hero_heading: string;
-  hero_subheading: string;
-  about_heading: string;
-  about_body: string;
-  fundraising_heading: string;
-  fundraising_subheading: string;
-  footer_tagline: string;
-
   // ── Catalog Options (admin-managed) ──
   catalog_options: CatalogOptions;
   addon_defaults: AddonDefaults;
   customer_fields: CustomerField[];
+
+  // ── Editable Theme (light + dark + fonts) ──
+  theme: SiteTheme;
+
+  // ── Editable Site Copy (per page/section, overrides over content.ts) ──
+  content: SiteContent;
 }
 
+/*
+ * There is deliberately no announcement/hero/about/footer copy, nor any flat
+ * colour or font field, on this type any more. Those used to live here, but the
+ * storefront now reads copy through useSiteContent() and colours/fonts through
+ * the theme above — so the flat versions were write-only. mergeTheme() still
+ * HONOURS the legacy flat names (primary_color, heading_font, …) when it reads
+ * the raw document, which is what keeps a pre-theme-editor document rendering
+ * as it always did.
+ */
+
 const FALLBACK: SiteConfig = {
-  announcement_text: "Family Owned & Operated From Durango, CO USA — Free shipping on orders over $100",
-  announcement_active: true,
-
-  primary_color: "#1E4D4F",
-  accent_color: "#D97706",
-  background_color: "#FAF6F0",
-  gold_color: "#D97706",
-  plum_color: "#935B8A",
-  cream_color: "#FAF6F0",
-  warm_sand_color: "#F5EBE6",
-  text_color: "#111827",
-
-  heading_font: "Georgia, 'Times New Roman', serif",
-  body_font: "system-ui, -apple-system, sans-serif",
-
   shipping_tier_stickers: 3.0,
   shipping_tier_apparel: 7.5,
   free_shipping_threshold: 100.0,
   addon_price: 5.0,
-
-  hero_heading: "Custom Designs On An Array Of Products",
-  hero_subheading: "Discover Endless Possibilities With Our Custom Designs Printed On An Array Of Products",
-  about_heading: "From Our Family To Yours",
-  about_body: "At Animas Reflections, we are a family-owned and operated design & print operation based in Durango, CO.",
-  fundraising_heading: "Fundraising Made Easy",
-  fundraising_subheading: "Raise money for your team, school, or cause with custom merchandise.",
-  footer_tagline: "Family owned and operated design & print operation based in Durango, CO, creating unique custom designs.",
 
   catalog_options: {
     colors: [
@@ -121,11 +89,15 @@ const FALLBACK: SiteConfig = {
     { id: "state", label: "State", type: "text", required: false, squareMapping: "address.administrativeDistrictLevel1" },
     { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "address.postalCode" },
   ],
+
+  theme: mergeTheme({}),
+  content: mergeContent({}),
 };
 
 const SiteConfigContext = createContext<{
   config: SiteConfig;
   loading: boolean;
+  /** Re-reads config/site. Use after an admin action writes it directly. */
   refresh: () => Promise<void>;
 }>({
   config: FALLBACK,
@@ -145,32 +117,17 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
       if (snap.exists()) {
         const data = snap.data() as Record<string, unknown>;
         const merged: SiteConfig = {
-          announcement_text: String(data.announcement_text ?? FALLBACK.announcement_text),
-          announcement_active: data.announcement_active !== false,
-          primary_color: String(data.primary_color || FALLBACK.primary_color),
-          accent_color: String(data.accent_color || FALLBACK.accent_color),
-          background_color: String(data.background_color || FALLBACK.background_color),
-          gold_color: String(data.gold_color || FALLBACK.gold_color),
-          plum_color: String(data.plum_color || FALLBACK.plum_color),
-          cream_color: String(data.cream_color || FALLBACK.cream_color),
-          warm_sand_color: String(data.warm_sand_color || FALLBACK.warm_sand_color),
-          text_color: String(data.text_color || FALLBACK.text_color),
-          heading_font: String(data.heading_font || FALLBACK.heading_font),
-          body_font: String(data.body_font || FALLBACK.body_font),
           shipping_tier_stickers: Number(data.shipping_tier_stickers ?? FALLBACK.shipping_tier_stickers),
           shipping_tier_apparel: Number(data.shipping_tier_apparel ?? FALLBACK.shipping_tier_apparel),
           free_shipping_threshold: Number(data.free_shipping_threshold ?? FALLBACK.free_shipping_threshold),
           addon_price: Number(data.addon_price ?? FALLBACK.addon_price),
-          hero_heading: String(data.hero_heading || FALLBACK.hero_heading),
-          hero_subheading: String(data.hero_subheading || FALLBACK.hero_subheading),
-          about_heading: String(data.about_heading || FALLBACK.about_heading),
-          about_body: String(data.about_body || FALLBACK.about_body),
-          fundraising_heading: String(data.fundraising_heading || FALLBACK.fundraising_heading),
-          fundraising_subheading: String(data.fundraising_subheading || FALLBACK.fundraising_subheading),
-          footer_tagline: String(data.footer_tagline || FALLBACK.footer_tagline),
           catalog_options: (data.catalog_options as CatalogOptions) || FALLBACK.catalog_options,
           addon_defaults: (data.addon_defaults as AddonDefaults) || FALLBACK.addon_defaults,
           customer_fields: (data.customer_fields as CustomerField[]) || FALLBACK.customer_fields,
+          // mergeTheme folds the legacy flat *_color / *_font fields in, so a
+          // document that predates the theme editor still reproduces its look.
+          theme: mergeTheme(data as unknown as MergeThemeInput),
+          content: mergeContent(data.content as unknown as Partial<SiteContent>),
         };
         setConfig(merged);
       }
@@ -188,24 +145,30 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
     void load();
   }, [load]);
 
-  // Apply CSS variables to :root for all theme settings.
-  // setIfChanged avoids unnecessary style recalculations when the value matches.
+  /*
+   * Theme tokens are applied as a single injected stylesheet rather than inline
+   * style properties. Two reasons:
+   *
+   *  1. ONE source. The theme editor writes config/site.theme, and themeToCss()
+   *     emits the light palette on :root and the dark palette under html.dark —
+   *     so editing a token in either mode actually changes both the editor
+   *     preview and the live site. Nothing else may write these custom
+   *     properties, or one mechanism would silently win over the other.
+   *  2. Unlayered rules beat Tailwind's @theme. @theme emits :root inside a
+   *     cascade layer, and unlayered declarations win over layered ones
+   *     regardless of specificity — so these values override the shipped
+   *     palette in globals.css.
+   */
   useEffect(() => {
-    const root = document.documentElement;
-    const setIfChanged = (prop: string, value: string) => {
-      if (root.style.getPropertyValue(prop) !== value) root.style.setProperty(prop, value);
-    };
-    setIfChanged("--color-primary", config.primary_color);
-    setIfChanged("--color-accent", config.accent_color);
-    setIfChanged("--color-background", config.background_color);
-    setIfChanged("--color-gold", config.gold_color);
-    setIfChanged("--color-plum", config.plum_color);
-    setIfChanged("--color-cream", config.cream_color);
-    setIfChanged("--color-warm-sand", config.warm_sand_color);
-    setIfChanged("--color-text", config.text_color);
-    setIfChanged("--font-heading", config.heading_font);
-    setIfChanged("--font-body", config.body_font);
-  }, [config]);
+    const css = themeToCss(config.theme);
+    let el = document.getElementById("dsh-theme") as HTMLStyleElement | null;
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "dsh-theme";
+      document.head.appendChild(el);
+    }
+    if (el.textContent !== css) el.textContent = css;
+  }, [config.theme]);
 
   return (
     <SiteConfigContext.Provider value={{ config, loading, refresh: load }}>
@@ -219,6 +182,11 @@ export function useSiteConfig(): SiteConfig {
   return config;
 }
 
+/** Merged site copy (config/site.content overrides over content.ts defaults). */
+export function useSiteContent(): SiteContent {
+  return useContext(SiteConfigContext).config.content;
+}
+
 export function useSiteConfigLoading(): boolean {
   const { loading } = useContext(SiteConfigContext);
   return loading;
@@ -226,6 +194,5 @@ export function useSiteConfigLoading(): boolean {
 
 /** Re-reads config/site. Use after an admin action writes it directly. */
 export function useSiteConfigRefresh(): () => Promise<void> {
-  const { refresh } = useContext(SiteConfigContext);
-  return refresh;
+  return useContext(SiteConfigContext).refresh;
 }

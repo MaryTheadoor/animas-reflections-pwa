@@ -1772,3 +1772,253 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] Carry-over: G2 real-card checkout test, G1 catalog population, G4/G5 images, G15
   Lighthouse, G19/G22/G23, G20 DNS cutover, G21 analytics
 - [ ] Housekeeping: stale local `master`; the 230 MB zip
+---
+
+## Recovered from the `origin/master` line — Content & Theme sessions (30–33)
+
+> The sessions below ran on a line that branched from a *newer* base than this one and
+> renumbered its own log from 30. They are kept verbatim for history: they are the record
+> of the Content & Theme feature (data-driven light/dark theme + the page-by-page copy
+> editor) that this line later reconciled rather than reimplemented. Session numbers
+> collide by construction and are NOT a single sequence — see `docs/STATUS_SWEEP.md` §1.
+
+## Session 30 — Content & Theme: Phase 1 (editable light + dark theme)
+
+### What was done
+- Added a data-driven theme system so **both light and dark** palettes + fonts are editable from the admin.
+- **`src/lib/site-defaults.ts`** (new): `ThemePalette`/`SiteTheme`, `LIGHT_THEME`/`DARK_THEME` (mirror `globals.css`), `DEFAULT_FONTS`, `mergeTheme()` (folds `config/site.theme` + legacy flat fields over defaults → full palettes), `toThemeConfig()`, `themeToCss()`, `THEME_TOKENS`, `FONT_OPTIONS`.
+- **`src/context/site-config-context.tsx`**: `SiteConfig.theme`; the provider injects a `#dsh-theme` `<style>` (light on `:root`, dark under `html.dark`, plus fonts) so both modes apply live. Replaced the old inline `--color-*` setters.
+- **`src/app/globals.css`**: removed the hardcoded `html.dark body { --color-* }` (now data-driven); `html.dark body::before` uses `var(--color-cream)`. Component overrides (glass-card, nav-dock, announcement-banner) unchanged.
+- **`src/components/admin/theme-editor.tsx`** (new) + admin **Content & Theme** tab: Light/Dark sub-tabs, per-token color pickers + hex input, font dropdowns, **live WYSIWYG preview** (`#dsh-theme-edit`), Reset per mode, Save via `saveSiteConfig`.
+- **Tests**: `src/lib/__tests__/theme.test.ts` (7 cases: defaults, sparse override, dark override, legacy flat, theme>legacy precedence, fonts, themeToCss).
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Files Changed
+| File | New/Edit |
+|------|----------|
+| src/lib/site-defaults.ts | new |
+| src/context/site-config-context.tsx | edit |
+| src/app/globals.css | edit |
+| src/components/admin/theme-editor.tsx | new |
+| src/app/admin/page.tsx | edit |
+| src/lib/__tests__/theme.test.ts | new |
+| docs/THEME_EDITOR.md | new |
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme editor deployed live; copy editor (Phase 2) not yet built.
+
+### Pending / Next Session
+- [ ] Phase 2: page-by-page copy editor for all site text (per-page wireframe diagrams + fields), building on `config/site.content`.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```
+
+## Session 31 — Content & Theme: Phase 2 (page-by-page copy editor)
+
+### What was done
+- **`src/lib/content-schema.ts`** (new): `SiteContent` types, `DEFAULT_CONTENT` (sourced from `content.ts`), `mergeContent()` deep-merge, `COPY_PAGES` (page → region diagram + fields), `getContentPath`/`setContentPath`.
+- **`src/context/site-config-context.tsx`**: `SiteConfig.content` + **`useSiteContent()`**.
+- **`src/components/admin/copy-editor.tsx`** (new) in the **Content & Theme** tab: page selector, **wireframe diagram** per page, per-region text/textarea/toggle fields, Save via `saveSiteConfig`.
+- **Wired** `/about`, `/contact`, `/custom`, `/biscuit-hockey`, `/im-ok-r-u`, home hero + Our-Story, and the announcement bar to `useSiteContent()` so edits apply live.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Files Changed (key)
+| File | New/Edit |
+|------|----------|
+| src/lib/content-schema.ts | new |
+| src/context/site-config-context.tsx | edit |
+| src/components/admin/copy-editor.tsx | new |
+| src/app/{about,contact,custom,biscuit-hockey,im-ok-r-u}/page.tsx | edit |
+| src/app/page.tsx · src/components/layout/header-bar.tsx | edit |
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme + Copy editors deployed live.
+
+### Pending / Next Session
+- [ ] Phase 2b: footer/nav links + structured list content (FAQ items, terms/privacy sections, fundraising steps) editable.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```
+
+## Session 32 — Content & Theme: Phase 2b (structured content)
+
+### What was done
+- `content-schema.ts`: `faq.items` (`{q,a}[]`), `terms/privacy.sections` (`{title,body}[]`), navigation defaults; `CopyField` gained a **`list`** type + array helpers (`getContentArray`/`setContentArray`/`addContentItem`/`removeContentItem`).
+- `copy-editor.tsx`: repeatable **list fields** (add/remove rows) for FAQ Q&A and Terms/Privacy sections.
+- Wired `/faq`, `/terms`, `/privacy` to `useSiteContent()` so items/sections are editable live.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Content & Theme → Theme + Copy (incl. FAQ/Terms/Privacy list editing) deployed live.
+
+### Pending / Next Session
+- [ ] Remaining structured content: nav/footer links + fundraising steps.
+- [ ] Phase 3: per-field reset, help links, SEO/OG text.
+```
+
+## Session 33 — Content & Theme: Phase 3 polish + fundraising steps
+
+### What was done
+- `content-schema.ts`: `fundraising.howItWorks` (`{title,body}[]`) + global SEO fields
+  (`metaTitle`/`metaDescription`/`ogImage`); COPY_PAGES adds SEO + fundraising steps.
+- `copy-editor.tsx`: per-field **Reset** (to site default) + "?" help button (opens Help tab).
+- `seo-meta.tsx` (new) in `PageLayout`: applies editable SEO title/description/og:image
+  to the document head.
+- Wired `/fundraising` headings/intro/steps to `useSiteContent`.
+
+### Verification
+- lint 0 errors · tsc 0 · tests 124/124 · build 22/22 · hosting deployed live.
+
+### Current State at Session End
+- Branch: `fix/auth-storage-reuse` (PR #1)
+- Phase 1 (theme), 2 (copy editor), 2b (FAQ/terms/privacy/fundraising), 3 (reset/help/SEO) done + deployed.
+
+### Known limitations / Next
+- Nav dock uses fixed links/icons; `whoFor`/`products`/`whyUs` lists + home CTA labels remain static.
+```
+
+---
+
+### Reconciliation note (added when the two lines were merged)
+
+- The theme + copy editors, `src/lib/site-defaults.ts`, `src/lib/content-schema.ts`,
+  `ThemeEditor`, `CopyEditor`, `useSiteContent()` and `config/site.content`/`.theme` were
+  taken from this line and are now live on `development`.
+- `src/components/layout/seo-meta.tsx` (Session 33) was DELETED during the merge. It wrote
+  one *global* title/description to every page, and it was mounted in `PageLayout`, so the
+  home page was not covered. It is superseded by `src/lib/seo-runtime.ts` +
+  `src/context/seo-context.tsx`, which apply `config/seo` per route — and by the
+  build-time `metadataFor()` in each server page, which is what non-JS scrapers read.
+- The copy editor's Global page no longer exposes SEO title/description/og image
+  (`metaTitle`/`metaDescription`/`ogImage`) for the same reason: they were one page's worth
+  of metadata applied site-wide. Per-page SEO lives in the SEO tab.
+- Dark-mode colour tokens moved OUT of the `html.dark body` block in `globals.css` and into
+  `DARK_THEME` in `src/lib/site-defaults.ts`, so the theme editor really can change dark
+  mode. `DARK_THEME` carries the accessibility values that block held (goldDeep/goldInk
+  #E68A00, danger #f87171, onGold deliberately unchanged).
+
+---
+
+## Session 35 — 2026-10-08 | Reconciliation: the two lines merged, Firebase made authoritative
+
+> This is the session that ends the divergence. Everything above it on this line, and the
+> recovered `origin/master` block, now live on one branch.
+
+### Context Restored From
+- `docs/STATUS_SWEEP.md` §1 (the divergence), the previous session's plan, and direct reads
+  of both branches' files rather than the earlier notes about them
+- The live `config/site` document read back through the Firestore REST API (public read)
+
+### Actions Taken
+
+1. **Runtime SEO, so Firebase is authoritative for `title`/`description` without a rebuild.**
+   New `src/lib/seo-runtime.ts` (pure resolver), `src/context/seo-context.tsx` (live read of
+   `config/seo`) and `src/components/layout/runtime-seo.tsx` (head writer, mounted once in
+   `ClientLayout` so routes that bypass `PageLayout` are covered). The build-time snapshot
+   stays as the fallback and is still what non-JS social scrapers receive. Canonical and
+   JSON-LD deliberately stay build-time — they are structural and crawl-time only. 13 tests.
+
+2. **Merged `origin/master` into a `reconcile/master-into-development` branch.** 24
+   conflicted files, 62 hunks. Resolutions, all to this line's verified behaviour:
+   `functions/src/index.ts` (ours is a strict superset — 33 exports vs 14),
+   `auth-context.tsx` (ours carries the security fix and its rationale),
+   `csv.ts` / `catalog-import.ts` / `help-content.ts` / `help-guide.tsx` / `csv.test.ts`
+   (each file the two lines added independently — ours is the evolved, tested one),
+   `product-manager.tsx` (ours: 2364 lines vs 2036, and no top-level identifier exists only
+   in theirs), `customizer/page.tsx` and `product/page.tsx` (ours kept `text-gold-deep` /
+   `text-on-gold`, and theirs had dropped the currency symbol in "Add to Cart"),
+   `tsconfig.json` (dropped their `scripts` exclude — `tsc --noEmit` is clean, so it would
+   only have reduced coverage).
+
+3. **The 8 content pages needed a real decision, not a side to pick.** This line makes them
+   server components that `export const metadata` (per-page SEO); `origin/master` made them
+   client components calling `useSiteContent()` (editable copy) with a *global* title applied
+   by their `<SeoMeta />`. Taking either side alone loses a requirement, and Next forbids both
+   in one file. Resolution: `page.tsx` keeps `metadataFor(path)` and renders a new
+   `*-view.tsx` client child that holds the copy. Verified the split still server-renders the
+   copy into the export (16 `<details>` on /faq, sections on /terms) so SEO and no-JS users
+   lose nothing. Deleted `seo-meta.tsx`: it wrote one page's title to every route and was
+   mounted in `PageLayout`, so it missed the home page entirely.
+
+4. **Made the theme editor actually able to change dark mode.** `themeToCss` emitted
+   `html.dark {}` (0,1,0) while `globals.css` held an `html.dark body {}` token block
+   (0,1,1) — the stylesheet won for every token it declared, so dark edits did nothing. The
+   block is gone and its accessibility values moved into `DARK_THEME`, together with three
+   tokens the palette never had (`goldInk`, `onGold`, `danger`).
+
+5. **Added a contrast floor, because Firebase-as-truth otherwise ships the regression.**
+   The live document holds `theme.dark.goldDeep = #B45309` — 3.5:1 on the dark navy, where
+   the stylesheet it replaced used #E68A00 at 6.8:1. `enforceContrast()` measures the guarded
+   pairs on every `themeToCss()`, substitutes the shipped default when the saved colour fails
+   AA, and the editor now lists what moved, why, and at what ratio. 12 tests.
+
+6. **Removed every dead control the merge exposed.** Read the live document and found
+   `config/site` sets every `theme.light` token and has no `content` field at all — which
+   proves the Settings tab's brand colours/fonts were shadowed and its announcement/hero/
+   about/footer copy inputs were write-only. Deleted those sections (with a pointer to
+   Content & Theme), along with the corresponding fields in `SiteConfig`, the admin's
+   `SiteConfigData`, and the copy editor's `metaTitle`/`metaDescription`/`ogImage`/`tagline`/
+   `footerTagline`. Wired the two copy fields that genuinely had no consumer: the footer now
+   reads `c.global.description` and `c.navigation.footer`.
+
+7. **Fixed the contrast the merged admin editors reintroduced:** `bg-gold text-white`
+   (3.19:1) → `text-on-gold` in `copy-editor.tsx` and `theme-editor.tsx`, and `text-foreground/50`
+   (3.3:1) → `/70` in the six admin files that used it. The storefront was already clear of both.
+
+8. **Docs:** help-content gained a "Editing site copy, colours & fonts" entry, the Settings
+   and SEO entries were corrected, and the tab list in Getting started was updated.
+
+### Decisions Made
+- **Per-page SEO beats global editable metadata.** Copy is editable per page; titles and
+  descriptions stay per-route in the SEO tab, applied at runtime for visitors and at build
+  time for crawlers.
+- **One owner per setting.** Colours/fonts → the theme object. Copy → the content object.
+  Per-page SEO → `config/seo`. Anything that duplicated those was deleted rather than wired.
+- **Accessibility is a floor, not a suggestion.** A saved colour is published exactly when it
+  is readable; otherwise the readable default is used and the substitution is visible.
+- **The merge brought the editors; it did not bring their wiring.** The copy editor had never
+  been saved on production (no `content` field in the live document), so first save creates it.
+
+### Verification
+- Lint 0/0 · `tsc --noEmit` clean (app + functions) · tests **203/203** (16 suites) · build
+  **25 pages** · SEO gate green · contrast audit **25/25 AA** · no conflict markers anywhere
+- Exported HTML spot-checked: per-page `<title>`/description/canonical baked and distinct
+  (`/about/` = "Our Story", `/shop/` = "Shop Custom Apparel…"), and all 8 split pages
+  server-render their copy
+
+### Files Changed (key)
+| File | Change |
+|------|--------|
+| src/lib/seo-runtime.ts, src/context/seo-context.tsx, src/components/layout/runtime-seo.tsx | NEW — runtime SEO |
+| src/lib/site-defaults.ts, src/lib/content-schema.ts | NEW (from the other line) + contrast floor, dark tokens |
+| src/components/admin/{theme,copy}-editor.tsx | NEW (from the other line) + contrast report, contrast fixes |
+| src/context/site-config-context.tsx | merged: our load/refresh + their theme/content, dead fields removed |
+| src/app/{about,contact,custom,faq,im-ok-r-u,privacy,terms,biscuit-hockey}/*-view.tsx | NEW — client copy views |
+| src/components/layout/seo-meta.tsx | DELETED — superseded by the runtime SEO |
+| src/app/admin/page.tsx | Content & Theme tab + SEO tab, dead Settings sections removed |
+| src/app/globals.css | dark token block removed (now data-driven), comments corrected |
+| src/lib/help-content.ts | new Content & Theme entry; Settings/SEO entries corrected |
+
+### Current State at Session End
+- Branch `reconcile/master-into-development`, merged and verified; not yet merged to
+  `development`, not pushed, not deployed
+- The stale local `master` (holds `7e71997`, 13 ahead / 20 behind, unpushable) is still there
+- 230 MB `animas-reflections-pwa.zip` still untracked in the repo root — the client's file
+
+### Pending / Next Session
+- [ ] Merge to `development`, push, then deploy hosting (and functions only if touched)
+- [ ] Delete or reset the stale local `master`, then decide the branch topology going forward
+      (the two lines converging is the reason `master` was unpushable)
+- [ ] The admin `Admins` allowlist and `config/site.theme.dark` are worth a look: the saved
+      palette still carries `warmSand: #4f6c9d` and `gold: #ffd862`, which pass AA but are a
+      hand-tweak worth confirming is intentional
+- [ ] `--color-text` is a dead token (aliased to `--color-foreground`, used by no class)
+- [ ] Carry-over: G2 real-card checkout test, G1 catalog population, G4/G5 images, G15
+      Lighthouse, G19/G22/G23, G20 DNS cutover, G21 analytics

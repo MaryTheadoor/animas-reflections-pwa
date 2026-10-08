@@ -277,14 +277,14 @@ export default function CategoryManager() {
                 <button
                   onClick={() => reorder(i, -1)}
                   disabled={i === 0}
-                  className="text-foreground/50 hover:text-primary disabled:opacity-20 text-xs leading-none"
+                  className="text-foreground/70 hover:text-primary disabled:opacity-20 text-xs leading-none"
                 >
                   ▲
                 </button>
                 <button
                   onClick={() => reorder(i, 1)}
                   disabled={i >= categories.length - 1}
-                  className="text-foreground/50 hover:text-primary disabled:opacity-20 text-xs leading-none"
+                  className="text-foreground/70 hover:text-primary disabled:opacity-20 text-xs leading-none"
                 >
                   ▼
                 </button>

@@ -70,7 +70,7 @@ export default function PrintZoneEditor({
         // eslint-disable-next-line @next/next/no-img-element -- remote Firebase Storage mockup on a static export; next/image needs a remote loader config.
         <img src={mockupUrl} alt={label} draggable={false} className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none" />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] text-foreground/50 px-2 text-center">
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] text-foreground/70 px-2 text-center">
           No mockup image for {label}. Upload one in the Images tab to preview precisely.
         </div>
       )}

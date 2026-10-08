@@ -6,6 +6,22 @@ built but not live, what is broken or at risk, and what only the client can answ
 Scope: verified against the repository, the emitted build, and the live production
 site on 2026-10-06. Branch `development` @ `7e71997`.
 
+> ## RECONCILED — 2026-10-08
+>
+> **The divergence described in §1 and §3 is closed.** The two lines were merged on
+> `reconcile/master-into-development`: 24 conflicted files resolved in favour of this
+> line's verified behaviour, taking the other line's additive Content & Theme work
+> (theme editor, copy editor, `site-defaults.ts`, `content-schema.ts`) wholesale.
+>
+> **§1, §3 and §3.1 below are now historical.** They are kept because they record WHY the
+> work diverged and what each line held, and because the "cannot be merged naively"
+> warning in §3 was correct — ten of the conflicts would have silently regressed this
+> line (the admin domain wildcard, the a11y tokens, the SEO tab, `publishSite`, the
+> generated `robots.txt`/`sitemap.xml`). Do not act on their "outstanding" framings.
+>
+> Current state, decisions and verification: `docs/DEVLOG.md` Session 35 and
+> `PROJECT_CONTEXT.md` §14.
+
 ---
 
 ## 0. CRITICAL — live privilege escalation (found 2026-10-06) — **FIXED & DEPLOYED**
