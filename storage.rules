@@ -63,6 +63,13 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
+    // Product photo library - reusable blank-product photos (see
+    // firestore.rules /product_photos). Public read, admin-only write.
+    match /product-photos/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Deny everything else
     match /{allPaths=**} {
       allow read, write: if false;

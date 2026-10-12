@@ -36,11 +36,45 @@ export interface DesignAsset {
   name: string;
   description?: string;
   category: string;
+  /**
+   * Categories this design belongs to, as real `categories` doc ids. A design
+   * pinned onto a new product in one of these categories is selected
+   * automatically (see src/lib/design-category.ts).
+   *
+   * ABSENT means "fall back to matching `category`/`tags` by name" — which is
+   * how every design predating this field behaves. An explicitly EMPTY array
+   * means "belongs to no category", i.e. never auto-selected.
+   */
+  categoryIds?: string[];
   image_url: string;
   tags?: string[];
   created_at: string;
   /** Optional product association for per-product designs */
   productId?: string;
+}
+
+/**
+ * A reusable photo of a blank product, uploaded once and then SELECTED onto
+ * products instead of re-uploaded for each one. Collection `product_photos`,
+ * Storage `product-photos/{id}_{filename}`.
+ *
+ * There is deliberately no `view` field: the same photo can serve as a gallery
+ * image *and* as a product's front mockup, so which slot it fills is a property
+ * of the placement (which button opened the picker), not of the photo.
+ */
+export interface ProductPhoto {
+  id: string;
+  /** Human label for the picker, e.g. "Gildan 18500 Hoodie — front". */
+  name: string;
+  image_url: string;
+  /** Categories this photo suits. Absent = any. Empty = none (an opt-out). */
+  categoryIds?: string[];
+  /** Product type this photo is for, so the picker can pre-filter. */
+  productType?: ProductType;
+  /** Colour this photo depicts, keyed exactly as `product.colors` entries are. */
+  color?: string;
+  tags?: string[];
+  created_at: string;
 }
 
 /* ─── Product Type Enum ──────────────────────────────────────────── */

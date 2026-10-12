@@ -47,6 +47,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Product photo library - reusable blank-product photos, uploaded once and
+    // then selected onto products. Public read keeps it consistent with designs
+    // and products (a photo used on a product is served from its stored URL
+    // regardless), admin-only write.
+    match /product_photos/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Products - public read, admin-only write
     match /products/{document=**} {
       allow read: if true;
