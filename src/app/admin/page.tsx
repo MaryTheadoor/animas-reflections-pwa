@@ -17,6 +17,7 @@ import ThemeEditor from "@/components/admin/theme-editor";
 import CopyEditor from "@/components/admin/copy-editor";
 import { useSiteConfigLoading } from "@/hooks/useSiteConfig";
 import ImageManager from "@/components/admin/image-manager";
+import ProductPhotoManager from "@/components/admin/product-photo-manager";
 import HelpGuide from "@/components/admin/help-guide";
 import type { ManagedCategory, DesignAsset } from "@/types";
 import PlaceholderImage from "@/components/ui/placeholder-image";
@@ -127,7 +128,7 @@ const DEFAULT_CONFIG: SiteConfigData = {
 
 function DashboardContent() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<"products" | "categories" | "seo" | "settings" | "designs" | "images" | "orders" | "users" | "admins" | "theme" | "help">("products");
+  const [tab, setTab] = useState<"products" | "categories" | "seo" | "settings" | "designs" | "images" | "photos" | "orders" | "users" | "admins" | "theme" | "help">("products");
   const siteConfigLoading = useSiteConfigLoading();
   const [config, setConfig] = useState<SiteConfigData>(DEFAULT_CONFIG);
   const [saving, setSaving] = useState(false);
@@ -410,6 +411,7 @@ function DashboardContent() {
             { key: "settings" as const, label: "Settings" },
             { key: "designs" as const, label: "Designs" },
             { key: "images" as const, label: "Images" },
+            { key: "photos" as const, label: "Product Photos" },
             { key: "orders" as const, label: "Orders" },
             { key: "users" as const, label: "Users" },
             { key: "admins" as const, label: "Admins" },
@@ -1088,6 +1090,13 @@ function DashboardContent() {
         {tab === "images" && (
           <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
             <ImageManager />
+          </section>
+        )}
+
+        {/* ── Product Photo Library (shared, reusable blank-product photos) ── */}
+        {tab === "photos" && (
+          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+            <ProductPhotoManager />
           </section>
         )}
 

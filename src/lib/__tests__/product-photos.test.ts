@@ -11,7 +11,9 @@ import {
   blankPhotoSets,
   coveredViews,
   filterPhotos,
+  inferViewFromFilename,
   missingViews,
+  safePhotoName,
 } from "@/lib/product-photos";
 import type { ProductPhoto } from "@/types";
 
@@ -184,5 +186,52 @@ describe("filterPhotos", () => {
 
   it("combines filters", () => {
     expect(filterPhotos(library, { productType: "apparel", query: "bella" }).map((p) => p.id)).toEqual(["tee"]);
+  });
+});
+
+describe("inferViewFromFilename", () => {
+  it("reads the view out of ordinary operator filenames", () => {
+    expect(inferViewFromFilename("gildan-18500-front.png")).toBe("front");
+    expect(inferViewFromFilename("Gildan 18500 BACK.jpg")).toBe("back");
+    expect(inferViewFromFilename("hoodie_sleeve_print.png")).toBe("sleeve");
+    expect(inferViewFromFilename("hoodie-sideL.png")).toBe("sideL");
+    expect(inferViewFromFilename("hoodie right side.png")).toBe("sideR");
+    expect(inferViewFromFilename("tee-left.png")).toBe("sideL");
+    expect(inferViewFromFilename("tee_rear_view.webp")).toBe("back");
+  });
+
+  it("prefers the side views over the others", () => {
+    // Contains both "side" and "front"; the ordered rule picks the side.
+    expect(inferViewFromFilename("hoodie-left-side-front.png")).toBe("sideL");
+  });
+
+  it("does not match a view buried inside another word", () => {
+    // Each keyword must end at a word boundary: a wrong automatic placement is
+    // worse than one the operator makes by hand.
+    expect(inferViewFromFilename("aside.png")).toBeUndefined();
+    expect(inferViewFromFilename("backdrop.png")).toBeUndefined();
+    expect(inferViewFromFilename("frontier.png")).toBeUndefined();
+    expect(inferViewFromFilename("leftward.png")).toBeUndefined();
+  });
+
+  it("returns undefined when the name says nothing about a view", () => {
+    expect(inferViewFromFilename("IMG_4821.jpg")).toBeUndefined();
+    expect(inferViewFromFilename("")).toBeUndefined();
+    expect(inferViewFromFilename("gildan18500.png")).toBeUndefined();
+  });
+});
+
+describe("safePhotoName", () => {
+  it("keeps the extension and strips anything exotic", () => {
+    // A run of disallowed characters collapses to ONE underscore.
+    expect(safePhotoName("Gildan 18500 (front).png")).toBe("Gildan_18500_front_.png");
+    expect(safePhotoName("hoodie back.jpg")).toBe("hoodie_back.jpg");
+  });
+
+  it("reduces a path to its final segment", () => {
+    // A browser File.name is already a base name; this is defensive against a
+    // pasted path, and it must not carry separators into a Storage object key.
+    const withPath = ["some", "folder", "tee-front.png"].join("/");
+    expect(safePhotoName(withPath)).toBe("tee-front.png");
   });
 });

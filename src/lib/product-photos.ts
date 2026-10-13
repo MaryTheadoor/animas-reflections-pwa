@@ -193,3 +193,43 @@ export function filterPhotos(photos: readonly ProductPhoto[], filters: PhotoFilt
     return true;
   });
 }
+
+/**
+ * Guess a mockup view from a filename, so uploading five files at once can
+ * place them all instead of forcing five passes through the form.
+ *
+ * Ordered, and the order is the contract: "side" variants are tested before
+ * sleeve/back/front so `hoodie-left-side.png` cannot be read as a front. A name
+ * that names two views resolves to the earlier entry rather than to nothing,
+ * which is deterministic and explainable.
+ *
+ * Each keyword must END at a word boundary, so `backdrop.png` is not a back
+ * photo and `frontier.png` is not a front. That trades a little recall
+ * (`hoodie_frontprint.png` is left unplaced) for precision: a wrong automatic
+ * placement is worse than one the operator picks by hand.
+ */
+const VIEW_PATTERNS: readonly [ProductPhotoView, RegExp][] = [
+  ["sideL", /(?:^|[^a-z])(?:left|side[-_]?l|l[-_]?side)(?![a-z])/],
+  ["sideR", /(?:^|[^a-z])(?:right|side[-_]?r|r[-_]?side)(?![a-z])/],
+  ["sleeve", /(?:^|[^a-z])(?:sleeve|arm)(?![a-z])/],
+  ["back", /(?:^|[^a-z])(?:back|rear)(?![a-z])/],
+  ["front", /(?:^|[^a-z])(?:front|main)(?![a-z])/],
+];
+
+export function inferViewFromFilename(filename: string): ProductPhotoView | undefined {
+  const stem = String(filename ?? "")
+    .toLowerCase()
+    .replace(/\.[a-z0-9]{1,5}$/, "")
+    .replace(/[_+]+/g, "-");
+  if (!stem) return undefined;
+  for (const [view, pattern] of VIEW_PATTERNS) {
+    if (pattern.test(stem)) return view;
+  }
+  return undefined;
+}
+
+/** A Storage-safe filename: keeps the extension, drops anything exotic. */
+export function safePhotoName(filename: string): string {
+  const base = String(filename ?? "photo").split(/[\\/]/).pop() ?? "photo";
+  return base.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(-80);
+}
