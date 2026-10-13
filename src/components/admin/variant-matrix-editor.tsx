@@ -4,6 +4,13 @@ import { useState, useMemo } from "react";
 import type { ManagedVariant, ProductOption } from "@/types";
 import { PRODUCT_SIZES, PRODUCT_COLORS } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
+import {
+  combinationKey,
+  matrixCombinations,
+  missingCombinations,
+  variantSku,
+  visibleGridCombinations,
+} from "@/lib/variant-matrix";
 
 /** One dimension of the variant matrix (e.g. Size, Color, Material). */
 interface Dimension {
@@ -73,22 +80,64 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
     if (existing) {
       onChange(variants.filter((v) => v.id !== existing.id));
     } else {
-      const price = parseFloat(basePrice) || 0;
-      const skuPrefix = baseSku.trim();
-      const skuParts = values.map((v) => v.substring(0, 3).toUpperCase());
-      const optionMap: Record<string, string> = {};
-      dimensions.forEach((d, i) => {
-        optionMap[d.name] = values[i];
-      });
-      const newVariant: ManagedVariant = {
-        id: crypto.randomUUID(),
-        name: values.join(" / "),
-        price,
-        sku: skuPrefix ? skuPrefix + "-" + skuParts.join("-") : "",
-        options: optionMap,
-      };
-      onChange([...variants, newVariant]);
+      onChange([...variants, makeVariant(values, parseFloat(basePrice) || 0)]);
     }
+  };
+
+  /** The ManagedVariant one combination produces. */
+  const makeVariant = (values: string[], price: number): ManagedVariant => {
+    const optionMap: Record<string, string> = {};
+    dimensions.forEach((d, i) => {
+      optionMap[d.name] = values[i];
+    });
+    return {
+      id: crypto.randomUUID(),
+      name: values.join(" / "),
+      price,
+      sku: variantSku(values, baseSku),
+      options: optionMap,
+    };
+  };
+
+  const [fillNote, setFillNote] = useState<string | null>(null);
+
+  /** Add every missing combination of the given set, in one write. */
+  const addCombinations = (combinations: string[][], label: string) => {
+    const existingKeys = new Set(existingMatrix.keys());
+    const missing = missingCombinations(combinations, existingKeys);
+    if (missing.length === 0) {
+      setFillNote(`Nothing to add — all ${combinations.length} ${label} already exist.`);
+      return;
+    }
+    // A big batch is worth confirming: this is one click creating real data.
+    if (missing.length > 20 && !confirm(`Create ${missing.length} variants?`)) return;
+    const price = parseFloat(basePrice) || 0;
+    onChange([...variants, ...missing.map((values) => makeVariant(values, price))]);
+    setFillNote(`Added ${missing.length} variant${missing.length === 1 ? "" : "s"} (${label}).`);
+  };
+
+  const removeCombinations = (combinations: string[][]) => {
+    const doomed = new Set(
+      combinations
+        .map((values) => existingMatrix.get(combinationKey(values))?.id)
+        .filter((id): id is string => Boolean(id)),
+    );
+    if (doomed.size === 0) {
+      setFillNote("Nothing to remove from this view.");
+      return;
+    }
+    if (doomed.size > 20 && !confirm(`Remove ${doomed.size} variants?`)) return;
+    onChange(variants.filter((v) => !doomed.has(v.id)));
+    setFillNote(`Removed ${doomed.size} variant${doomed.size === 1 ? "" : "s"} from this view.`);
+  };
+
+  /** Push the current base price onto every variant already created. */
+  const applyPriceToAll = () => {
+    const price = parseFloat(basePrice);
+    if (Number.isNaN(price)) return;
+    if (!confirm(`Set all ${variants.length} variant prices to $${price.toFixed(2)}?`)) return;
+    onChange(variants.map((v) => ({ ...v, price })));
+    setFillNote(`Set ${variants.length} variant prices to $${price.toFixed(2)}.`);
   };
 
   const [d1, d2, ...rest] = dimensions;
@@ -99,6 +148,21 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
   // creating duplicate variants with blank values.)
   const [extraSelections, setExtraSelections] = useState<Record<number, string>>({});
   const extraValues = rest.map((d, i) => extraSelections[i] ?? d.values[0]);
+
+  const existingKeys = useMemo(() => new Set(existingMatrix.keys()), [existingMatrix]);
+  const visibleCombinations = useMemo(
+    () => visibleGridCombinations(dimensions, extraSelections),
+    [dimensions, extraSelections],
+  );
+  const allCombinations = useMemo(() => matrixCombinations(dimensions), [dimensions]);
+  const visibleMissing = useMemo(
+    () => missingCombinations(visibleCombinations, existingKeys).length,
+    [visibleCombinations, existingKeys],
+  );
+  const allMissing = useMemo(
+    () => missingCombinations(allCombinations, existingKeys).length,
+    [allCombinations, existingKeys],
+  );
 
   return (
     <div className="space-y-4">
@@ -128,11 +192,57 @@ export default function VariantMatrixEditor({ variants, onChange, options }: Var
       </div>
 
       <p className="text-xs text-foreground/80">
-        Click cells to toggle variants. {variants.length} variant(s) selected.
+        Click cells to toggle variants, or fill the whole set at once. {variants.length} variant(s)
+        selected.
         {dimensions.length > 0 && (
           <> Dimensions: {dimensions.map((d) => d.name).join(" × ")}.</>
         )}
       </p>
+
+      {dimensions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => addCombinations(visibleCombinations, "in this view")}
+            disabled={visibleMissing === 0}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gold text-on-gold hover:bg-gold-light disabled:opacity-40 transition-colors"
+          >
+            {visibleMissing === 0 ? "View complete" : `Add all in view (${visibleMissing})`}
+          </button>
+
+          {hasRest && (
+            <button
+              type="button"
+              onClick={() => addCombinations(allCombinations, "across every dimension")}
+              disabled={allMissing === 0}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-white hover:bg-primary-light disabled:opacity-40 transition-colors"
+            >
+              {allMissing === 0
+                ? `All ${allCombinations.length} combinations exist`
+                : `Add every combination (${allMissing})`}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => removeCombinations(visibleCombinations)}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-primary/20 text-foreground hover:border-danger hover:text-danger transition-colors"
+          >
+            Remove all in view
+          </button>
+
+          <button
+            type="button"
+            onClick={applyPriceToAll}
+            disabled={variants.length === 0 || Number.isNaN(parseFloat(basePrice))}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-primary/20 text-foreground hover:border-gold hover:text-gold-deep disabled:opacity-40 transition-colors"
+          >
+            Apply this price to all {variants.length}
+          </button>
+
+          {fillNote && <span className="text-xs text-foreground/70">{fillNote}</span>}
+        </div>
+      )}
 
       {dimensions.length === 0 && (
         <p className="text-xs text-foreground/70">

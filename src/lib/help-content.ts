@@ -52,7 +52,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
     title: "Variants, options & inventory",
     category: "Products",
     keywords: ["variant", "size", "sku", "inventory", "stock", "out of stock", "matrix"],
-    body: "Variants are the specific versions you sell, e.g. “Large / Navy”. Each has a name, price, SKU, and optional inventory count.\n\nUse the Variant Matrix (or the manual list) to add size/color combinations quickly.\n\nSet Inventory per variant. Inventory drives the stock badges on the shop page and the availability flag in the page’s structured data — it is a display and search signal, not a hard sales block.",
+    body: "Variants are the specific versions you sell, e.g. “Large / Navy”. Each has a name, price, SKU, and optional inventory count.\n\nUse the Variant Matrix (or the manual list) to add size/color combinations. You do not have to click every cell: set the base price first, then Add all in view fills the cells on screen, and Add every combination fills the whole grid when a third dimension is in play. Apply this price to all pushes the base price onto variants you already created. Before a large batch you are asked to confirm.\n\nSet Inventory per variant. Inventory drives the stock badges on the shop page and the availability flag in the page’s structured data — it is a display and search signal, not a hard sales block.",
   },
   {
     id: "colors",
