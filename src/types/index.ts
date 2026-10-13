@@ -53,26 +53,50 @@ export interface DesignAsset {
   productId?: string;
 }
 
+/** The per-view slots a blank-product photo can fill (mirrors mockupImages). */
+export type ProductPhotoView = "front" | "back" | "sleeve" | "sideL" | "sideR";
+
+/** Display order for the view pickers. */
+export const PRODUCT_PHOTO_VIEWS: readonly ProductPhotoView[] = [
+  "front",
+  "back",
+  "sleeve",
+  "sideL",
+  "sideR",
+];
+
+export const PRODUCT_PHOTO_VIEW_LABELS: Record<ProductPhotoView, string> = {
+  front: "Front",
+  back: "Back",
+  sleeve: "Sleeve",
+  sideL: "Left side",
+  sideR: "Right side",
+};
+
 /**
  * A reusable photo of a blank product, uploaded once and then SELECTED onto
  * products instead of re-uploaded for each one. Collection `product_photos`,
  * Storage `product-photos/{id}_{filename}`.
  *
- * There is deliberately no `view` field: the same photo can serve as a gallery
- * image *and* as a product's front mockup, so which slot it fills is a property
- * of the placement (which button opened the picker), not of the photo.
+ * `name` is the blank product ("Gildan 18500 Hoodie"), not the individual file,
+ * and `view` is which slot the photo belongs in. Photos that share a `name` (and
+ * `color`) form one set, which is what lets a single action fill every mockup
+ * view on a product — the per-view upload was the slowest part of building a
+ * product by hand.
  */
 export interface ProductPhoto {
   id: string;
-  /** Human label for the picker, e.g. "Gildan 18500 Hoodie — front". */
+  /** The blank product, e.g. "Gildan 18500 Hoodie". Photos sharing this form a set. */
   name: string;
   image_url: string;
+  /** Which mockup slot this photo is for. Absent = gallery/loose photo only. */
+  view?: ProductPhotoView;
+  /** Colour depicted, keyed exactly as `product.colors` entries are. */
+  color?: string;
   /** Categories this photo suits. Absent = any. Empty = none (an opt-out). */
   categoryIds?: string[];
   /** Product type this photo is for, so the picker can pre-filter. */
   productType?: ProductType;
-  /** Colour this photo depicts, keyed exactly as `product.colors` entries are. */
-  color?: string;
   tags?: string[];
   created_at: string;
 }
