@@ -7,6 +7,7 @@ import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
 import { PRODUCT_TYPE_LABELS } from "@/types";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { stripTags } from "@/lib/html-utils";
 import DensityPicker, { DENSITY_CLASSES, type Density } from "@/components/product/density-picker";
 
@@ -22,6 +23,7 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
 
 function ShopContent() {
   const { products, categories, loading, error, refresh } = useCatalog();
+  const siteConfig = useSiteConfig();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -99,11 +101,36 @@ function ShopContent() {
     return result;
   }, [products, browseMode, activeCategory, activeType, search, sortMode, categories]);
 
+  /**
+   * Product types come from the site config, so a type added in Settings →
+   * Store Settings actually appears here. The hardcoded enum is the fallback for
+   * a config that predates the list, and a type some product carries that the
+   * config does not know is appended rather than hidden — a product whose type
+   * is unlisted must still be reachable.
+   */
+  const typeOptions = useMemo(() => {
+    const configured = siteConfig.catalog_options?.productTypes ?? [];
+    const known = new Map<string, string>(
+      Object.entries(PRODUCT_TYPE_LABELS) as [string, string][],
+    );
+    const options: [string, string][] =
+      configured.length > 0 ? configured.map((t) => [t.value, t.label]) : [...known.entries()];
+    const seen = new Set(options.map(([value]) => value));
+    for (const product of products) {
+      const type = product.productType;
+      if (type && !seen.has(type)) {
+        seen.add(type);
+        options.push([type, known.get(type) ?? type]);
+      }
+    }
+    return options;
+  }, [siteConfig.catalog_options?.productTypes, products]);
+
   const activeLabel =
     browseMode === "type"
       ? activeType === "All"
         ? "All Types"
-        : PRODUCT_TYPE_LABELS[activeType as keyof typeof PRODUCT_TYPE_LABELS] ?? activeType
+        : typeOptions.find(([value]) => value === activeType)?.[1] ?? activeType
       : activeCategory === "All"
         ? "All Products"
         : categories.find((c) => c.id === activeCategory)?.name ?? activeCategory;
@@ -189,7 +216,7 @@ function ShopContent() {
                 className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
               >
                 <option value="All">All Types ({products.length})</option>
-                {Object.entries(PRODUCT_TYPE_LABELS).map(([value, label]) => (
+                {typeOptions.map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
@@ -226,7 +253,7 @@ function ShopContent() {
                     {cat.name}
                   </button>
                 ))
-              : Object.entries(PRODUCT_TYPE_LABELS).map(([value, label]) => (
+              : typeOptions.map(([value, label]) => (
                   <button
                     key={value}
                     onClick={() => setActiveType(activeType === value ? "All" : value)}

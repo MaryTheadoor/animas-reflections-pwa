@@ -153,7 +153,7 @@ function ProductContent() {
   // Dynamic image: when a color is selected, show its per-color image if one
   // is configured. Falls back to the front mockup, then the primary gallery image.
   const colorImage = effectiveColor
-    ? product?.mockupImagesByColor?.[effectiveColor]?.front ?? product?.colorThumbnails?.[effectiveColor]
+    ? product?.mockupImagesByColor?.[effectiveColor]?.front
     : undefined;
   const imageUrl = colorImage ?? product?.mockupImages?.front ?? getProductImageUrl(product);
   // Gated by modifiers (Phase 3) or productAddons so the Name/Number field only

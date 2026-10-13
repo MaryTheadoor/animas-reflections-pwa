@@ -43,7 +43,6 @@ export interface ThemePalette {
    * that token is remapped to a dark slate in dark mode (2.9:1 on plum).
    */
   onPlum: string;
-  text: string;
   foreground: string;
   white: string;
 }
@@ -70,7 +69,6 @@ export const LIGHT_THEME: ThemePalette = {
   plumLight: "#8E5484",
   plumInk: "#7E4B76",
   onPlum: "#FFFFFF",
-  text: "#111827",
   foreground: "#111827",
   white: "#FFFFFF",
 };
@@ -86,8 +84,6 @@ export const LIGHT_THEME: ThemePalette = {
 //   light label on gold would only reach 3.2:1.
 //   plumLight is darker than plum here on purpose — it is the hover face of a
 //   white label, and a lighter face cannot carry one in either mode.
-//   `text` is unused by any utility class (dead token, kept for the legacy
-//   flat-field mapping).
 export const DARK_THEME: ThemePalette = {
   cream: "#0F172A",
   warmSand: "#1E293B",
@@ -103,7 +99,6 @@ export const DARK_THEME: ThemePalette = {
   plumLight: "#8E5484",
   plumInk: "#C08BB6",
   onPlum: "#FFFFFF",
-  text: "#111827",
   foreground: "#F1F5F9",
   white: "#1E293B",
 };
@@ -129,7 +124,9 @@ const LEGACY_LIGHT_MAP: [keyof ThemePalette, string][] = [
   ["cream", "background_color"],
   ["cream", "cream_color"],
   ["warmSand", "warm_sand_color"],
-  ["text", "text_color"],
+  // The old `--color-text` token was never used by a class; `text_color` now
+  // feeds the token that actually renders, so a document that set it still works.
+  ["foreground", "text_color"],
 ];
 
 /** Fold legacy flat config fields (primary_color, accent_color, …) into a palette. */
@@ -346,7 +343,6 @@ export function themeToCss(theme: SiteTheme): string {
     `  --color-plum-light: ${p.plumLight};`,
     `  --color-plum-ink: ${p.plumInk};`,
     `  --color-on-plum: ${p.onPlum};`,
-    `  --color-text: ${p.text};`,
     `  --color-foreground: ${p.foreground};`,
     `  --color-white: ${p.white};`,
   ];
@@ -378,7 +374,6 @@ export const THEME_TOKENS: { key: keyof ThemePalette; label: string; hint?: stri
   { key: "plumLight", label: "Plum (hover face)", hint: "Must stay dark enough for a white label" },
   { key: "plumInk", label: "Plum ink", hint: "Text on a plum tint — needs 4.5:1" },
   { key: "onPlum", label: "Label on plum", hint: "Must stay light in both modes" },
-  { key: "text", label: "Text", hint: "Unused by any class; legacy mapping only" },
   { key: "foreground", label: "Foreground", hint: "Default body text" },
   { key: "white", label: "White", hint: "Text on dark surfaces" },
 ];

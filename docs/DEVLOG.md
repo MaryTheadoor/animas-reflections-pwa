@@ -2101,3 +2101,81 @@ boundary. Counts taken that way are meaningless; use `text-gold[^-]`.
 - [ ] Client decision: dark `warmSand` (#4f6c9d → the shipped #1E293B) and `gold` (#ffd862)
 - [ ] The product photo library + category pinning plan (Phases 2-6) is still unstarted;
       Phase 1 (data model, rules, matcher, 24 tests) landed in `be9ecdb`
+
+---
+
+## Session 37 — 2026-10-13 | Product build-out speed: the library, the matrix, auto-pin, bulk apply
+
+Brief: Cindy asked for two things, restated as one goal — **build products faster, and
+update them, without manually selecting as much or uploading**. That framing changed the
+work: the shop-page change from the earlier plan was dropped (it is shopper-facing and does
+not speed up building a product), and one item nobody had asked about turned out to be the
+largest cost, so it was added.
+
+### What was measured first
+
+Three time sinks in the product editor, in order of cost:
+
+| | |
+|---|---|
+| Variants | the matrix is a click-every-cell grid — a hoodie with 8 sizes and 10 colours is **80 clicks**, and no way to set one price across them |
+| Mockups | five views uploaded per product, plus per-colour photos, each a file dialog |
+| Designs | pinned one at a time from a 50-item list with no search, and a 10-cap that failed silently |
+
+### Shipped
+
+1. **Product photo library** (`product_photos`, `product-photos/` in Storage). A photo
+   declares its **blank product** and its **view**, so the library is read as SETS; applying
+   one fills every mockup view in a single action instead of five uploads, and states which
+   views the blank cannot fill. Multi-file upload infers the view from the filename so all
+   five can go up in one pass. The gallery can also pull from the library without
+   re-uploading. Admin tab: **Product Photos** (distinct from the per-product **Images** tab).
+2. **Variant matrix fill** — *Add all in view*, *Add every combination* (which covers the
+   dimensions the dropdown pins, previously unreachable), *Remove all in view*, and *Apply
+   this price to all*. Filling is idempotent; a batch over 20 asks first.
+3. **Designs auto-pin by category** — choosing a category on a NEW product pins that
+   category's designs. The automatic pass only ever touches designs IT added, so a hand-picked
+   design is never removed and a hand-deselected one is never resurrected. An existing product
+   is never rewritten automatically.
+4. **Bulk update existing products** — apply a blank's photos, or one price, across a category
+   or type. Planned, previewed, then applied exactly as previewed.
+5. **Tidy-ups**: `colorThumbnails` removed (verified 0 of 377 live products carried it),
+   the dead `--color-text` token removed with the legacy `text_color` field remapped to
+   `foreground`, and the shop's product-type filter now reads `catalog_options.productTypes`
+   instead of the hardcoded enum — so that Settings control is no longer a dead one.
+
+### Decisions worth keeping
+
+- **The design editor gained a real category picker ALONGSIDE the free-text label**, because
+  products reference categories by id while designs carried a label. The matcher accepts an
+  explicit id, the label by name, or a tag naming the category — so the designs that already
+  exist pin with **no retagging**, and the picker marks those with "≈" so an operator can see
+  *why* a design already pins rather than finding it unexplained.
+- **Filename view inference stops at a word boundary** — `backdrop.png` is not a back photo.
+  Precision over recall: a wrong automatic placement is worse than one the operator picks.
+- **Bulk apply refuses to work on a too-long sheet of noise** — see Known Issue #54.
+- **`useProductPhotos` is a hook, not a provider**: only the admin reads that collection, and a
+  provider would cost every storefront visitor a Firestore read for nothing.
+
+### Verification
+- Gate on every slice: tsc clean · lint 0/0 · **286 tests / 20 suites** · contrast **32/32 AA**
+- The production build could NOT be run — see below — so nothing from this session is deployed
+
+### ⚠️ Blocking the release: Node v24.15.0 crashes V8 on this machine
+
+`require("typescript")` alone dies with `Fatal error ... unreachable code`, which takes out
+`npm run build`, `npx tsc`, `npm test` and `npm run lint`. It began mid-session on commands
+that had just succeeded, and it is not caused by the repo. `node --no-opt <script>` works for
+tsc/eslint/jest, but Next rejects `--no-opt` for its workers (`ERR_WORKER_INVALID_EXEC_ARGV`)
+and `--jitless` has no WebAssembly for Turbopack. **Fix: Node 22 LTS (what CI uses).** Full
+detail in PROJECT_CONTEXT Known Issue #52. Do not commit flags into the build scripts.
+
+### Pending / Next
+- [ ] **Move this machine to Node 22 LTS**, then build and deploy: `firebase deploy --only
+      firestore:rules,storage` FIRST (the new collection needs its rules), then hosting
+- [ ] The shop-page change from the earlier plan stays dropped unless asked for
+- [ ] Optional follow-up once the library is in use: batch-apply photos to products *matching a
+      blank already applied* is covered, but re-pointing a whole category at a different blank
+      is not
+- [ ] The `designIds` read-path refactor remains the honest fix for Known Issue #53; the
+      refresh-on-save in this session is the stopgap

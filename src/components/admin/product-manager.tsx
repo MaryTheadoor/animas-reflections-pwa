@@ -936,9 +936,6 @@ export default function ProductManager({ categories }: Props) {
         if (views) urls.push(...(Object.values(views).filter(Boolean) as string[]));
       }
     }
-    if (p.colorThumbnails) {
-      urls.push(...Object.values(p.colorThumbnails).filter(Boolean));
-    }
     return urls;
   };
 
