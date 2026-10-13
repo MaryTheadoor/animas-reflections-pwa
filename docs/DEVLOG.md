@@ -2192,6 +2192,22 @@ is still `winget install OpenJS.NodeJS.LTS`.)
   admin surfaces (`Product Photo Library`, `Bulk update products`, `Add every combination`,
   `Pins onto these categories`, `Apply a saved blank`) are present in the deployed chunk
 
+### Help guide pass (same day, after the release)
+
+The admin guide was re-written against the DEPLOYED admin rather than from the previous
+text: four new entries (product photos, duplicates, description formatting, using the guide),
+a new tutorial for reusing a blank garment, and corrections to eight existing entries —
+including a stale tab list, a typo in the auto-pin instructions, print zones described as
+typed percentages when they are dragged, and the missing parent/subcategory hierarchy. The
+offline-cache hard refresh is now documented, because it has repeatedly made a deployed
+change look absent.
+
+Each claim was verified before it was written (the service worker's constant CACHE_NAME, the
+duplicate-merge labels, the print-zone drag editor, the toolbar buttons, category parents).
+The file header now states the rule the guide has twice broken: it must describe what the
+admin does, and its entry changes in the same commit as the feature. Deployed and confirmed
+present in the live admin chunk.
+
 ### Pending / Next
 - [ ] Durable fix for the machine: `winget install OpenJS.NodeJS.LTS` (or update 24.x — the
       crash is a V8 fault in 24.15.0 specifically)
