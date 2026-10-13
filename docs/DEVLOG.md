@@ -2170,12 +2170,38 @@ tsc/eslint/jest, but Next rejects `--no-opt` for its workers (`ERR_WORKER_INVALI
 and `--jitless` has no WebAssembly for Turbopack. **Fix: Node 22 LTS (what CI uses).** Full
 detail in PROJECT_CONTEXT Known Issue #52. Do not commit flags into the build scripts.
 
+### RELEASED (same day)
+
+The Node blockage was cleared without a system change: the official **portable** Node 22.23.3
+zip was unpacked to `~/.local/node22/` and put FIRST ON PATH for the release commands. Nothing
+was installed system-wide, no PATH change was made for the user, and deleting the folder undoes
+it. The one non-obvious step: Node 22 as the parent is NOT enough — Turbopack's PostCSS helper
+resolves `node` from PATH, so with the broken 24 still first the build died with
+`os error 10054` / `TurbopackInternalError` while processing `globals.css`. PATH ORDER is the
+fix, not the choice of binary. (`~/.local/node22/env.sh` sources it for a shell; the durable fix
+is still `winget install OpenJS.NodeJS.LTS`.)
+
+- `next build` clean (25 pages) · `check-seo` OK (25 pages / 16 sitemap URLs) · 286 tests ·
+  contrast 32/32 AA
+- `git push origin development` (0ff69a1..183c3ba)
+- `firebase deploy --only firestore:rules,storage` — both rules files COMPILED and released,
+  which also validated the new `product_photos` / `product-photos` blocks that could not be
+  checked offline
+- `firebase deploy --only hosting` — 263 files
+- Live check: `/`, `/shop/`, `/admin/login/`, `/admin/`, `/product/` all 200, and the five new
+  admin surfaces (`Product Photo Library`, `Bulk update products`, `Add every combination`,
+  `Pins onto these categories`, `Apply a saved blank`) are present in the deployed chunk
+
 ### Pending / Next
-- [ ] **Move this machine to Node 22 LTS**, then build and deploy: `firebase deploy --only
-      firestore:rules,storage` FIRST (the new collection needs its rules), then hosting
+- [ ] Durable fix for the machine: `winget install OpenJS.NodeJS.LTS` (or update 24.x — the
+      crash is a V8 fault in 24.15.0 specifically)
 - [ ] The shop-page change from the earlier plan stays dropped unless asked for
 - [ ] Optional follow-up once the library is in use: batch-apply photos to products *matching a
       blank already applied* is covered, but re-pointing a whole category at a different blank
       is not
 - [ ] The `designIds` read-path refactor remains the honest fix for Known Issue #53; the
       refresh-on-save in this session is the stopgap
+- [ ] The admin surfaces have NOT been clicked through by a person yet (they sit behind the
+      admin login, and a localhost origin has no session) — see Known Issue #51 for why a
+      rendered pixel check matters more than a computed-style one
+
