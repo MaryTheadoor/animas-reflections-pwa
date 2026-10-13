@@ -94,7 +94,7 @@ export const HELP_ENTRIES: HelpEntry[] = [
     title: "The design library",
     category: "Catalog",
     keywords: ["design", "artwork", "logo", "printable", "library", "upload"],
-    body: "Designs are reusable graphics customers can print on products.\n\nAdd designs in the Designs tab (name, category, tags, image). Then, in a product’s editor, pin up to 10 “Printable Designs” so they appear in that product’s customizer.\n\nDesigns are stored once and reused across any product. The Designs tab also has a “Migrate Old Data” action for the legacy flat format.",
+    body: "Designs are reusable graphics customers can print on products.\n\nAdd designs in the Designs tab (name, category label, tags, image). Then, in a product’s editor, pin up to 10 “Printable Designs” so they appear in that product’s customizer.\n\nAutomatic pinning: a design carries a category label AND, below it, a list of real categories you can tick. Tick one and every NEW product in that category gets the design pinned without you choosing it — the product editor says how many it pinned. You can still deselect any of them by hand, and deselecting sticks. An existing product is never changed automatically: use Print this category’s designs, or Refresh pinned from library after editing a design’s name or image (pinned designs are copies, and saving a product re-reads them for you).\n\nDesigns are stored once and reused across any product. The Designs tab also has a “Migrate Old Data” action for the legacy flat format.",
   },
   {
     id: "customizer",

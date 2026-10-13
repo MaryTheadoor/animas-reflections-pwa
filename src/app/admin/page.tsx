@@ -20,6 +20,7 @@ import ImageManager from "@/components/admin/image-manager";
 import ProductPhotoManager from "@/components/admin/product-photo-manager";
 import HelpGuide from "@/components/admin/help-guide";
 import type { ManagedCategory, DesignAsset } from "@/types";
+import { designMatchesCategory } from "@/lib/design-category";
 import PlaceholderImage from "@/components/ui/placeholder-image";
 import { DismissedTooltipsCount } from "@/components/ui/admin-tooltip";
 
@@ -141,6 +142,13 @@ function DashboardContent() {
   const [designName, setDesignName] = useState("");
   const [designDescription, setDesignDescription] = useState("");
   const [designTags, setDesignTags] = useState("");
+  /**
+   * Real category ids this design belongs to. This is the MACHINE link: a new
+   * product in one of these categories pins the design automatically. The free
+   * text label above stays because it is what customers search by, and it still
+   * matches by name for designs created before this field existed.
+   */
+  const [designCategoryIds, setDesignCategoryIds] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   /** Set when the form is editing an existing design rather than creating one. */
   const [editingDesignId, setEditingDesignId] = useState<string | null>(null);
@@ -287,6 +295,9 @@ function DashboardContent() {
         name: designName.trim(),
         description: designDescription.trim() || null,
         category: designCategory.trim(),
+        // EMPTY means "pins to nothing" — an explicit opt-out, distinct from
+        // absent, which falls back to matching the label and tags by name.
+        categoryIds: designCategoryIds,
         image_url: imageUrl,
         tags: tags.length > 0 ? tags : null,
         created_at: editing?.created_at ?? new Date().toISOString(),
@@ -301,6 +312,7 @@ function DashboardContent() {
       setUploadProgress(0);
       setEditingDesignId(null);
       setDesignName(""); setDesignCategory(""); setDesignDescription(""); setDesignTags("");
+      setDesignCategoryIds([]);
       setSelectedFile(null);
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 4000);
@@ -318,14 +330,35 @@ function DashboardContent() {
     setDesignCategory(d.category);
     setDesignDescription(d.description ?? "");
     setDesignTags((d.tags ?? []).join(", "));
+    setDesignCategoryIds(d.categoryIds ?? []);
     setSelectedFile(null);
     setUploadError(null);
     setUploadSuccess(false);
   };
 
+  /**
+   * Does the free-text label or a tag already name this category?
+   *
+   * Designs created before the picker existed carry no category ids, so they pin
+   * by NAME. The picker shows those with a "≈" instead of silently leaving them
+   * out — the operator should be able to see why a design already pins.*/
+  const designCategoryMatches = (cat: ManagedCategory) =>
+    designMatchesCategory(
+      {
+        id: "draft",
+        name: designName,
+        category: designCategory,
+        tags: designTags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean),
+        image_url: "",
+        created_at: "",
+      } as DesignAsset,
+      cat,
+    );
+
   const cancelEditDesign = () => {
     setEditingDesignId(null);
     setDesignName(""); setDesignCategory(""); setDesignDescription(""); setDesignTags("");
+    setDesignCategoryIds([]);
     setSelectedFile(null);
     setUploadError(null);
   };
@@ -1012,11 +1045,55 @@ function DashboardContent() {
               <input type="text" value={designName} onChange={(e) => setDesignName(e.target.value)}
                 placeholder="Design name *" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
               <input type="text" value={designCategory} onChange={(e) => setDesignCategory(e.target.value)}
-                placeholder="Category * (e.g. Durango High Football)" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+                placeholder="Category label * (e.g. Durango High Football)" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
               <input type="text" value={designDescription} onChange={(e) => setDesignDescription(e.target.value)}
                 placeholder="Description (optional)" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
               <input type="text" value={designTags} onChange={(e) => setDesignTags(e.target.value)}
                 placeholder="Tags: comma, separated" className="px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm" />
+            </div>
+
+            {/* The real categories, so a new product in one of them pins this
+                design automatically. The label above is free text and is what
+                customers search by; this is the machine link. */}
+            <div className="mb-4">
+              <span className="text-xs font-medium text-primary block mb-1.5">
+                Pins onto these categories{" "}
+                <span className="text-foreground/70 font-normal">
+                  — a new product in one of them gets this design automatically
+                </span>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {managedCategories.length === 0 && (
+                  <span className="text-xs text-foreground/70">No categories yet — create one in the Categories tab.</span>
+                )}
+                {managedCategories.map((cat) => {
+                  const on = designCategoryIds.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setDesignCategoryIds(
+                          on ? designCategoryIds.filter((id) => id !== cat.id) : [...designCategoryIds, cat.id],
+                        )
+                      }
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        on ? "bg-primary text-white" : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
+                      }`}
+                    >
+                      {!on && designCategoryMatches(cat) ? "≈ " : ""}
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {designCategoryIds.length === 0 && (
+                <p className="text-[10px] text-foreground/70 mt-1">
+                  None selected: this design stays manual. A category marked ≈ is one the label or a tag already
+                  names, so it pins even without being selected.
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-3 mb-6">
               <label className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-sm ${

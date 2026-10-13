@@ -27,6 +27,12 @@ import { buildModifiersForProduct, type SquareModifierList } from "@/lib/square-
 import { useProductPhotos } from "@/hooks/useProductPhotos";
 import { applySetPatch, blankPhotoSets, filterPhotos, type BlankPhotoSet } from "@/lib/product-photos";
 import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS } from "@/types";
+import {
+  DESIGN_PIN_LIMIT,
+  autoFillDesignsForCategory,
+  designsForCategory,
+  refreshPinnedDesigns,
+} from "@/lib/design-category";
 
 const EMPTY_PRODUCT: ManagedProduct = {
   id: "",
@@ -383,6 +389,78 @@ export default function ProductManager({ categories }: Props) {
     setGalleryPicked([]);
     setGalleryPickerOpen(false);
   };
+
+  /* ── Designs pinned automatically by category ─────────────────────────────
+     A design that belongs to a category is pinned onto a NEW product in that
+     category without being picked. The rule that keeps this unsurprising: the
+     automatic pass only ever touches the designs THAT IT ADDED (autoDesignIds),
+     so a hand-picked design is never removed and a hand-deselected one is never
+     resurrected. Once a product exists, nothing is automatic — the operator asks
+     for it with a button.
+     ──────────────────────────────────────────────────────────────────────── */
+  const [autoDesignIds, setAutoDesignIds] = useState<Set<string>>(new Set());
+  const [designNote, setDesignNote] = useState<string | null>(null);
+
+  const autoPinForCategory = (categoryId: string) => {
+    const category = [...categories, ...localCategories].find((c) => c.id === categoryId);
+    if (!category) return;
+    const matching = designsForCategory(allDesigns, category);
+    const result = autoFillDesignsForCategory({
+      pinned: form.designAssets ?? [],
+      matching,
+      autoIds: autoDesignIds,
+    });
+    const removed = new Set(result.removedIds);
+    setAutoDesignIds(
+      new Set([...autoDesignIds].filter((id) => !removed.has(id)).concat(result.addedIds)),
+    );
+    updateField("designAssets", result.designAssets);
+    if (result.addedIds.length === 0 && result.removedIds.length === 0 && result.overflow === 0) {
+      setDesignNote(`No designs are tagged to “${category.name}” yet.`);
+      return;
+    }
+    const parts: string[] = [];
+    if (result.addedIds.length > 0) parts.push(`pinned ${result.addedIds.length} from “${category.name}”`);
+    if (result.removedIds.length > 0) parts.push(`unpinned ${result.removedIds.length} that no longer match`);
+    if (result.overflow > 0) parts.push(`${result.overflow} more match but the limit is ${DESIGN_PIN_LIMIT}`);
+    setDesignNote(parts.join("; ") + ".");
+  };
+
+  /** Turn a just-toggled design into a deliberate manual choice. */
+  const pinDesignManually = (design: DesignAsset) => {
+    const current = form.designAssets ?? [];
+    const selected = current.some((a) => a.id === design.id);
+    if (selected) {
+      updateField("designAssets", current.filter((a) => a.id !== design.id));
+    } else if (current.length < DESIGN_PIN_LIMIT) {
+      updateField("designAssets", [...current, design]);
+    } else {
+      setDesignNote(`The limit is ${DESIGN_PIN_LIMIT} designs — remove one first.`);
+      return;
+    }
+    // Either way the admin has spoken about this one, so stop auto-managing it.
+    if (autoDesignIds.has(design.id)) {
+      const next = new Set(autoDesignIds);
+      next.delete(design.id);
+      setAutoDesignIds(next);
+    }
+  };
+
+  /** Re-resolve pinned snapshots against the library, so renames/images land. */
+  const refreshPinned = () => {
+    const { designAssets, updatedIds } = refreshPinnedDesigns(form.designAssets ?? [], allDesigns);
+    if (updatedIds.length === 0) {
+      setDesignNote("Pinned designs are already up to date.");
+      return;
+    }
+    updateField("designAssets", designAssets);
+    setDesignNote(`Refreshed ${updatedIds.length} pinned design${updatedIds.length === 1 ? "" : "s"} from the library.`);
+  };
+
+  const categoryForAutoPin = [...categories, ...localCategories].find((c) => c.id === form.categoryId);
+  const matchingDesignCount = categoryForAutoPin
+    ? designsForCategory(allDesigns, categoryForAutoPin).length
+    : 0;
   // Working list = the product's configured add-ons, or the site-standard ones
   // (as a starting template) when the product hasn't been configured yet. Any edit
   // below materializes form.productAddons; leaving it untouched keeps it undefined
@@ -664,8 +742,14 @@ export default function ProductManager({ categories }: Props) {
     try {
       const now = new Date().toISOString();
       const docId = editing?.id || crypto.randomUUID();
+      // Products hold design SNAPSHOTS, so a rename or a replaced image in the
+      // library would never reach a product that pinned it. Re-resolve them from
+      // the library as part of the save; a design deleted from the library keeps
+      // its stored snapshot so the product still renders.
+      const pinned = refreshPinnedDesigns(form.designAssets ?? [], allDesigns);
       const product: ManagedProduct = {
         ...form,
+        designAssets: pinned.designAssets,
         id: docId,
         name: form.name.trim(),
         description: form.description.trim(),
@@ -1229,7 +1313,13 @@ export default function ProductManager({ categories }: Props) {
               <label className="block text-xs font-medium text-primary mb-1">Category *</label>
               <select
                 value={form.categoryId}
-                onChange={(e) => updateField("categoryId", e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  updateField("categoryId", next);
+                  // A NEW product gets the category's designs pinned for it; an
+                  // existing product is never rewritten behind the operator's back.
+                  if (!editing?.id && next) autoPinForCategory(next);
+                }}
                 className="w-full px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
               >
                 <option value="">Select...</option>
@@ -2272,12 +2362,36 @@ export default function ProductManager({ categories }: Props) {
           {/* Design Pinning — select which designs are printable on this product */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <AdminTooltip content="Select up to 10 designs that customers can print on this product. These designs appear first in the customizer library when this product is selected." dismissKey="product-designs">
+              <AdminTooltip content="Select up to 10 designs that customers can print on this product. These designs appear first in the customizer library when this product is selected. Designs tagged with this product's category are pinned automatically on a new product." dismissKey="product-designs">
                 <label className="text-xs font-medium text-primary">
                   Printable Designs ({form.designAssets?.length ?? 0} selected)
                 </label>
               </AdminTooltip>
             </div>
+
+            {allDesigns.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => autoPinForCategory(form.categoryId)}
+                  disabled={!form.categoryId}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium border border-primary/20 text-foreground hover:border-gold hover:text-gold-deep disabled:opacity-40 transition-colors"
+                >
+                  {matchingDesignCount > 0
+                    ? `Pin this category's designs (${matchingDesignCount})`
+                    : "Pin this category's designs"}
+                </button>
+                <button
+                  type="button"
+                  onClick={refreshPinned}
+                  disabled={(form.designAssets?.length ?? 0) === 0}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium border border-primary/20 text-foreground hover:border-gold hover:text-gold-deep disabled:opacity-40 transition-colors"
+                >
+                  Refresh pinned from library
+                </button>
+                {designNote && <span className="text-[11px] text-foreground/70">{designNote}</span>}
+              </div>
+            )}
             {allDesigns.length === 0 ? (
               <p className="text-xs text-foreground/70">No designs available. Add designs in the Designs tab first.</p>
             ) : (
@@ -2288,14 +2402,7 @@ export default function ProductManager({ categories }: Props) {
                     <button
                       key={d.id}
                       type="button"
-                      onClick={() => {
-                        const current = form.designAssets ?? [];
-                        if (selected) {
-                          updateField("designAssets", current.filter((a) => a.id !== d.id));
-                        } else if (current.length < 10) {
-                          updateField("designAssets", [...current, d]);
-                        }
-                      }}
+                      onClick={() => pinDesignManually(d)}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                         selected
                           ? "bg-gold/10 border-gold/30 text-gold-deep"
