@@ -28,6 +28,16 @@ import { useProductPhotos } from "@/hooks/useProductPhotos";
 import { applySetPatch, blankPhotoSets, filterPhotos, type BlankPhotoSet } from "@/lib/product-photos";
 import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS } from "@/types";
 import {
+  describeBlankPlan,
+  planBlankApply,
+  planPriceApply,
+  selectTargets,
+  summarizeBlankPlans,
+  summarizePricePlans,
+  type BlankApplyPlan,
+  type PriceApplyPlan,
+} from "@/lib/bulk-apply";
+import {
   DESIGN_PIN_LIMIT,
   autoFillDesignsForCategory,
   designsForCategory,
@@ -461,6 +471,124 @@ export default function ProductManager({ categories }: Props) {
   const matchingDesignCount = categoryForAutoPin
     ? designsForCategory(allDesigns, categoryForAutoPin).length
     : 0;
+
+  /* ── Bulk updates across existing products ────────────────────────────────
+     The library and the matrix make one product fast. This is the other half:
+     forty products that need the same blank's photos, or a price change across a
+     category. Every operation is PREVIEWED as a plan and then applied exactly as
+     previewed, so a bulk write cannot reach further than the operator saw.
+     ──────────────────────────────────────────────────────────────────────── */
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkType, setBulkType] = useState<ProductType | "all">("all");
+  const [bulkBlankName, setBulkBlankName] = useState("");
+  const [bulkPrice, setBulkPrice] = useState("");
+  const [blankPlan, setBlankPlan] = useState<BlankApplyPlan[] | null>(null);
+  const [pricePlan, setPricePlan] = useState<PriceApplyPlan[] | null>(null);
+  const [bulkNote, setBulkNote] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const bulkFilters = { categoryId: bulkCategory || undefined, productType: bulkType };
+  const bulkTargets = selectTargets(products, bulkFilters);
+
+  const previewBlankApply = () => {
+    const chosen = photoSets.find((set) => set.name === bulkBlankName);
+    if (!chosen) {
+      setBulkNote("Choose a saved blank first.");
+      return;
+    }
+    setPricePlan(null);
+    setBlankPlan(planBlankApply(products, chosen, bulkFilters));
+    setBulkNote(null);
+  };
+
+  const previewPriceApply = () => {
+    const price = parseFloat(bulkPrice);
+    if (Number.isNaN(price) || price < 0) {
+      setBulkNote("Enter a price of 0 or more.");
+      return;
+    }
+    setBlankPlan(null);
+    setPricePlan(planPriceApply(products, price, bulkFilters));
+    setBulkNote(null);
+  };
+
+  const applyBlankPlanToProducts = async () => {
+    if (!blankPlan || blankPlan.length === 0) return;
+    if (!confirm(`Apply this blank to ${blankPlan.length} product${blankPlan.length === 1 ? "" : "s"}?`)) return;
+    setBulkBusy(true);
+    setBulkNote(null);
+    let done = 0;
+    const failures: string[] = [];
+    try {
+      for (const plan of blankPlan) {
+        const target = products.find((p) => p.id === plan.productId);
+        if (!target) continue;
+        // Merge per view: the plan only carries the views that differ, so a
+        // mockup the operator set by hand on another view survives.
+        const mockupImages = { ...(target.mockupImages ?? {}), ...plan.fill };
+        const merged = { ...(target.mockupImagesByColor ?? {}) };
+        for (const [color, views] of Object.entries(plan.fillByColor)) {
+          merged[color] = { ...(merged[color] ?? {}), ...views };
+        }
+        const payload: Record<string, unknown> = {
+          mockupImages,
+          updatedAt: new Date().toISOString(),
+        };
+        if (Object.keys(merged).length > 0) payload.mockupImagesByColor = merged;
+        try {
+          await setDoc(doc(db, "products", plan.productId), payload, { merge: true });
+          done += 1;
+        } catch (err) {
+          failures.push(`${plan.productName}: ${err instanceof Error ? err.message : "failed"}`);
+        }
+      }
+      setBulkNote(
+        `Updated ${done} product${done === 1 ? "" : "s"}` +
+          (failures.length > 0 ? `. ${failures.length} failed: ${failures.join("; ")}` : "."),
+      );
+      setBlankPlan(null);
+      await loadProducts();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const applyPricePlanToProducts = async () => {
+    if (!pricePlan || pricePlan.length === 0) return;
+    const total = summarizePricePlans(pricePlan).variants;
+    if (!confirm(`Set ${total} variant price${total === 1 ? "" : "s"} across ${pricePlan.length} product${pricePlan.length === 1 ? "" : "s"}?`)) return;
+    setBulkBusy(true);
+    setBulkNote(null);
+    let done = 0;
+    const failures: string[] = [];
+    try {
+      for (const plan of pricePlan) {
+        const target = products.find((p) => p.id === plan.productId);
+        if (!target) continue;
+        const ids = new Set(plan.changes.map((c) => c.variantId));
+        const variants = target.variants.map((v) => (ids.has(v.id) ? { ...v, price: plan.to } : v));
+        try {
+          await setDoc(
+            doc(db, "products", plan.productId),
+            { variants, updatedAt: new Date().toISOString() },
+            { merge: true },
+          );
+          done += 1;
+        } catch (err) {
+          failures.push(`${plan.productName}: ${err instanceof Error ? err.message : "failed"}`);
+        }
+      }
+      setBulkNote(
+        `Repriced ${done} product${done === 1 ? "" : "s"}` +
+          (failures.length > 0 ? `. ${failures.length} failed: ${failures.join("; ")}` : "."),
+      );
+      setPricePlan(null);
+      await loadProducts();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
   // Working list = the product's configured add-ons, or the site-standard ones
   // (as a starting template) when the product hasn't been configured yet. Any edit
   // below materializes form.productAddons; leaving it untouched keeps it undefined
@@ -1019,6 +1147,190 @@ export default function ProductManager({ categories }: Props) {
             </button>
           </AdminTooltip>
         </div>
+      </div>
+
+      {/* ── Bulk updates across existing products ── */}
+      <div className="mb-4 rounded-xl border border-primary/20 bg-warm-sand/20 p-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setBulkOpen((v) => !v)}
+            className="text-xs font-medium text-primary hover:text-gold-deep transition-colors"
+          >
+            {bulkOpen ? "Close bulk updates" : "Bulk update products…"}
+          </button>
+          <span className="text-[11px] text-foreground/70">
+            Apply one blank&rsquo;s photos, or one price, across many products &mdash; previewed first
+          </span>
+        </div>
+
+        {bulkOpen && (
+          <div className="mt-3 space-y-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label htmlFor="bulk-cat" className="text-[11px] font-medium text-primary block mb-1">Category</label>
+                <select
+                  id="bulk-cat"
+                  value={bulkCategory}
+                  onChange={(e) => { setBulkCategory(e.target.value); setBlankPlan(null); setPricePlan(null); }}
+                  className="px-3 py-2 rounded-lg border border-primary/20 bg-white text-xs"
+                >
+                  <option value="">Any category</option>
+                  {[...categories, ...localCategories].map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="bulk-type" className="text-[11px] font-medium text-primary block mb-1">Product type</label>
+                <select
+                  id="bulk-type"
+                  value={bulkType}
+                  onChange={(e) => { setBulkType(e.target.value as ProductType | "all"); setBlankPlan(null); setPricePlan(null); }}
+                  className="px-3 py-2 rounded-lg border border-primary/20 bg-white text-xs"
+                >
+                  <option value="all">Any type</option>
+                  {(siteConfig.catalog_options?.productTypes ?? []).map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+              <span className="text-[11px] text-foreground/70 pb-2">
+                {bulkTargets.length} product{bulkTargets.length === 1 ? "" : "s"} match
+              </span>
+            </div>
+
+            {/* Blank mockups */}
+            <div>
+              <span className="text-[11px] font-medium text-primary block mb-1">
+                Apply a saved blank&rsquo;s photos
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={bulkBlankName}
+                  onChange={(e) => { setBulkBlankName(e.target.value); setBlankPlan(null); }}
+                  aria-label="Choose a saved blank"
+                  className="px-3 py-2 rounded-lg border border-primary/20 bg-white text-xs"
+                >
+                  <option value="">Choose a blank…</option>
+                  {photoSets.map((set) => (
+                    <option key={set.name} value={set.name}>
+                      {set.name} ({PRODUCT_PHOTO_VIEWS.filter((v) => set.byView[v]).length} of 5 views)
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={previewBlankApply}
+                  disabled={!bulkBlankName || bulkBusy}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-primary/20 text-foreground hover:border-gold hover:text-gold-deep disabled:opacity-40 transition-colors"
+                >
+                  Preview
+                </button>
+                {blankPlan && blankPlan.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={applyBlankPlanToProducts}
+                    disabled={bulkBusy}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gold text-on-gold hover:bg-gold-light disabled:opacity-50 transition-colors"
+                  >
+                    Apply to {summarizeBlankPlans(blankPlan).products} product
+                    {summarizeBlankPlans(blankPlan).products === 1 ? "" : "s"}
+                  </button>
+                )}
+              </div>
+              {blankPlan && (
+                <div className="mt-2 text-[11px] text-foreground/80 max-h-40 overflow-y-auto">
+                  {blankPlan.length === 0 ? (
+                    <p>Nothing to change &mdash; every matching product already has this blank&rsquo;s photos.</p>
+                  ) : (
+                    <>
+                      <p className="text-foreground">
+                        {summarizeBlankPlans(blankPlan).views} view
+                        {summarizeBlankPlans(blankPlan).views === 1 ? "" : "s"} across{" "}
+                        {blankPlan.length} product{blankPlan.length === 1 ? "" : "s"}:
+                      </p>
+                      {blankPlan.slice(0, 8).map((plan) => (
+                        <div key={plan.productId}>
+                          &bull; {plan.productName} &mdash; {describeBlankPlan(plan)}
+                          {plan.unavailable.length > 0 && (
+                            <span className="text-foreground/60">
+                              {" "}(no photo for {plan.unavailable.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")})
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {blankPlan.length > 8 && <div>&hellip;and {blankPlan.length - 8} more</div>}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Price */}
+            <div>
+              <span className="text-[11px] font-medium text-primary block mb-1">
+                Set every variant price
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={bulkPrice}
+                  onChange={(e) => { setBulkPrice(e.target.value); setPricePlan(null); }}
+                  placeholder="24.99"
+                  aria-label="New price"
+                  className="w-28 px-3 py-2 rounded-lg border border-primary/20 bg-white text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={previewPriceApply}
+                  disabled={bulkBusy}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-primary/20 text-foreground hover:border-gold hover:text-gold-deep disabled:opacity-40 transition-colors"
+                >
+                  Preview
+                </button>
+                {pricePlan && pricePlan.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={applyPricePlanToProducts}
+                    disabled={bulkBusy}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gold text-on-gold hover:bg-gold-light disabled:opacity-50 transition-colors"
+                  >
+                    Apply to {summarizePricePlans(pricePlan).variants} variant
+                    {summarizePricePlans(pricePlan).variants === 1 ? "" : "s"}
+                  </button>
+                )}
+              </div>
+              {pricePlan && (
+                <div className="mt-2 text-[11px] text-foreground/80 max-h-40 overflow-y-auto">
+                  {pricePlan.length === 0 ? (
+                    <p>Nothing to change &mdash; every matching variant is already at that price.</p>
+                  ) : (
+                    <>
+                      <p className="text-foreground">
+                        {summarizePricePlans(pricePlan).variants} variant
+                        {summarizePricePlans(pricePlan).variants === 1 ? "" : "s"} across {pricePlan.length}{" "}
+                        product{pricePlan.length === 1 ? "" : "s"}:
+                      </p>
+                      {pricePlan.slice(0, 8).map((plan) => (
+                        <div key={plan.productId}>
+                          &bull; {plan.productName} &mdash; {plan.changes.length} variant
+                          {plan.changes.length === 1 ? "" : "s"} to ${plan.to.toFixed(2)} (e.g.{" "}
+                          {plan.changes[0].variantName} ${plan.changes[0].from.toFixed(2)})
+                        </div>
+                      ))}
+                      {pricePlan.length > 8 && <div>&hellip;and {pricePlan.length - 8} more</div>}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {bulkNote && <p className="text-[11px] text-foreground">{bulkNote}</p>}
+          </div>
+        )}
       </div>
 
       {/* Import report — what the last upload actually did */}

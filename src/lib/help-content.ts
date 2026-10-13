@@ -132,6 +132,13 @@ export const HELP_ENTRIES: HelpEntry[] = [
     body: "Customers create accounts to see their orders and saved addresses.\n\nAdmins are controlled by the allowlist in the Admins tab. Only emails in that list can access the admin dashboard and upload product photos — add or remove admins there. This is the secure way to grant access (never rely on an email domain alone).",
   },
   {
+    id: "bulk-updates",
+    title: "Updating many products at once",
+    category: "Catalog",
+    keywords: ["bulk", "batch", "many products", "update", "price change", "apply", "mass update"],
+    body: "Products tab, Bulk update products. Two operations: apply a saved blank product's photos to many products, or set one price across many variants.\n\nPick a category or a product type to narrow the targets, then Preview. The preview lists exactly which products change, how much changes on each, and which views the blank has no photo for — nothing is written until you press Apply, and Apply does only what the preview showed.\n\nA product that already matches is left out rather than listed, so running the same update twice the second time reports nothing to do. Applying photos merges per view, so a mockup you set by hand on another view is never overwritten.",
+  },
+  {
     id: "content-theme",
     title: "Editing site copy, colours & fonts",
     category: "Admin",
