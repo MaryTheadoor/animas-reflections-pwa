@@ -109,5 +109,50 @@ describe("enforceReadableTheme / themeToCss", () => {
     expect(css).toContain(`--color-on-gold: ${LIGHT_THEME.onGold};`);
     expect(css).toContain(`--color-danger: ${LIGHT_THEME.danger};`);
     expect(css).toContain(`--color-danger: ${DARK_THEME.danger};`);
+    expect(css).toContain(`--color-plum-ink: ${LIGHT_THEME.plumInk};`);
+    expect(css).toContain(`--color-plum-ink: ${DARK_THEME.plumInk};`);
+    expect(css).toContain(`--color-on-plum: ${LIGHT_THEME.onPlum};`);
+  });
+});
+
+describe("plum family", () => {
+  const livePlum = { ...DARK_THEME, plum: "#935B8A", plumLight: "#A86B9F", plumInk: "#935B8A" };
+
+  it("replaces a plum tint ink that only reaches 3.5:1 on the dark navy", () => {
+    const { palette, fixes } = enforceContrast(livePlum, DARK_THEME, "dark");
+    expect(palette.plumInk).toBe(DARK_THEME.plumInk);
+    expect(fixes.map((f) => f.token)).toContain("plumInk");
+  });
+
+  it("replaces the SURFACE when no label colour can rescue it", () => {
+    // The live document's plumLight is #A86B9F, where a white label measures
+    // 3.99:1 and a dark one 3.7:1 — the surface itself has to move.
+    const { palette, fixes } = enforceContrast(livePlum, DARK_THEME, "dark");
+    expect(palette.plumLight).toBe(DARK_THEME.plumLight);
+    const fix = fixes.find((f) => f.token === "plumLight");
+    expect(fix).toBeDefined();
+    expect(fix!.attempted).toBe("#A86B9F");
+    expect(fix!.applied).toBe("#8E5484");
+    expect(fix!.ratioBefore).toBeLessThan(4.5);
+    expect(fix!.ratioAfter).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps a plum label light in dark mode rather than remapping it dark", () => {
+    // text-white on plum is 2.9:1 in dark because that token becomes slate-800.
+    expect(contrastRatio(DARK_THEME.onPlum, livePlum.plum)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(DARK_THEME.white, livePlum.plum)).toBeLessThan(4.5);
+  });
+});
+
+describe("gold-ink tint level", () => {
+  it("judges the tint at its lightest use, not at gold/10", () => {
+    // A gold-ink that clears a gold/10 tint but not the gold/20 pills still fails.
+    const onTen = blend(LIGHT_THEME.gold, 0.1, LIGHT_THEME.cream);
+    const onTwenty = blend(LIGHT_THEME.gold, 0.2, LIGHT_THEME.cream);
+    const candidate = "#9A5713";
+    expect(contrastRatio(candidate, onTen)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(candidate, onTwenty)).toBeLessThan(4.5);
+    const { fixes } = enforceContrast({ ...LIGHT_THEME, goldInk: candidate }, LIGHT_THEME, "light");
+    expect(fixes.map((f) => f.token)).toContain("goldInk");
   });
 });

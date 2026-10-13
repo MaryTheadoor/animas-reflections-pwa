@@ -2022,3 +2022,82 @@ See `docs/SCOPE.md` Section 9 "Roadmap — Priority Order"
 - [ ] `--color-text` is a dead token (aliased to `--color-foreground`, used by no class)
 - [ ] Carry-over: G2 real-card checkout test, G1 catalog population, G4/G5 images, G15
       Lighthouse, G19/G22/G23, G20 DNS cutover, G21 analytics
+
+---
+
+## Session 36 — 2026-10-12 | Theme tightening: accent contrast, both modes
+
+Goal: "tighten up the theme — some accent colours are derived from the logo, make
+sure everything has appropriate contrast."
+
+### What was measured first
+
+The shipped palette was already audited (25/25 AA), but that audit describes a site
+nobody sees: the real palette lives in `config/site.theme`, and it differs
+(`theme.dark.warmSand #4f6c9d`, `gold #ffd862`, `goldDeep #B45309`). So this session
+started by reading the live document back and checking the accent pairs **for real**,
+in both modes.
+
+### Fixed
+
+1. **Skip link was invisible in dark mode.** `.skip-link` used
+   `background: var(--color-primary); color: #fff` — but `--color-primary` REMAPS to a
+   near-white in dark (it is the "ink" colour there), so the one control a keyboard user
+   needs first measured **1.1:1**. Now `color: var(--color-cream)`: primary and cream are
+   always opposite ends of the palette, so it holds in both modes (8.8:1 / 16.3:1).
+2. **The plum family was broken in both modes**, exactly the way the gold buttons were
+   before `--color-on-gold` existed:
+   - `text-plum` on a `bg-plum/20` tint: **4.19:1 light, 3.5:1 dark** → added `plumInk`
+     (#7E4B76 light, #C08BB6 dark) and repointed 5 call sites.
+   - `bg-plum text-white`: **2.86:1 in dark**, because `--color-white` becomes slate-800
+     there → added `onPlum` (#FFFFFF both modes) and repointed the band-merch CTA.
+   - `hover:bg-plum-light`: white on #A86B9F was **3.99:1 in both modes**, and no label
+     colour can rescue a surface in that band → `plumLight` is now #8E5484 (5.6:1).
+3. **`goldInk` on a gold/20 tint failed in dark** (3.80:1). The guard had been judging the
+   tint at `gold/10`; it now judges the lightest tint the components actually use
+   (`gold/20`), and `DARK_THEME.goldInk` is #F5B84D so it clears it (7.8:1).
+4. **The contrast floor can now move a SURFACE, not just text.** `GuardPair.surface`
+   replaces the surface token with the shipped value when no label colour can fix the
+   pair — the plum hover face is the case that forced it. Substitution is measured on a
+   trial palette, so `ContrastFix.ratioAfter` is the ratio that actually ships.
+
+`_webbridge/contrast.py` grew from 25 to 32 combinations (plum family, gold-ink tint
+levels, both modes) and all pass AA.
+
+### Deliberately NOT changed
+
+The live `theme.dark.warmSand` is `#4f6c9d`, a mid blue. On it `goldDeep` reaches
+**2.02:1** and `goldInk` **2.99:1** — a surface in that lightness band cannot carry the
+accent golds, and the floor cannot fix it by swapping text because both the shipped and
+the admin's golds fail there. The shipped `#1E293B` would give `goldDeep` 5.57:1. That is
+a visible brand surface, so it is a client decision (one click in the theme editor), not
+something to change silently. Same for `gold #ffd862`.
+
+### A tool built and thrown away (worth recording)
+
+I wrote a DOM audit that walked every text node, resolved its rendered colours through a
+canvas (so `lab()`/`oklab()` values from Tailwind v4 convert correctly) and computed the
+real ratio. It reported ~20 failures per page — **all contradicted by screenshots at
+native resolution**. `getComputedStyle(el).color` returned the LIGHT value for elements
+whose own parent reported the dark one, while the paint was correct; toggling `html.dark`
+outside the React provider is the likely trigger. The tool was deleted rather than
+shipped, and the general rule is recorded as Known Issue #51: verify contrast on rendered
+pixels plus arithmetic over the tokens, and treat computed-style readings taken after a
+scripted theme change as suspect.
+
+Also learned: grepping `\btext-gold\b` matches `text-gold-deep`, because `-` is a word
+boundary. Counts taken that way are meaningless; use `text-gold[^-]`.
+
+### Verification
+- lint 0/0 · `tsc --noEmit` clean · tests **231/231** (17 suites) · build 25 pages · SEO gate green
+- `_webbridge/contrast.py`: **32/32 combinations pass AA**
+- Browser, dark mode via the site's own toggle: `--color-on-plum #FFFFFF`,
+  `--color-plum-ink #C08BB6`, `--color-plum-light #8E5484`, `--color-gold-ink #F5B84D`
+  all resolved, skip link now #0F172A on #F1F5F9 (16.3:1)
+- Screenshots at native resolution confirm the shop filter pills, the browse toggle and
+  the nav dock read correctly in dark mode
+
+### Pending / Next
+- [ ] Client decision: dark `warmSand` (#4f6c9d → the shipped #1E293B) and `gold` (#ffd862)
+- [ ] The product photo library + category pinning plan (Phases 2-6) is still unstarted;
+      Phase 1 (data model, rules, matcher, 24 tests) landed in `be9ecdb`

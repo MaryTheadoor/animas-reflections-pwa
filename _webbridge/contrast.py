@@ -32,9 +32,15 @@ GOLD = '#D97706'
 GOLD_DEEP = '#B45309'      # light-mode token; remaps to #E68A00 under html.dark
 GOLD_INK = '#92400E'
 GOLD_DEEP_DARK = '#E68A00'
+GOLD_INK_DARK = '#F5B84D'  # lighter in dark: it also has to clear a gold/20 tint
 ON_GOLD = '#111827'        # deliberately never remapped: the gold face is constant
 DANGER = '#dc2626'
 DANGER_DARK = '#f87171'
+PLUM = '#935B8A'
+PLUM_INK = '#7E4B76'
+PLUM_INK_DARK = '#C08BB6'
+PLUM_LIGHT = '#8E5484'     # hover face; #A86B9F could carry no readable label
+ON_PLUM = '#FFFFFF'        # fixed, because --color-white remaps to slate-800 in dark
 DARK_BG = '#0F172A'
 DARK_CARD = '#1E293B'
 
@@ -57,12 +63,19 @@ combos = [
     ('white on red-600 (out-of-stock badge)', WHITE, '#dc2626'),
     ('white on teal-700 (in-stock badge)', WHITE, '#00776e'),
     ('teal-700 on teal-100 (status pill)', '#00776e', '#cbfbf1'),
+    ('plum-ink on plum/20 over cream (plum pills)', PLUM_INK, blend(PLUM, 0.20, CREAM)),
+    ('on-plum white on plum (plum CTA)', ON_PLUM, PLUM),
+    ('on-plum white on plum-light (CTA hover)', ON_PLUM, PLUM_LIGHT),
 
     # ── dark mode (tokens remapped under html.dark) ──
     ('dark: foreground #F1F5F9 on #0F172A', '#F1F5F9', DARK_BG),
     ('dark: foreground #F1F5F9 on card #1E293B', '#F1F5F9', DARK_CARD),
     ('dark: gold-deep -> #E68A00 on dark bg', GOLD_DEEP_DARK, DARK_BG),
-    ('dark: gold-ink -> #E68A00 on dark card', GOLD_DEEP_DARK, DARK_CARD),
+    ('dark: gold-ink -> #F5B84D on dark card', GOLD_INK_DARK, DARK_CARD),
+    ('dark: gold-ink -> #F5B84D on gold/20 over dark bg', GOLD_INK_DARK, blend(GOLD, 0.20, DARK_BG)),
+    ('dark: plum-ink -> #C08BB6 on plum/20 over dark bg', PLUM_INK_DARK, blend(PLUM, 0.20, DARK_BG)),
+    ('dark: on-plum white on plum (plum CTA)', ON_PLUM, PLUM),
+    ('dark: on-plum white on plum-light (CTA hover)', ON_PLUM, PLUM_LIGHT),
     ('dark: danger -> #f87171 on dark bg', DANGER_DARK, DARK_BG),
     ('dark: on-gold on gold (face stays gold, label stays dark)', ON_GOLD, GOLD),
     ('dark: slate-800 #1E293B on gold (announcement banner)', '#1E293B', GOLD),

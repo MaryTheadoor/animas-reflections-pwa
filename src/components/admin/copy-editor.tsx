@@ -117,7 +117,7 @@ export default function CopyEditor({ onOpenHelp }: { onOpenHelp?: () => void }) 
             {page.label} — {page.route}
           </p>
           <div className="space-y-1.5">
-            <div className="h-6 rounded bg-plum/20 flex items-center px-2 text-[10px] text-plum">nav</div>
+            <div className="h-6 rounded bg-plum/20 flex items-center px-2 text-[10px] text-plum-ink">nav</div>
             {page.regions.map((r, i) => (
               <div
                 key={r}
@@ -129,7 +129,7 @@ export default function CopyEditor({ onOpenHelp }: { onOpenHelp?: () => void }) 
                 <span className="text-foreground/70">{r}</span>
               </div>
             ))}
-            <div className="h-6 rounded bg-plum/20 flex items-center px-2 text-[10px] text-plum">footer</div>
+            <div className="h-6 rounded bg-plum/20 flex items-center px-2 text-[10px] text-plum-ink">footer</div>
           </div>
           <p className="text-[10px] text-foreground/70 mt-2">Each field below maps to a block above.</p>
         </div>

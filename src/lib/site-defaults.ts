@@ -31,6 +31,18 @@ export interface ThemePalette {
   danger: string;
   plum: string;
   plumLight: string;
+  /**
+   * Plum-family TEXT colour for text on a plum tint (mirrors goldInk). A tint
+   * lifts the background toward the text, so this must be deeper on light and
+   * lighter on dark — bare `plum` on a plum tint measured 4.2:1 light / 3.3:1 dark.
+   */
+  plumInk: string;
+  /**
+   * Label colour for a plum-FILLED surface. Plum keeps a mid-tone in both modes,
+   * so the label stays white in both — `text-white` cannot be used here because
+   * that token is remapped to a dark slate in dark mode (2.9:1 on plum).
+   */
+  onPlum: string;
   text: string;
   foreground: string;
   white: string;
@@ -55,19 +67,27 @@ export const LIGHT_THEME: ThemePalette = {
   onGold: "#111827",
   danger: "#dc2626",
   plum: "#935B8A",
-  plumLight: "#A86B9F",
+  plumLight: "#8E5484",
+  plumInk: "#7E4B76",
+  onPlum: "#FFFFFF",
   text: "#111827",
   foreground: "#111827",
   white: "#FFFFFF",
 };
 
 // Dark palette — mirrors the colour tokens that used to sit in the html.dark
-// block of globals.css. goldDeep/goldInk flip to a LIGHT gold on the dark navy:
-// #E68A00 reaches 6.8:1 on #0F172A where gold-deep would only manage 3.6:1.
-// danger flips to the lighter red for 6.5:1. onGold deliberately does NOT move:
-// the gold button face is unchanged in dark mode, so a light label on it would
-// only reach 3.2:1. `text` is unused by any utility class (dead token, kept for
-// the legacy flat-field mapping).
+// block of globals.css.
+//
+//   goldDeep/goldInk flip to a LIGHT gold on the dark navy (#E68A00 reaches
+//   6.8:1 on #0F172A where gold-deep would manage 3.6:1); goldInk goes lighter
+//   still (#F5B84D) because it also has to clear a gold/20 tint.
+//   danger flips to the lighter red. onGold/onPlum deliberately do NOT move: the
+//   surfaces they label are mid-tones that keep their value in both modes, so a
+//   light label on gold would only reach 3.2:1.
+//   plumLight is darker than plum here on purpose — it is the hover face of a
+//   white label, and a lighter face cannot carry one in either mode.
+//   `text` is unused by any utility class (dead token, kept for the legacy
+//   flat-field mapping).
 export const DARK_THEME: ThemePalette = {
   cream: "#0F172A",
   warmSand: "#1E293B",
@@ -76,11 +96,13 @@ export const DARK_THEME: ThemePalette = {
   gold: "#D97706",
   goldLight: "#E68A00",
   goldDeep: "#E68A00",
-  goldInk: "#E68A00",
+  goldInk: "#F5B84D",
   onGold: "#111827",
   danger: "#f87171",
   plum: "#935B8A",
-  plumLight: "#A86B9F",
+  plumLight: "#8E5484",
+  plumInk: "#C08BB6",
+  onPlum: "#FFFFFF",
   text: "#111827",
   foreground: "#F1F5F9",
   white: "#1E293B",
@@ -216,20 +238,37 @@ export function blend(fg: string, alpha: number, bg: string): string {
 }
 
 interface GuardPair {
-  /** Token that carries the TEXT; this is what gets substituted. */
+  /** Token that carries the TEXT. */
   fg: keyof ThemePalette;
   /** What the text sits on, derived from the palette itself. */
   bg: (p: ThemePalette) => string;
   label: string;
+  /**
+   * Replace THIS token with the shipped value instead of the foreground. For a
+   * pair no label colour can fix — a surface lighter than the readable band,
+   * e.g. a plum hover face, where both a light and a dark label land under
+   * 4.5:1 — the surface is what has to move.
+   */
+  surface?: keyof ThemePalette;
 }
 
 const GUARD_PAIRS: GuardPair[] = [
   { fg: "goldDeep", bg: (p) => p.cream, label: "gold text on the page background" },
   { fg: "goldDeep", bg: (p) => p.white, label: "gold text on a card" },
-  { fg: "goldInk", bg: (p) => blend(p.gold, 0.1, p.cream), label: "gold-ink on a gold tint" },
+  // The tint is deliberately the LIGHTEST one the components use (gold/20), so a
+  // tinted pill is judged at its worst rather than at the gold/10 default.
+  { fg: "goldInk", bg: (p) => blend(p.gold, 0.2, p.cream), label: "gold-ink on a gold tint" },
   { fg: "danger", bg: (p) => p.white, label: "error text on a card" },
   { fg: "onGold", bg: (p) => p.gold, label: "label on a gold button face" },
   { fg: "white", bg: (p) => p.goldDeep, label: "white text on a gold-deep badge" },
+  { fg: "plumInk", bg: (p) => blend(p.plum, 0.2, p.cream), label: "plum-ink on a plum tint" },
+  { fg: "onPlum", bg: (p) => p.plum, label: "label on a plum button face" },
+  {
+    fg: "onPlum",
+    bg: (p) => p.plumLight,
+    surface: "plumLight",
+    label: "label on the plum hover face",
+  },
 ];
 
 export interface ContrastFix {
@@ -243,9 +282,12 @@ export interface ContrastFix {
 }
 
 /**
- * Fold a palette back inside the contrast floor. A token is only replaced when
- * its own value fails AND the shipped default passes — if both fail there is
- * nothing better to offer, so the admin's value is kept and no fix is reported.
+ * Fold a palette back inside the contrast floor.
+ *
+ * A token is only replaced when its own value fails AND the shipped default
+ * passes — if both fail there is nothing better to offer, so the admin's value
+ * is kept and no fix is reported. Substitution is measured on a trial palette
+ * so the reported ratio is the one that actually ships.
  */
 export function enforceContrast(
   palette: ThemePalette,
@@ -257,19 +299,21 @@ export function enforceContrast(
   for (const pair of GUARD_PAIRS) {
     const ratioBefore = contrastRatio(out[pair.fg], pair.bg(out));
     if (ratioBefore >= TEXT_MIN_RATIO) continue;
-    const candidate = shipped[pair.fg];
-    const ratioAfter = contrastRatio(candidate, pair.bg(out));
+    const target = pair.surface ?? pair.fg;
+    const candidate = shipped[target];
+    const trial = { ...out, [target]: candidate };
+    const ratioAfter = contrastRatio(trial[pair.fg], pair.bg(trial));
     if (ratioAfter < TEXT_MIN_RATIO) continue;
     fixes.push({
       mode,
-      token: pair.fg,
+      token: target,
       label: pair.label,
-      attempted: out[pair.fg],
+      attempted: out[target],
       applied: candidate,
       ratioBefore: Math.round(ratioBefore * 100) / 100,
       ratioAfter: Math.round(ratioAfter * 100) / 100,
     });
-    out[pair.fg] = candidate;
+    out[target] = candidate;
   }
   return { palette: out, fixes };
 }
@@ -300,6 +344,8 @@ export function themeToCss(theme: SiteTheme): string {
     `  --color-danger: ${p.danger};`,
     `  --color-plum: ${p.plum};`,
     `  --color-plum-light: ${p.plumLight};`,
+    `  --color-plum-ink: ${p.plumInk};`,
+    `  --color-on-plum: ${p.onPlum};`,
     `  --color-text: ${p.text};`,
     `  --color-foreground: ${p.foreground};`,
     `  --color-white: ${p.white};`,
@@ -329,7 +375,9 @@ export const THEME_TOKENS: { key: keyof ThemePalette; label: string; hint?: stri
   { key: "onGold", label: "Label on gold", hint: "Must stay dark in both modes" },
   { key: "danger", label: "Danger", hint: "Errors, destructive actions" },
   { key: "plum", label: "Plum", hint: "Highlights / badges" },
-  { key: "plumLight", label: "Plum (light)" },
+  { key: "plumLight", label: "Plum (hover face)", hint: "Must stay dark enough for a white label" },
+  { key: "plumInk", label: "Plum ink", hint: "Text on a plum tint — needs 4.5:1" },
+  { key: "onPlum", label: "Label on plum", hint: "Must stay light in both modes" },
   { key: "text", label: "Text", hint: "Unused by any class; legacy mapping only" },
   { key: "foreground", label: "Foreground", hint: "Default body text" },
   { key: "white", label: "White", hint: "Text on dark surfaces" },

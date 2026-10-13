@@ -27,7 +27,7 @@ export default function CartToast() {
               ${(lastAdded.base_price * lastAdded.quantity).toFixed(2)}
             </span>
             {lastAdded.addons.length > 0 && (
-              <span className="text-[10px] text-plum bg-plum/10 rounded-full px-1.5">
+              <span className="text-[10px] text-plum-ink bg-plum/10 rounded-full px-1.5">
                 +{lastAdded.addons.length}
               </span>
             )}

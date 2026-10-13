@@ -28,7 +28,14 @@
      to the lighter red because red-600 fails on the dark navy. */
   --color-danger: #dc2626;
   --color-plum: #935B8A;
-  --color-plum-light: #A86B9F;
+  --color-plum-light: #8E5484;
+  /* plum-ink is for plum-family text that sits on a plum/20 tint — the tint
+     lifts the background toward the text, so bare plum only managed 4.2:1. */
+  --color-plum-ink: #7E4B76;
+  /* Label colour for a plum-filled surface (#935B8A keeps its value in both
+     modes). Not text-white: that token remaps to a dark slate under html.dark,
+     which measured 2.9:1 on plum. */
+  --color-on-plum: #FFFFFF;
   --color-text: #111827;
   --color-white: #FFFFFF;
   --color-foreground: #111827;
@@ -82,8 +89,13 @@ html.dark :focus-visible {
   left: 1rem;
   z-index: 100;
   padding: 0.75rem 1.25rem;
+  /* primary-on-cream, not primary-with-white: `--color-primary` REMAPS to a
+     near-white in dark mode (it is the "ink" colour there), so white text on it
+     measured 1.1:1 — invisible on the one control a keyboard user needs first.
+     primary and cream are always opposite ends of the palette, so this pairing
+     holds in both modes (8.8:1 light, 16.3:1 dark). */
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-cream);
   font-weight: 600;
   border-radius: 0.75rem;
   text-decoration: none;

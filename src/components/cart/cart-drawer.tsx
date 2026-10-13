@@ -94,7 +94,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     </p>
                   ))}
                   {item.addons.map((a) => (
-                    <span key={a.addon_id ?? a.type} className="inline-block text-xs bg-plum/10 text-plum rounded-full px-2 py-0.5 mt-1 mr-1">
+                    <span key={a.addon_id ?? a.type} className="inline-block text-xs bg-plum/10 text-plum-ink rounded-full px-2 py-0.5 mt-1 mr-1">
                       +{a.label} (${resolveAddonPrice(a, item.base_price).toFixed(2)})
                     </span>
                   ))}
