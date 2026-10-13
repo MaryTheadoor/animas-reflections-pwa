@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   collection,
   getDocs,
@@ -24,6 +24,9 @@ import AdminTooltip from "@/components/ui/admin-tooltip";
 import { importCatalogCsv, type ImportReport } from "@/lib/catalog-import";
 import { findDuplicateGroups, mergeGroup, type DuplicateGroup } from "@/lib/duplicate-products";
 import { buildModifiersForProduct, type SquareModifierList } from "@/lib/square-addons";
+import { useProductPhotos } from "@/hooks/useProductPhotos";
+import { applySetPatch, blankPhotoSets, filterPhotos, type BlankPhotoSet } from "@/lib/product-photos";
+import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS } from "@/types";
 
 const EMPTY_PRODUCT: ManagedProduct = {
   id: "",
@@ -314,6 +317,72 @@ export default function ProductManager({ categories }: Props) {
   };
 
   const defaultAddonPrice = siteConfig.addon_price ?? ADDON_PRICE;
+
+  /* ── Product photo library ────────────────────────────────────────────────
+     Filling a product's mockups by hand means five uploads for one blank
+     garment. A saved blank already knows its views, so applying one fills them
+     all — and it reports the views it could NOT fill rather than leaving that to
+     be discovered in the customizer later.
+     ──────────────────────────────────────────────────────────────────────── */
+  const { photos: libraryPhotos } = useProductPhotos();
+  const [showAllBlanks, setShowAllBlanks] = useState(false);
+  const [blankNote, setBlankNote] = useState<string | null>(null);
+  const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
+  const [galleryPicked, setGalleryPicked] = useState<string[]>([]);
+  const [galleryQuery, setGalleryQuery] = useState("");
+
+  const photoSets = useMemo(() => blankPhotoSets(libraryPhotos), [libraryPhotos]);
+
+  // Default to the blanks that suit THIS product; an operator can widen it.
+  const matchingSets = useMemo(() => {
+    if (showAllBlanks) return photoSets;
+    return photoSets.filter((set) => {
+      if (set.productType && set.productType !== form.productType) return false;
+      if (set.categoryIds.length > 0 && !set.categoryIds.includes(form.categoryId)) return false;
+      return true;
+    });
+  }, [photoSets, showAllBlanks, form.productType, form.categoryId]);
+
+  const galleryCandidates = useMemo(
+    () =>
+      filterPhotos(libraryPhotos, {
+        query: galleryQuery,
+        productType: form.productType,
+        categoryId: form.categoryId || undefined,
+      }),
+    [libraryPhotos, galleryQuery, form.productType, form.categoryId],
+  );
+
+  /** Merge a blank's photos into the form. Only the views it has are touched. */
+  const applyBlank = (set: BlankPhotoSet) => {
+    const patch = applySetPatch(set);
+    if (patch.mockupImages) {
+      updateField("mockupImages", { ...(form.mockupImages ?? {}), ...patch.mockupImages });
+    }
+    if (patch.mockupImagesByColor) {
+      const merged = { ...(form.mockupImagesByColor ?? {}) };
+      for (const [color, views] of Object.entries(patch.mockupImagesByColor)) {
+        merged[color] = { ...(merged[color] ?? {}), ...views };
+      }
+      updateField("mockupImagesByColor", merged);
+    }
+    const filled = patch.appliedViews.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ");
+    const short = patch.missingViews.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ");
+    setBlankNote(
+      patch.appliedViews.length === 0
+        ? `“${set.name}” has no view set yet — give its photos a view in the Product Photos tab.`
+        : `Filled ${filled} from “${set.name}”${short ? `. No photo saved yet for: ${short}` : "."}`,
+    );
+  };
+
+  const addGalleryPicks = () => {
+    if (galleryPicked.length === 0) return;
+    const next = [...form.images];
+    for (const url of galleryPicked) if (!next.includes(url)) next.push(url);
+    updateField("images", next);
+    setGalleryPicked([]);
+    setGalleryPickerOpen(false);
+  };
   // Working list = the product's configured add-ons, or the site-standard ones
   // (as a starting template) when the product hasn't been configured yet. Any edit
   // below materializes form.productAddons; leaving it untouched keeps it undefined
@@ -1337,6 +1406,60 @@ export default function ProductManager({ categories }: Props) {
           {/* Mockup Images */}
           <div>
             <label className="block text-xs font-medium text-primary mb-2">Mockup Images (blank product shots for customizer)</label>
+
+            {/* Apply a saved blank from the Product Photos library: fills every
+                view the blank has, in one click, and says what is still missing. */}
+            {(photoSets.length > 0 || showAllBlanks) && (
+              <div className="mb-3 rounded-xl border border-primary/20 bg-warm-sand/20 p-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                  <span className="text-[11px] font-medium text-primary">
+                    Apply a saved blank product — fills every view it has
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllBlanks((v) => !v)}
+                    className="text-[10px] text-foreground/70 hover:text-gold-deep"
+                  >
+                    {showAllBlanks ? "Show matching blanks only" : "Show all blanks"}
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {matchingSets.map((set) => {
+                    const covered = PRODUCT_PHOTO_VIEWS.filter((v) => set.byView[v]);
+                    const missing = PRODUCT_PHOTO_VIEWS.filter((v) => !set.byView[v]);
+                    return (
+                      <button
+                        key={set.name}
+                        type="button"
+                        onClick={() => applyBlank(set)}
+                        title={
+                          covered.length === 0
+                            ? "This blank has no photos assigned to a view yet"
+                            : `Fills: ${covered.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")}`
+                        }
+                        className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-white border border-primary/20 text-foreground hover:border-gold hover:text-gold-deep transition-colors text-left"
+                      >
+                        {set.name}
+                        <span className="block text-foreground/70 font-normal">
+                          {covered.length}
+                          {" of 5 views"}
+                          {missing.length > 0 && ` · missing ${missing.length}`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {matchingSets.length === 0 && (
+                    <span className="text-[11px] text-foreground/70">
+                      No saved blanks match this product type.{" "}
+                      <button type="button" onClick={() => setShowAllBlanks(true)} className="text-gold-deep hover:underline">
+                        Show all
+                      </button>
+                    </span>
+                  )}
+                </div>
+                {blankNote && <p className="text-[10px] text-foreground/80 mt-2">{blankNote}</p>}
+              </div>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {(["front", "back", "sleeve", "sideL", "sideR"] as const).map((view) => (
                 <div key={view}>
@@ -2331,6 +2454,79 @@ export default function ProductManager({ categories }: Props) {
                 className="hidden"
               />
             </label>
+
+            {/* Reuse a photo that already exists instead of uploading it again. */}
+            {libraryPhotos.length > 0 && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setGalleryPickerOpen((v) => !v)}
+                  className="text-xs font-medium text-gold-deep hover:underline"
+                >
+                  {galleryPickerOpen ? "Close the library" : "Add from the photo library"}
+                </button>
+
+                {galleryPickerOpen && (
+                  <div className="mt-2 rounded-xl border border-primary/20 bg-warm-sand/20 p-3">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <input
+                        type="search"
+                        value={galleryQuery}
+                        onChange={(e) => setGalleryQuery(e.target.value)}
+                        placeholder="Search blanks, colours, tags…"
+                        aria-label="Search the photo library"
+                        className="flex-1 min-w-[160px] px-2.5 py-1.5 rounded-lg border border-primary/20 bg-white focus:border-gold outline-none text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={addGalleryPicks}
+                        disabled={galleryPicked.length === 0}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gold text-on-gold hover:bg-gold-light disabled:opacity-40 transition-colors"
+                      >
+                        Add {galleryPicked.length > 0 ? galleryPicked.length : ""} to gallery
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 max-h-56 overflow-y-auto">
+                      {galleryCandidates.slice(0, 40).map((photo) => {
+                        const on = galleryPicked.includes(photo.image_url);
+                        return (
+                          <button
+                            key={photo.id}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() =>
+                              setGalleryPicked((prev) =>
+                                on ? prev.filter((u) => u !== photo.image_url) : [...prev, photo.image_url],
+                              )
+                            }
+                            className={`rounded-lg overflow-hidden border-2 text-left transition-colors ${
+                              on ? "border-gold" : "border-transparent hover:border-primary/30"
+                            }`}
+                          >
+                            <Image
+                              src={photo.image_url}
+                              alt={`${photo.name}${photo.view ? ` — ${PRODUCT_PHOTO_VIEW_LABELS[photo.view]}` : ""}`}
+                              width={120}
+                              height={120}
+                              className="w-full h-20 object-contain bg-white"
+                            />
+                            <span className="block px-1 py-0.5 text-[9px] text-foreground/70 truncate">
+                              {photo.name}
+                              {photo.color ? ` · ${photo.color}` : ""}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {galleryCandidates.length === 0 && (
+                        <p className="col-span-full text-xs text-foreground/70">
+                          Nothing in the library matches. Add photos in the Product Photos tab.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Save */}
