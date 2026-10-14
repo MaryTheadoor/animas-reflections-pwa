@@ -41,14 +41,15 @@
 
 ---
 
-## 4. ALL ROUTES (20 total)
+## 4. ALL ROUTES (25 exported pages)
 
 | Route | File | Purpose |
 |---|---|---|
 | `/` | src/app/page.tsx | Homepage with hero, featured products, our story |
 | `/about` | src/app/about/page.tsx | Our Story |
 | `/account` | src/app/account/page.tsx | Customer account (orders, addresses, profile) |
-| `/shop` | src/app/shop/page.tsx | Product catalog — By Design/Brand or By Product Type, search, sort, tile density |
+| `/shop` | src/app/shop/page.tsx | Product catalog — By Brand/Category or By Product Type, search, sort, tile density |
+| `/services` | src/app/services/page.tsx | Services hub; also cross-links the keyword pages |
 | `/product` | src/app/product/page.tsx | Product detail page (query param ?id=) |
 | `/customizer` | src/app/customizer/page.tsx | Interactive design customizer (color selector, mockups, designs, add-ons) |
 | `/checkout` | src/app/checkout/page.tsx | Cart + Square payment form + customer info |
@@ -65,6 +66,11 @@
 | `/biscuit-hockey` | src/app/biscuit-hockey/page.tsx | Sub-brand page |
 | `/im-ok-r-u` | src/app/im-ok-r-u/page.tsx | Sub-brand page |
 | `/_not-found` | | 404 |
+| `/404` | | Static 404 export |
+| `/<keyword>` | src/app/[keyword]/page.tsx | CMS keyword landing pages, one per published entry in `config/seo`. Three live: `/custom-embroidery-durango`, `/custom-t-shirt-printing-durango`, `/corporate-apparel-durango` |
+
+`/robots.txt` and `/sitemap.xml` are generated routes (`src/app/robots.ts`, `src/app/sitemap.ts`), not pages.
+`find out -name index.html | wc -l` = 25 and the sitemap lists 16 URLs; `npm run build` prints the same page count, and `scripts/check-seo.mjs` fails the build if they disagree.
 
 ---
 
@@ -115,7 +121,20 @@
 
 ---
 
-## 6. FIREBASE FUNCTIONS (18 deployed, us-central1, Node 22 Gen2)
+| src/lib/product-photos.ts | Blank-product photo library: blankPhotoSets(), applySetPatch(), filterPhotos(), inferViewFromFilename() |
+| src/lib/bulk-apply.ts | Bulk planners: selectTargets(), planBlankApply(), planPriceApply() — preview before writing |
+| src/lib/design-category.ts | Design↔category matching, autoFillDesignsForCategory(), refreshPinnedDesigns() |
+| src/lib/variant-matrix.ts | Variant combination maths for the matrix' bulk fill |
+| src/lib/seo-runtime.ts | Applies config/seo to <head> at runtime (build-time snapshot stays the fallback) |
+| src/lib/site-defaults.ts | Editable theme palettes + the WCAG contrast floor (enforceContrast) |
+| src/lib/content-schema.ts | Editable site copy contract: SiteContent, DEFAULT_CONTENT, COPY_PAGES |
+| src/components/admin/product-photo-manager.tsx | Admin → Product Photos library |
+| src/components/admin/theme-editor.tsx / copy-editor.tsx | Admin → Content & Theme |
+| src/context/seo-context.tsx, src/components/layout/runtime-seo.tsx | Runtime SEO provider + head writer |
+| src/hooks/useProductPhotos.ts | Product photo library hook (admin only — deliberately not a provider) |
+| collections: `product_photos`, `designs`, `categories`, `products`, `orders`, `config/*` | Firestore. `product_photos` and `designs` are public-read / admin-write |
+
+## 6. FIREBASE FUNCTIONS (19 deployed, us-central1, Node 22 Gen2)
 
 **Square is PAYMENT-ONLY since the catalog architecture overhaul (2026-08). Firestore is the master catalog — all Square sync functions were deleted.**
 
@@ -206,10 +225,10 @@
 49. **A mid-tone accent needs a text variant AND a label variant; the bare token fails both ways (2026-10-12):** `text-plum` on a `bg-plum/20` tint measured **4.19:1 light / 3.5:1 dark**, and `bg-plum text-white` measured **2.86:1 in dark** — because `--color-white` REMAPS to a dark slate there, which is exactly how the 37 `bg-gold text-white` buttons were broken before `--color-on-gold` existed. The gold family is now the template: `gold`/`goldLight`/`goldDeep` for surfaces and borders, `goldInk` for text on a gold tint, `onGold` for a label on a gold face — and plum mirrors it with `plumInk`/`onPlum`. Do not reach for a bare accent token for either job, and do not use `text-white` on a coloured face at all.
 50. **A mid-tone surface cannot carry accent text, and no label colour fixes it (2026-10-12):** the live `config/site.theme.dark.warmSand` is `#4f6c9d`, a mid blue. On it, `goldDeep` reaches **2.02:1** and `goldInk` **2.99:1** — while `foreground` gets 4.84:1. Any surface in that lightness band is unusable behind the accent golds. The contrast floor cannot repair this by swapping the text (both the shipped and the admin's golds fail), so the surface itself has to move; the shipped `#1E293B` gives `goldDeep` 5.57:1 and `foreground` 13.35:1. Left as a client decision rather than changed unilaterally — it is a visible brand surface.
 51. **Verify contrast on rendered pixels, not on `getComputedStyle` (2026-10-12):** a scripted audit that toggled `html.dark` and read computed styles reported ~20 failures on /shop/ and the nav dock, every one of them contradicted by a screenshot at native resolution showing readable text — `getComputedStyle(el).color` returned the LIGHT value for elements whose parent reported the dark one, while the paint was correct. Changing the theme class outside the React provider is the likely trigger. Trust (a) a screenshot, and (b) arithmetic over the palette tokens; treat any computed-style reading taken after a scripted theme change as suspect.
-52. **Node v24.15.0 on this machine crashes V8 when compiling large modules (2026-10-13; WORKED AROUND, machine still on 24.15.0):** — `npm run build` cannot complete until Node is changed:** `require("typescript")` alone dies with `Fatal error ... unreachable code` (the stack shows `v8::ScriptCompiler::CompileFunction`). It hits tsc, eslint, jest and next build, and it began part-way through a session on a machine where the same commands had just succeeded, so it is NOT caused by the repo. What works: `node --no-opt <script>` and `node --jitless <script>`. What does not: `--no-opt` in `NODE_OPTIONS` (Next converts its workers' execArgv into NODE_OPTIONS and rejects it: `ERR_WORKER_INVALID_EXEC_ARGV`), and `--jitless` (no WebAssembly, so Turbopack dies). Practical consequences: verify with `node --no-opt node_modules/typescript/lib/tsc.js --noEmit`, `node --no-opt node_modules/eslint/bin/eslint.js` and `node --no-opt node_modules/jest/bin/jest.js`, and treat a green build as unavailable here until Node 22 LTS (what CI uses) or a patched 24.x is installed. Do not "fix" it by committing flags into the build scripts. A portable Node 22.23.3 now lives at `~/.local/node22/` (source `~/.local/node22/env.sh`); put it FIRST ON PATH for any build — with the broken 24 still first, Turbopack's PostCSS helper resolves `node` from PATH and the build dies with `os error 10054` / `TurbopackInternalError` on globals.css. PATH ORDER is the fix, not the choice of binary. The durable fix is still `winget install OpenJS.NodeJS.LTS`.
+52. **Node v24.15.0 on this machine crashes V8 when compiling large modules (2026-10-13; WORKED AROUND, machine still on 24.15.0):** `require("typescript")` alone dies with `Fatal error ... unreachable code` (the stack shows `v8::ScriptCompiler::CompileFunction`). It hits tsc, eslint, jest and next build, and it began part-way through a session on a machine where the same commands had just succeeded, so it is NOT caused by the repo. What works: `node --no-opt <script>` and `node --jitless <script>`. What does not: `--no-opt` in `NODE_OPTIONS` (Next converts its workers' execArgv into NODE_OPTIONS and rejects it: `ERR_WORKER_INVALID_EXEC_ARGV`), and `--jitless` (no WebAssembly, so Turbopack dies). Practical consequences: verify with `node --no-opt node_modules/typescript/lib/tsc.js --noEmit`, `node --no-opt node_modules/eslint/bin/eslint.js` and `node --no-opt node_modules/jest/bin/jest.js`, and treat a green build as unavailable here until Node 22 LTS (what CI uses) or a patched 24.x is installed. Do not "fix" it by committing flags into the build scripts. A portable Node 22.23.3 now lives at `~/.local/node22/` (source `~/.local/node22/env.sh`); put it FIRST ON PATH for any build — with the broken 24 still first, Turbopack's PostCSS helper resolves `node` from PATH and the build dies with `os error 10054` / `TurbopackInternalError` on globals.css. PATH ORDER is the fix, not the choice of binary. The durable fix is still `winget install OpenJS.NodeJS.LTS`.
 53. **A product holds design COPIES, not references (recorded 2026-10-13):** `ManagedProduct.designAssets` stores whole `DesignAsset` objects, so renaming a design or replacing its image in the library never reaches a product that pinned it. Auto-pinning by category makes this much worse — ten designs across forty products is four hundred stale copies. The product editor now re-resolves pinned designs from the library on save, and offers Refresh pinned from library, which keeps the snapshot honest until the read path is moved to ids.
-55. **A running dev server makes `tsc` fail with syntax errors that are not yours (2026-10-13):** `tsconfig.json` includes `.next/dev/types/**/*.ts`, and the dev server regenerates `validator.ts` while you edit — mid-write it can contain a stray fragment, so `tsc --noEmit` reports `TS1109 Expression expected` in a file nobody wrote by hand. It looks exactly like a broken source change. Stop the dev server (or `rm -rf .next/dev`) before trusting a typecheck; `.next` is gitignored, so this never reaches a commit.
 54. **A bulk operation must be planned before it is written, and the plan must OMIT targets that need no change (recorded 2026-10-13):** the bulk planners return only products that would actually change, so applying the same update twice reports "nothing to change" the second time. Listing no-op targets inflates the report, which makes a real failure indistinguishable from noise, and it invites the operator to apply a plan whose size they have not really read. Preview, then apply exactly the preview — the same discipline as the CSV importer.
+55. **A running dev server makes `tsc` fail with syntax errors that are not yours (2026-10-13):** `tsconfig.json` includes `.next/dev/types/**/*.ts`, and the dev server regenerates `validator.ts` while you edit — mid-write it can contain a stray fragment, so `tsc --noEmit` reports `TS1109 Expression expected` in a file nobody wrote by hand. It looks exactly like a broken source change. Stop the dev server (or `rm -rf .next/dev`) before trusting a typecheck; `.next` is gitignored, so this never reaches a commit.
 
 ---
 
@@ -263,13 +282,21 @@ Full plan: `docs/PRODUCT_MODIFIER_AUDIT.md`. Session log: `docs/DEVLOG.md` Sessi
 
 ## 11. NEXT INSTANCE — START HERE
 
-1. Read `docs/DEVLOG.md` for last session state + pending items (latest: Session 23, 2026-08-21)
+1. Read `docs/DEVLOG.md` for last session state + pending items (latest: Session 37, 2026-10-13), then §15 below for the consolidated open list
 2. Read this file §10 "Catalog Architecture Overhaul" for the architecture summary
 3. Check `USE_SYNTHETIC` flag in `src/hooks/useCatalog.ts` (false = real Firestore)
 4. Run `npm run dev` to test locally
-5. Run `npm run build && firebase deploy` to deploy (retry once if the functions-analysis step times out)
-6. **Branching:** work on `development`; merge to `master` only when verified + user-approved (master is 17 commits behind as of 2026-08-21)
-7. Every deploy MUST pass: lint (0 errors), build (22 routes), tests (109/109), visual check
+5. Run `npm run build` to deploy hosting. **Use Node 22**, and **deploy rules before hosting** when rules changed:
+   `firebase deploy --only firestore:rules,storage` then `firebase deploy --only hosting`.
+   See Known Issue #52 for why the machine's Node 24 must not be used, and retry once if the functions-analysis step times out.
+6. **Branching:** `development` is the ONLY branch — it is the GitHub default and the branch `publishSite` rebuilds
+   (`GITHUB_PUBLISH_REF` in functions/src/index.ts). The old `master` was deleted on 2026-10-13 after verifying every
+   commit on it was an ancestor of `development`; do not recreate a second "main" branch, because two branches looking
+   authoritative is exactly how the work diverged in the first place.
+7. Every deploy MUST pass: lint (0 errors), `tsc --noEmit` (0 errors), build (25 pages), tests (286/286, 20 suites),
+   and a visual check. **Note this is a rule, not an enforced gate** — as of 2026-10-13 no release path runs lint or
+   tests: `.github/workflows/rebuild.yml` runs only `npm run build`, and `npm run publish` is build + deploy. Tracked
+   as an open item in §15.
 8. Do NOT modify nav-dock position — it's inside a fixed wrapper
 9. Do NOT add bottom navigation bars — only top dock
 10. Use backup framework: `backup:file` before edits, `backup:snapshot` at session end (backup-commit.ps1 is unreliable — use plain git)
@@ -326,4 +353,46 @@ Synthetic data is for UI development only. Production always reads Firestore —
   `RETURN_POLICY`/`PAYMENT_METHODS` and the `/services/` hero copy are still static.
 
 ---
+## 15. OPEN ITEMS — the current list (2026-10-13)
+
+Consolidated so there is one place to look. Per-session notes live in `docs/DEVLOG.md`;
+client questions live in `docs/STATUS_SWEEP.md` §5.
+
+### 15.1 Deferred by design (not forgotten, not needed yet)
+| Item | Why it is deferred |
+|---|---|
+| `designIds` read-path refactor | Products hold design COPIES (Known Issue #53). Saving a product re-resolves them, which is the stopgap; making them references touches the customizer, search indexing and the storefront read path |
+| Re-point many products from one blank to another | Bulk apply sets a blank ON products; switching them off is a different job with a different preview |
+| Service-worker cache strategy | `CACHE_NAME` is a constant, so a returning visitor can be served the previous page once (documented in the admin help). Fixing it means versioning the cache per build |
+
+### 15.2 Release-path gaps (the gates that do not actually gate)
+| Item | Evidence |
+|---|---|
+| No test gate in any release path | `.github/workflows/rebuild.yml` runs only `npm run build`; `npm run publish` is build + deploy. 286 tests still cannot block a publish — `npm run verify` now exists for local use, but wiring it into CI is a pending decision (docs/PIPELINE.md) |
+| No lint gate in any release path | `npm run lint` is clean (40 s) but is never invoked by CI or publish — same pending decision |
+| ~~`jest --passWithNoTests`~~ | **FIXED 2026-10-13** — a zero-test run now exits non-zero |
+| Failed `config/seo` fetch is warn-only | `fetch-seo-config.mjs` logs and exits 0 when a snapshot exists, so a network blip publishes copy of unknown age |
+| `og-image.png` is never validated | `check-seo.mjs` only asserts the tag is present and absolute; a missing share card passes every gate |
+
+### 15.3 Housekeeping
+- The machine still runs Node v24.15.0 (Known Issue #52). Portable Node 22 at `~/.local/node22`; the durable fix is `winget install OpenJS.NodeJS.LTS`
+- Two stale remote branches, both verified fully contained in `development` with no open PRs: `origin/fix/auth-storage-reuse` (PR #1 merged) and `origin/polish/p1`
+- Untracked 230 MB `animas-reflections-pwa.zip` in the repo root — the client's file, left alone by request
+- `docs/DEVELOPMENT.md` predates the reconciliation and the branch change; refreshed 2026-10-13 but its deeper content is older than the code
+- Older docs (`GAP_ANALYSIS.md`, `PROJECT_STATUS_REPORT.md`, `SCHEMA.md`, `MASTER*.md`, `SCOPE.md`) are dated Aug/Sep 2026 and are historical; treat `PROJECT_CONTEXT.md`, `docs/DEVLOG.md` and `docs/CATALOG_IMPORT.md` as current
+
+### 15.4 Launch items (from STATUS_SWEEP §4.1, re-checked)
+| ID | Status |
+|---|---|
+| G4 product images are manual per-product uploads | **SOLVED** — the Product Photos library (Session 37) |
+| G5 blank mockup images for the customizer | **SOLVED** — same library, applied per product |
+| G2 checkout never tested with a real card | OPEN — highest-value verification outstanding |
+| G1 real catalog population | OPEN |
+| G15 Lighthouse PWA audit | OPEN |
+| G20 DNS cutover to animasreflections.com | OPEN |
+| G21 analytics | OPEN — would require revisiting cookie consent |
+| G19/G22/G23 | OPEN — see STATUS_SWEEP §4 |
+
+---
+
 END OF CONTEXT FILE

@@ -210,14 +210,18 @@ with the copy editor editing page copy only. See the analysis in the session not
 
 ## 4. Outstanding issues
 
+> **Re-checked item by item on 2026-10-13.** Resolved items are struck through or annotated rather than
+> deleted, so the sweep still shows what changed since it was written. Anything without an annotation still
+> stands as written on 2026-10-06.
+
 ### 4.1 Launch blockers (P0)
 
 | ID | Issue | Note |
 |---|---|---|
 | G2 | **Checkout has never been tested end-to-end with a real card** | Open since Session 12. Also the only way to settle §4.2 item 1. Highest priority. |
 | G1 | Real catalog is still a manual rebuild | Who populates it, and when? |
-| G4 | Product images are manual per-product uploads | |
-| G5 | Blank mockup images for the customizer | |
+| G4 | ~~Product images are manual per-product uploads~~ | **SOLVED 2026-10-13** — the Product Photos library |
+| G5 | ~~Blank mockup images for the customizer~~ | **SOLVED 2026-10-13** — same library, applied per product |
 | G15 | Lighthouse PWA audit (target 90+) | Never run |
 | G20 | DNS cutover `animasreflections.com` → Firebase Hosting | Currently on Square Online |
 | G21 | Analytics integration | Adding it would require revisiting cookie consent |
@@ -244,7 +248,9 @@ with the copy editor editing page copy only. See the analysis in the session not
      is `production` (authoritative), then run the G2 real-card test. If the param were
      still `sandbox` while the token is production, every Square API call would fail —
      which would also explain why G2 has never been completed.
-2. **20 npm audit findings** — 1 **critical** (`next@16.2.7`), 7 high (`firebase`,
+2. **20 npm audit findings** — *(re-checked 2026-10-13: unchanged — 10 production-only findings, 1 critical
+   (`next`), 7 high (`firebase`, `@firebase/firestore`, `@grpc/grpc-js`, `postcss`, `sharp`, `source-map-js`).
+   Nothing regressed and nothing was fixed.)* — 1 **critical** (`next@16.2.7`), 7 high (`firebase`,
    `sharp`, `postcss`, `source-map-js`), 3 moderate, 1 low. Production-only view:
    10 findings. `next@16.3.x` upgrade clears the critical.
 3. **Domain inconsistency in published legal copy** — `src/lib/seo.ts:30` uses
@@ -256,18 +262,19 @@ with the copy editor editing page copy only. See the analysis in the session not
 
 ### 4.3 Accessibility
 
-- **Dark-mode counterpart audit** — open since Session 14 and still unstarted. The
-  contrast pass fixed the light palette and prevented dark regressions, but dark mode
-  has never had its own audit.
-- `_webbridge/contrast.py` (the audit script) has a stale colour list — it predates
-  `gold-ink`, `on-gold`, and `danger`.
+- ~~**Dark-mode counterpart audit** — open since Session 14 and still unstarted.~~ **DONE 2026-10-12/13:** both
+  modes were measured and the palette tightened (the skip link was invisible in dark at 1.1:1; the plum family
+  failed both ways; `goldInk`/`goldDeep`/`danger` needed dark-specific values). A WCAG floor now patches an
+  unreadable saved palette back to a readable one at render time.
+- ~~`_webbridge/contrast.py` has a stale colour list.~~ **FIXED:** it now covers 32 combinations including the
+  plum family, the gold tint levels, and both modes — all passing AA.
 
 ### 4.4 Code quality / tech debt
 
 - `product-manager.tsx` is ~1.8k lines — flagged for splitting by both lines independently
 - ~15 non-test `console.*` statements in `src/` and `functions/src/`
-- `functions/lib/` holds **stale compiled orphans** for deleted modules (`sync.js`,
-  `product-pipeline.js`)
+- ~~`functions/lib/` holds **stale compiled orphans** for deleted modules (`sync.js`, `product-pipeline.js`)~~
+  **FIXED** — removed 2026-10-08; `functions/lib/` now holds only `index` and `pricing` plus their maps
 - Order pagination is hardcoded (`admin` `PER_PAGE = 15`)
 - Per-variant inventory: Line B added **reject-only** enforcement server-side
   (out-of-stock variants are refused at checkout) but **no stock decrement** — selling
@@ -280,9 +287,9 @@ with the copy editor editing page copy only. See the analysis in the session not
 | Doc | Problem |
 |---|---|
 | `docs/GAP_ANALYSIS.md` | **2 months stale** (refreshed 2026-08-06). Predates all SEO/CMS + a11y work. |
-| `docs/PROJECT_STATUS_REPORT.md` | **Counts wrong:** claims 48 tests (actual **109**), 14 functions (actual **18**), 22 pages (actual **26**), and says "clean on master" (actually dirty `development`) |
-| `docs/SCOPE.md` | **Counts wrong:** 14 functions (actual 18), 4 test suites (actual 9), 8 admin tabs (actual **9** — SEO tab missing), and cites `USE_SYNTHETIC` in the wrong file (`useCatalog.ts`; it lives in `catalog-context.tsx:20`) |
-| `docs/DEVLOG.md` | **Session numbers 30–33 collide** between the two lines |
+| `docs/PROJECT_STATUS_REPORT.md` | **Counts wrong:** claims 48 tests, 14 functions, 22 pages. (Its "actual" figures were 109 / 18 / 26 on 2026-10-06; they are now **286 tests / 19 functions / 25 pages**.) Dated Aug 2026 — treat as historical |
+| `docs/SCOPE.md` | **Counts wrong:** 14 functions, 4 test suites, 8 admin tabs. (Now **19 functions / 20 suites / 12 tabs** — Product Photos and Content & Theme were added.) Also cites `USE_SYNTHETIC` in the wrong file (`useCatalog.ts`; it lives in `catalog-context.tsx:20`) |
+| `docs/DEVLOG.md` | ~~Session numbers 30–33 collide~~ **RESOLVED:** the lines were merged and the other line's entries are kept under a clearly-labelled heading with a numbering note |
 | `docs/ECOMMERCE_RESCOPE.md` | Accurate; it is a proposal, not implemented |
 | `_webbridge/contrast.py` | Stale colour list (see 4.3) |
 
@@ -290,9 +297,12 @@ with the copy editor editing page copy only. See the analysis in the session not
 
 - `scripts/backup-commit.ps1` is unusable (CRLF stderr handling) — plain `git` is the workaround
 - Untracked 230 MB `animas-reflections-pwa.zip` in the repo root
-- `npm run build` regenerates `src/lib/seo-content.generated.ts` with **LF** into a CRLF
-  repo, leaving the tree permanently dirty after every build (content is identical;
-  line endings only)
+- ~~`npm run build` leaves the tree permanently dirty (line endings only)~~ **NOT REPRODUCIBLE** (re-checked
+  2026-10-13): the generated file and `public/og-image.png` are both byte-identical after a build, and
+  `git status` is clean — the script's write-on-change comparison matches exactly. Claim withdrawn.
+- Untracked 230 MB `animas-reflections-pwa.zip` is still in the repo root
+- Two stale remote branches remain (`fix/auth-storage-reuse` — PR #1 merged — and `polish/p1`); both verified
+  fully contained in `development`
 
 ---
 
@@ -368,18 +378,21 @@ Grouped so the meeting can be short. Items marked ★ block work that is already
 
 ---
 
-## 6. Suggested immediate sequence
+## 6. Suggested immediate sequence — **COMPLETED 2026-10-13**
 
-1. **Confirm `SQUARE_ENVIRONMENT=production` in `functions/.env`** — one-line check, and
-   the site cannot legitimately take money without it.
-2. Run the G2 real-card test — settles the checkout question and confirms §5 item 16.
-3. **Reconcile the two lines on a dedicated branch, per §3 — before any further feature
-   work.** This is now urgent rather than housekeeping: it is recovering live
-   functionality (Help Hub, CSV import, theme/copy editor, inventory, modifier groups,
-   print-zone editor) that Line A's deploys silently removed.
-4. Get answers to ★ items in §5 — several unblock already-built work.
-5. Refresh `GAP_ANALYSIS.md`, `PROJECT_STATUS_REPORT.md`, and `SCOPE.md` to match reality.
-6. Then the remaining launch tasks: G15, G19/G22/G23, G20, G21.
+Every step was carried out. Kept here so the reasoning is traceable; the current open list lives in
+`PROJECT_CONTEXT.md` §15.
 
-**Do not deploy again from a single line until step 3 is done** — every hosting deploy
-from Line A alone overwrites Line B's live features, and vice versa.
+1. **`SQUARE_ENVIRONMENT`** — the server-side value is confirmed `production` (the `health` function reports it,
+   and the client's `SQUARE_ENV` dead-code note in §4.2.1 is unchanged).
+2. **G2 real-card test** — still OPEN. It remains the highest-value verification outstanding.
+3. **Reconcile the two lines** — DONE. Merged with 24 conflicts resolved in favour of the verified behaviour
+   (`docs/DEVLOG.md` Session 35), then released (`Session 37`).
+4. **Client answers** — partly answered 2026-10-06 (business is online-only; Biscuit Hockey is a brand). The
+   remaining ★ items are now listed in `PROJECT_CONTEXT.md` §15.4.
+5. **Refresh the stale docs** — DONE for the live ones: `PROJECT_CONTEXT.md`, `README.md`,
+   `docs/DEVELOPMENT.md`, `docs/STATUS_SWEEP.md` and the admin help were all updated 2026-10-13. The Aug/Sep
+   reports were left as dated snapshots and are labelled historical in §4.5.
+6. **Remaining launch tasks** — G2, G1, G15, G20, G21 as before.
+
+The "do not deploy from a single line" warning that stood here is obsolete: there is one line now.

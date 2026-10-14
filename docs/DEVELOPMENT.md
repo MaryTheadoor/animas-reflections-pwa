@@ -5,37 +5,67 @@
 | Command | Purpose |
 |---------|---------|
 | `npm run dev` | Next.js dev server (hot reload) |
-| `npm run build` | Static export → `out/` (18 routes) |
+| `npm run build` | Static export → `out/` (25 pages). Needs **Node 22** — see below |
 | `npm run lint` | ESLint (0 errors required before deploy) |
 | `npm run emulators` | Firebase emulators (Firestore + Functions) |
 | `npm run deploy` | Deploy all (functions + hosting + rules) |
+| `npm run deploy:hosting` | Deploy only hosting |
 | `npm run deploy:functions` | Deploy only Cloud Functions |
 | `npm run deploy:hosting` | Deploy only hosting (static files) |
 | `cd functions && npm run build` | Compile functions TypeScript |
 
+## Node version — read this first
+
+**Use Node 22 LTS.** CI uses 22 and `firebase.json` pins `nodejs22`. Node 24.15.0 crashes V8 while compiling
+this project's dependencies, which breaks `tsc`, `jest`, `eslint` and `next build` alike (PROJECT_CONTEXT
+Known Issue #52). On this machine a portable Node 22.23.3 lives at `~/.local/node22`:
+
+```bash
+source ~/.local/node22/env.sh   # prepends it to PATH for this shell
+node -v                          # expect v22.x
+```
+
+**PATH order is what matters**, not which binary starts the build: Turbopack's PostCSS helper resolves `node`
+from PATH, so leaving the broken 24 in front fails with `os error 10054` while compiling `globals.css`.
+The durable fix is `winget install OpenJS.NodeJS.LTS`.
+
 ## Pre-Deploy Checklist
 
-1. `npm run lint` — must return 0 errors
-2. `npm run build` — must generate 19 routes
-3. `cd functions && npm run build` — must compile clean
-4. `firebase deploy` — deploys everything
+1. `npm run lint` — 0 errors
+2. `npx tsc --noEmit` — 0 errors (a running `npm run dev` can make this fail on its own generated
+   `.next/dev/types/validator.ts`; stop the server first — Known Issue #55)
+3. `npm test` — 286 tests, 20 suites, all passing
+4. `npm run build` — 25 pages, and the SEO gate (`check-seo`) runs automatically afterwards
+5. `cd functions && npm run build` — must compile clean
+6. `firebase deploy --only firestore:rules,storage` **first** if any rules changed, then
+   `firebase deploy --only hosting` (or `firebase deploy` for everything)
+
+**None of steps 1–3 is enforced by a release path.** `.github/workflows/rebuild.yml` (what the admin's Publish
+button dispatches) runs only `npm run build`, and `npm run publish` is build + deploy — so a failing test or
+lint error cannot currently stop a publish. Treat the checklist as a discipline you are applying by hand.
 
 ## Branching & Rollback
 
-Two-branch model on GitHub (established 2026-07-22):
+**One branch: `development`.** It is the GitHub default and the branch the admin's Publish button rebuilds
+(`GITHUB_PUBLISH_REF` in `functions/src/index.ts`), so what is pushed is what can be published.
 
 | Branch | Role | Rule |
 |--------|------|------|
-| `master` | Stable / staged | GitHub default. Only merge verified work here. Always deployable. |
-| `development` | Working / integration | All edits land here first. Pushed to `origin/development` as offsite rollback. |
+| `development` | The only branch | GitHub default. Everything lands here. `origin/development` is the offsite rollback. |
 
-**Flow:** branch/work on `development` → verify (lint 0, tests pass, build 19 routes, live UI check) → merge to `master` → `firebase deploy`.
+The old two-branch model (`master` = stable, `development` = working) was retired on **2026-10-13**: `master`
+was deleted after verifying every commit on it was an ancestor of `development`. It had become a divergence
+hazard — two branches that both looked authoritative is how the two lines of work split in the first place.
+Do not recreate a second "main" branch.
+
+**Flow:** work on `development` → verify (lint 0, tsc clean, tests pass, build 25 pages, live UI check) → push →
+`firebase deploy --only firestore:rules,storage` if rules changed, then hosting.
 
 **Rollback options (most to least granular):**
 1. `git revert <hash>` on the offending commit
-2. `git reset --hard <last-good-hash>` on `development` (never on shared `master` without care)
+2. `git reset --hard <last-good-hash>` on `development` (it is now the only branch, so reset with care)
 3. Local snapshots via `npm run backup:restore` / `npm run backup:list`
-4. Re-deploy a known-good `master` commit: `git checkout <hash> && firebase deploy`
+4. Re-deploy a known-good commit: `git checkout <hash> && npm run build && firebase deploy --only hosting`
 
 Note: GitHub branch *protection rules* require a Pro plan on private repos — recovery relies on the merge discipline above plus the local snapshot framework, not platform enforcement.
 
@@ -80,7 +110,7 @@ Note: GitHub branch *protection rules* require a Pro plan on private repos — r
 
 ## Build Output
 
-Static export generates 19 routes to `out/`:
+Static export generates 25 pages to `out/`:
 ```
 /  /about  /account  /shop  /product  /customizer  /checkout
 /admin  /admin/login  /contact  /custom  /terms

@@ -2,6 +2,9 @@
   "name": "animas-reflections-pwa",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "og": "node scripts/generate-og.mjs",
@@ -14,7 +17,9 @@
     "build:all": "npm run build && cd functions && npm run build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest --passWithNoTests",
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run lint && npm run typecheck && npm test",
     "emulators": "firebase emulators:start",
     "deploy": "firebase deploy",
     "deploy:functions": "firebase deploy --only functions",
