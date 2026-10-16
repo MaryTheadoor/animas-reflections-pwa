@@ -412,6 +412,18 @@ export default function ProductManager({ categories }: Props) {
   const [autoDesignIds, setAutoDesignIds] = useState<Set<string>>(new Set());
   const [designNote, setDesignNote] = useState<string | null>(null);
 
+  const [designSort, setDesignSort] = useState<"name-asc" | "name-desc" | "newest" | "oldest">("name-asc");
+
+  /** The design grid, sorted for browsing — the pinning rules are unaffected. */
+  const sortedDesigns = useMemo(() => {
+    const copy = [...allDesigns];
+    if (designSort === "name-asc") copy.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+    else if (designSort === "name-desc") copy.sort((a, b) => (b.name ?? "").localeCompare(a.name ?? ""));
+    else if (designSort === "newest") copy.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+    else copy.sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+    return copy;
+  }, [allDesigns, designSort]);
+
   const autoPinForCategory = (categoryId: string) => {
     const category = [...categories, ...localCategories].find((c) => c.id === categoryId);
     if (!category) return;
@@ -2865,7 +2877,18 @@ export default function ProductManager({ categories }: Props) {
             <div className="flex items-center gap-2 mb-2">
               <AdminTooltip content="Select up to 10 designs that customers can print on this product. These designs appear first in the customizer library when this product is selected. Designs tagged with this product's category are pinned automatically on a new product." dismissKey="product-designs">
                 <label className="text-xs font-medium text-primary">
-                  Printable Designs ({form.designAssets?.length ?? 0} selected)
+                  Printable Designs ({form.designAssets?.length ?? 0} selected)                <span className="ml-2 text-[10px] text-foreground/60">sort:</span>
+                <select
+                  value={designSort}
+                  onChange={(e) => setDesignSort(e.target.value as typeof designSort)}
+                  aria-label="Sort designs"
+                  className="px-1.5 py-0.5 rounded border border-primary/20 bg-white text-[10px] text-foreground"
+                >
+                  <option value="name-asc">A to Z</option>
+                  <option value="name-desc">Z to A</option>
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                </select>
                 </label>
               </AdminTooltip>
             </div>
@@ -2956,7 +2979,7 @@ export default function ProductManager({ categories }: Props) {
               <p className="text-xs text-foreground/70">No designs available. Add designs in the Designs tab first.</p>
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1">
-                {allDesigns.slice(0, 50).map((d) => {
+                {sortedDesigns.slice(0, 50).map((d) => {
                   const selected = form.designAssets?.some((a) => a.id === d.id);
                   return (
                     <button
