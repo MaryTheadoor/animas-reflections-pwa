@@ -117,6 +117,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Lint, typecheck and the test suite. These used to run nowhere in any
+      # release path, so a red suite or a lint error could not stop a publish —
+      # the gate below is what makes the "every deploy must pass" rule real.
+      # `npm run build` typechecks too, but only after several minutes of work;
+      # this fails in about a minute with a precise message.
+      - name: Verify (lint, typecheck, tests)
+        run: npm run verify
+
       # next/font fetches Google Fonts over the network at build time. Keep
       # normal egress here: no NEXT_FONT_* offline flags, no network sandboxing,
       # no "npm ci --ignore-scripts". A build without font access fails or ships

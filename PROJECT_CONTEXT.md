@@ -368,11 +368,12 @@ client questions live in `docs/STATUS_SWEEP.md` §5.
 ### 15.2 Release-path gaps (the gates that do not actually gate)
 | Item | Evidence |
 |---|---|
-| No test gate in any release path | `.github/workflows/rebuild.yml` runs only `npm run build`; `npm run publish` is build + deploy. 286 tests still cannot block a publish — `npm run verify` now exists for local use, but wiring it into CI is a pending decision (docs/PIPELINE.md) |
-| No lint gate in any release path | `npm run lint` is clean (40 s) but is never invoked by CI or publish — same pending decision |
+| ~~No test gate in any release path~~ | **FIXED 2026-10-16** — `rebuild.yml` runs `npm run verify` (lint + typecheck + tests) before the build, so a red suite now stops a publish |
+| ~~No lint gate in any release path~~ | **FIXED 2026-10-16** — same step |
+| ~~Failed `config/seo` fetch was silent~~ | **IMPROVED 2026-10-16** — it emits a GitHub Actions `::warning::` naming the stale snapshot, and takes `--strict` to fail. Not wired as strict on purpose: blocking a publish on a transient network error is a worse trade than a visible warning |
+| ~~`og-image.png` was never validated~~ | **FIXED 2026-10-16** — `check-seo.mjs` now asserts the file exists and is a PNG (verified with a canary) |
 | ~~`jest --passWithNoTests`~~ | **FIXED 2026-10-13** — a zero-test run now exits non-zero |
-| Failed `config/seo` fetch is warn-only | `fetch-seo-config.mjs` logs and exits 0 when a snapshot exists, so a network blip publishes copy of unknown age |
-| `og-image.png` is never validated | `check-seo.mjs` only asserts the tag is present and absolute; a missing share card passes every gate |
+
 
 ### 15.3 Housekeeping
 - The machine still runs Node v24.15.0 (Known Issue #52). Portable Node 22 at `~/.local/node22`; the durable fix is `winget install OpenJS.NodeJS.LTS`

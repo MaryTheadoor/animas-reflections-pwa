@@ -94,7 +94,16 @@ including a stale or half-built export. Functions were always rebuilt; hosting n
 | `firebase.json` hosting `predeploy: check-seo.mjs` | Every hosting deploy now verifies the export it is about to upload, so a stale `out/` cannot ship silently | A broken export now blocks a deploy — intended. CI is unaffected: the GitHub deploy action uploads directly and does not run `firebase.json` hooks |
 | `testPathIgnorePatterns` | Makes the `_backups` exclusion explicit | None |
 
-## Recommended, not applied (needs a decision)
+## Applied since the review (2026-10-16)
+
+| Change | Verified by |
+|---|---|
+| `npm run verify` (lint + typecheck + tests) runs in `rebuild.yml` before the build | The step is in the workflow; the same command is green locally (286 tests) |
+| `check-seo.mjs` asserts `out/og-image.png` exists and carries the PNG signature | Canary: with the file removed the gate fails with a precise message, and passes again when restored |
+| `fetch-seo-config.mjs` emits a GitHub Actions `::warning::` when it falls back to the snapshot, and takes `--strict` to fail instead | Warning path unchanged in behaviour; `--strict` is opt-in and not wired into CI, because blocking a publish on a transient network error is a worse trade than a visible stale snapshot |
+| `next` upgraded 16.2.7 → 16.3.8 | Audit: production findings 10 → 7, **critical cleared**. tsc, lint, 286 tests, build (25 pages) and the SEO gate all green; dev server 200 on six routes with no errors in the log |
+
+## Recommended, still open (needs a decision)
 
 1. **Add `npm run verify` to `rebuild.yml` before the build.** This closes finding #2 — the largest
    remaining gap, and the one the docs already claimed was closed. *Why it needs your call:* it puts a
@@ -107,5 +116,5 @@ including a stale or half-built export. Functions were always rebuilt; hosting n
    log so a stale publish is visible. The alternative (failing) trades a silent staleness bug for a publish
    blocked by a transient network error.
 4. **Drop `build:all` before a full deploy** (§6), or make it the only place functions are built.
-5. **`npm audit`**: 10 production-only findings (1 critical in `next`). `next@16.3.x` clears the critical.
-   Unchanged since the 2026-10-06 sweep — nothing regressed, nothing was fixed.
+5. ~~**`npm audit`**: 10 production-only findings (1 critical in `next`).~~ **FIXED 2026-10-16:** `next` 16.3.8
+   clears the critical; 7 production findings remain (1 low, 1 moderate, 5 high, all transitively in `firebase`).

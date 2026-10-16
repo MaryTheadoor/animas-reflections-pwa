@@ -130,7 +130,24 @@ async function main() {
   } catch (err) {
     const reason = err && err.message ? err.message : String(err);
     if (existsSync(TARGET)) {
-      console.warn("[seo-config] fetch failed (" + reason + ") - keeping the committed snapshot");
+      // Falling back is the right call for a transient network blip, and the
+      // wrong call to make quietly: this snapshot is what gets baked into the
+      // published HTML, so if it is stale the site ships SEO copy of unknown
+      // age with nothing red anywhere. Announce it in a form a CI run surfaces
+      // at the top of the page, and let --strict turn it into a failure for
+      // anyone who would rather block the publish.
+      const msg =
+        "[seo-config] fetch failed (" +
+        reason +
+        ") - keeping the committed snapshot. The published SEO copy may be out of date.";
+      if (process.env.GITHUB_ACTIONS === "true") {
+        console.log("::warning title=SEO snapshot is stale::" + msg);
+      }
+      console.warn(msg);
+      if (process.argv.includes("--strict")) {
+        console.error("[seo-config] --strict: refusing to build against a snapshot of unknown age.");
+        process.exit(1);
+      }
       return;
     }
     // No committed snapshot to fall back on means the generated file was

@@ -204,6 +204,23 @@ for (const loc of sitemapLocs) {
   if (!existsSync(target)) errors.push("sitemap.xml: " + loc + " has no page at " + relative(OUT, target));
 }
 
+// ── The share card itself ──────────────────────────────────────────────────
+// Every page declares og:image and twitter:image, and every one of those tags is
+// checked above for being present and absolute. The FILE behind them was never
+// checked, so a missing or truncated og-image.png passed every gate and shipped
+// a broken card into every share preview. A tag pointing at nothing is not a
+// passing gate.
+const ogFile = join(OUT, "og-image.png");
+if (!existsSync(ogFile)) {
+  errors.push("og-image.png: missing from the export, so every share preview shows a broken card");
+} else {
+  const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  const head = readFileSync(ogFile).subarray(0, PNG_SIGNATURE.length);
+  if (!PNG_SIGNATURE.every((byte, i) => head[i] === byte)) {
+    errors.push("og-image.png: exists but is not a PNG (wrong file or a truncated write)");
+  }
+}
+
 // ── Report ─────────────────────────────────────────────────────────────────
 for (const w of warnings) console.warn("  warn  " + w);
 if (errors.length > 0) {
