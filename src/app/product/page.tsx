@@ -9,7 +9,7 @@ import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { sanitizeHTML, stripTags } from "@/lib/html-utils";
 import { useCart } from "@/context/cart-context";
-import type { CartAddon } from "@/types";
+import type { CartAddon, DesignAsset } from "@/types";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
 
@@ -77,6 +77,7 @@ function ProductContent() {
   const [customText, setCustomText] = useState("");
   const [descExpanded, setDescExpanded] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>();
+  const [selectedDesign, setSelectedDesign] = useState<DesignAsset | null>(null);
 
   // /product?id=A → /product?id=B keeps the same component instance, so all
   // per-product selection state must reset when the product changes. Without
@@ -86,6 +87,7 @@ function ProductContent() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset per-product selections on product change
     setSelectedVariant(0);
     setSelectedColor(undefined);
+    setSelectedDesign(null);
     setCustomText("");
   }, [productId]);
 
@@ -340,6 +342,44 @@ function ProductContent() {
               </div>
             )}
 
+            {/* Design — pick one directly here instead of entering the customizer.
+                For products like a puzzle, the design is the whole point, so the
+                customer chooses the background (colour/variant) and the design, then
+                Add to Cart — no drag/resize step needed. */}
+            {(product.designAssets?.length ?? 0) > 0 && (
+              <div className="mb-6">
+                <span className="text-xs font-medium text-primary block mb-2">
+                  Design{selectedDesign ? ` — ${selectedDesign.name}` : ""}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {product.designAssets!.map((d) => {
+                    const active = selectedDesign?.id === d.id;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setSelectedDesign(active ? null : d)}
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                          active
+                            ? "bg-gold/10 border-gold/40 text-gold-deep"
+                            : "bg-warm-sand/30 border-transparent text-foreground hover:border-primary/20"
+                        }`}
+                      >
+                        <Image src={d.image_url} alt={d.name} width={28} height={28} className="rounded object-cover shrink-0" />
+                        {d.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedDesign && (
+                  <p className="text-[11px] text-foreground/70 mt-1.5">
+                    This design will be printed on the {effectiveColor ?? "default"} background. Use “Customize This” if you want to move or resize it.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Custom Text — gated by personalization add-on presence */}
             {showPersonalization && (
             <div className="mb-6">
@@ -422,6 +462,7 @@ function ProductContent() {
                     selected_view: "front",
                     design_text: showPersonalization ? (customText || undefined) : undefined,
                     selected_color: effectiveColor,
+                    design_url: selectedDesign?.image_url || undefined,
                     shipping_rate: product.shippingRate,
                     addons,
                     selectedOptions,
