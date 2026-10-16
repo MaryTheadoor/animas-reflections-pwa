@@ -68,6 +68,18 @@ interface Props {
 
 export default function ProductManager({ categories }: Props) {
   const [products, setProducts] = useState<ManagedProduct[]>([]);
+  const [productSort, setProductSort] = useState<"name-asc" | "name-desc" | "newest" | "oldest">("name-asc");
+
+  /** The Products list, sorted for browsing — selection and bulk ops are unaffected. */
+  const sortedProducts = useMemo(() => {
+    const copy = [...products];
+    const byName = (x: ManagedProduct, y: ManagedProduct) => (x.name ?? "").localeCompare(y.name ?? "");
+    if (productSort === "name-asc") copy.sort(byName);
+    else if (productSort === "name-desc") copy.sort((x, y) => byName(y, x));
+    else if (productSort === "newest") copy.sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? ""));
+    else copy.sort((x, y) => (x.createdAt ?? "").localeCompare(y.createdAt ?? ""));
+    return copy;
+  }, [products, productSort]);
   const [allDesigns, setAllDesigns] = useState<DesignAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ManagedProduct | null>(null);
@@ -1247,6 +1259,19 @@ export default function ProductManager({ categories }: Props) {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h3 className="font-bold font-display text-lg">{products.length} Products</h3>
+          <label className="inline-flex items-center gap-1 text-[11px] text-foreground/70 mt-1">
+            sort
+            <select
+              value={productSort}
+              onChange={(e) => setProductSort(e.target.value as typeof productSort)}
+              className="px-1.5 py-0.5 rounded border border-primary/20 bg-white text-[11px] text-foreground"
+            >
+              <option value="name-asc">A to Z</option>
+              <option value="name-desc">Z to A</option>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </label>
           <p className="text-xs text-foreground/80">
             Firestore is the master catalog — Square is payment-only
           </p>
@@ -1678,7 +1703,7 @@ export default function ProductManager({ categories }: Props) {
 
       {products.length > 0 && !editing && (
         <div className="space-y-1">
-          {products.map((p) => (
+          {sortedProducts.map((p) => (
             <div
               key={p.id}
               className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-3"
