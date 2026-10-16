@@ -9,7 +9,7 @@ import {
   deleteDoc,
   deleteField,
 } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import Image from "next/image";
 import VariantMatrixEditor from "./variant-matrix-editor";
@@ -27,6 +27,7 @@ import { buildModifiersForProduct, type SquareModifierList } from "@/lib/square-
 import { useProductPhotos } from "@/hooks/useProductPhotos";
 import { applySetPatch, blankPhotoSets, filterPhotos, type BlankPhotoSet } from "@/lib/product-photos";
 import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS } from "@/types";
+import { designMatchesCategory } from "@/lib/design-category";
 import {
   describeBlankPlan,
   planBlankApply,
@@ -468,6 +469,159 @@ export default function ProductManager({ categories }: Props) {
   };
 
   const categoryForAutoPin = [...categories, ...localCategories].find((c) => c.id === form.categoryId);
+
+  /* ── Cindy's product-page epic (2026-10-16) ──────────────────────────────
+     Three requests, all about doing less by hand:
+
+       1. Modifiers: the Group field is a free-text box, so the same set gets
+          spelled several ways. The set names that already exist across the
+          catalogue become a dropdown, and a set can be applied to this product
+          in one action instead of rebuilt row by row.
+       2. Designs: the library is a grid of up to 50 thumbnails. Group selection
+          becomes a dropdown (the categories, which is what she named: Little
+          Stranger, Jordan Branch, Women In Aviation). The grid stays for
+          individual exceptions — hiding it would lose the only way to see what
+          is being pinned.
+       3. "Design Your Own" products take customer artwork, so the printable-
+          design controls are replaced by a design upload.
+
+     The dropdown options are DERIVED from live data, not a hardcoded list, so a
+     new set or category appears the moment it exists.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /** Set names already used anywhere in the catalogue, with their choices. */
+  const knownModifierSets = useMemo(() => {
+    const sets = new Map<string, Map<string, ProductAddon>>();
+    for (const product of products) {
+      for (const mod of product.modifiers ?? []) {
+        const group = (mod.group ?? "").trim();
+        if (!group) continue;
+        const choices = sets.get(group) ?? new Map<string, ProductAddon>();
+        // First sighting wins, so a set's choices stay stable across products.
+        if (mod.name && !choices.has(mod.name)) choices.set(mod.name, mod);
+        sets.set(group, choices);
+      }
+    }
+    return [...sets.entries()]
+      .map(([name, choices]) => ({ name, choices: [...choices.values()] }))
+      .sort((a, b) => b.choices.length - a.choices.length || a.name.localeCompare(b.name));
+  }, [products]);
+
+  /** Apply a whole set to this product, skipping choices already present. */
+  const applyModifierSet = (setName: string) => {
+    const set = knownModifierSets.find((s) => s.name === setName);
+    if (!set) return;
+    const current = form.modifiers ?? [];
+    const existing = new Set(current.map((m) => m.name.trim().toLowerCase()));
+    const additions = set.choices
+      .filter((choice) => !existing.has(choice.name.trim().toLowerCase()))
+      .map((choice) => ({ ...choice, id: crypto.randomUUID() }));
+    if (additions.length === 0) {
+      setDesignNote(`Every choice in “${setName}” is already on this product.`);
+      return;
+    }
+    updateField("modifiers", [...current, ...additions]);
+    setDesignNote(`Added ${additions.length} choice${additions.length === 1 ? "" : "s"} from “${setName}”.`);
+  };
+
+  /**
+   * Design groups for the dropdown: the real categories first — she named two
+   * that have no designs yet, and the option still belongs there — then any
+   * design label no category covers, so nothing in the library is unreachable.
+   */
+  const designGroups = useMemo(() => {
+    const allCategories = [...categories, ...localCategories];
+    const groups = allCategories.map((cat) => ({
+      label: cat.name,
+      category: cat as ManagedCategory,
+      count: allDesigns.filter((design) => designMatchesCategory(design, cat)).length,
+    }));
+    const covered = new Set(allCategories.map((c) => c.name.trim().toLowerCase()));
+    const loose = new Map<string, number>();
+    for (const design of allDesigns) {
+      const label = (design.category ?? "").trim();
+      if (!label || covered.has(label.toLowerCase())) continue;
+      loose.set(label, (loose.get(label) ?? 0) + 1);
+    }
+    for (const [label, count] of loose) {
+      // A label with no category document pins by name, which the matcher supports.
+      groups.push({ label, category: { id: "", name: label, slug: label } as ManagedCategory, count });
+    }
+    return groups.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [allDesigns, categories, localCategories]);
+
+  /** The selection one group would produce, applied through the tested rules. */
+  const applyDesignGroup = (label: string) => {
+    const group = designGroups.find((g) => g.label === label);
+    if (!group) return;
+    const matching = designsForCategory(allDesigns, group.category);
+    const result = autoFillDesignsForCategory({
+      pinned: form.designAssets ?? [],
+      matching,
+      autoIds: autoDesignIds,
+    });
+    const removed = new Set(result.removedIds);
+    setAutoDesignIds(new Set([...autoDesignIds].filter((id) => !removed.has(id)).concat(result.addedIds)));
+    updateField("designAssets", result.designAssets);
+    if (result.addedIds.length === 0 && result.removedIds.length === 0) {
+      setDesignNote(`No designs are filed under “${label}” yet.`);
+      return;
+    }
+    const parts: string[] = [];
+    if (result.addedIds.length > 0) parts.push(`pinned ${result.addedIds.length} from “${label}”`);
+    if (result.removedIds.length > 0) parts.push(`unpinned ${result.removedIds.length} that no longer match`);
+    if (result.overflow > 0) parts.push(`${result.overflow} more match but the limit is ${DESIGN_PIN_LIMIT}`);
+    setDesignNote(parts.join("; ") + ".");
+  };
+
+  /** "Design Your Own" products take customer artwork, not library designs. */
+  const designYourOwnCategory = useMemo(
+    () =>
+      [...categories, ...localCategories].find(
+        (category) => category.name.trim().toLowerCase() === "design your own",
+      ),
+    [categories, localCategories],
+  );
+  const takesCustomerArtwork = Boolean(
+    designYourOwnCategory && form.categoryId === designYourOwnCategory.id,
+  );
+  const [ownDesignUploading, setOwnDesignUploading] = useState(false);
+
+  /**
+   * Upload the artwork for a "Design Your Own" product: stored under designs/ and
+   * recorded as a design attached to THIS product (DesignAsset.productId), which
+   * is what the customizer already reads for a product's designs.
+   */
+  const handleOwnDesignUpload = async (file: File) => {
+    setOwnDesignUploading(true);
+    setDesignNote(null);
+    try {
+      const id = crypto.randomUUID();
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const objectRef = ref(storage, `designs/${id}_${safeName}`);
+      await uploadBytes(objectRef, file);
+      const image_url = await getDownloadURL(objectRef);
+      const asset: DesignAsset = {
+        id,
+        name: `${form.name.trim() || "Product"} — customer artwork`,
+        category: designYourOwnCategory?.name ?? "Design Your Own",
+        image_url,
+        tags: [],
+        created_at: new Date().toISOString(),
+        productId: form.id || undefined,
+      };
+      await setDoc(doc(db, "designs", id), stripUndefined(asset), { merge: true });
+      setAllDesigns((prev) => [asset, ...prev]);
+      updateField("designAssets", [...(form.designAssets ?? []), asset]);
+      setDesignNote("Artwork uploaded and attached to this product.");
+    } catch (err) {
+      setDesignNote("Upload failed: " + (err instanceof Error ? err.message : "unknown error"));
+    } finally {
+      setOwnDesignUploading(false);
+    }
+  };
+
+
   const matchingDesignCount = categoryForAutoPin
     ? designsForCategory(allDesigns, categoryForAutoPin).length
     : 0;
@@ -2560,6 +2714,43 @@ export default function ProductManager({ categories }: Props) {
               Input types: Toggle (price only), Text (e.g. name/number, engraving), File (e.g. custom artwork upload).
               Takes precedence over the legacy Add-ons section above.
             </p>
+
+            {/* Task 1 — pick a whole set instead of rebuilding it row by row.
+                Options are the set names already used across the catalogue. */}
+            {knownModifierSets.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <label htmlFor="modifier-set" className="text-[11px] font-medium text-primary">
+                  Apply an existing set
+                </label>
+                <select
+                  id="modifier-set"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) applyModifierSet(e.target.value);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg border border-primary/20 bg-white text-xs text-foreground focus:border-gold outline-none max-w-[280px]"
+                >
+                  <option value="">Choose a set…</option>
+                  {knownModifierSets.map((set) => (
+                    <option key={set.name} value={set.name}>
+                      {set.name} ({set.choices.length})
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-foreground/70">
+                  adds its choices below, skipping any this product already has
+                </span>
+              </div>
+            )}
+
+            {/* The Group field offers the names that already exist, so the same
+                set stops being spelled three different ways. Free text still
+                works — a datalist suggests, it does not restrict. */}
+            <datalist id="modifier-set-names">
+              {knownModifierSets.map((set) => (
+                <option key={set.name} value={set.name} />
+              ))}
+            </datalist>
             <div className="space-y-2 mb-3">
               {(form.modifiers ?? []).map((mod, idx) => (
                 <div key={mod.id} className="bg-warm-sand/30 rounded-lg p-3 space-y-2">
@@ -2631,6 +2822,7 @@ export default function ProductManager({ categories }: Props) {
                         mods[idx] = { ...mod, group: e.target.value };
                         updateField("modifiers", mods);
                       }}
+                      list="modifier-set-names"
                       placeholder="Group (e.g. Add-ons)"
                       className="w-28 px-2 py-1 rounded border border-primary/10 bg-white text-xs focus:border-gold outline-none"
                       title="Optional group name — modifiers sharing a group render together in the customizer."
@@ -2678,7 +2870,41 @@ export default function ProductManager({ categories }: Props) {
               </AdminTooltip>
             </div>
 
-            {allDesigns.length > 0 && (
+            {/* Task 3 — a "Design Your Own" product takes the customer's own
+                artwork, so the printable-design controls are replaced by an
+                upload. The file is stored and attached to THIS product
+                (DesignAsset.productId), which is what the customizer reads. */}
+            {takesCustomerArtwork ? (
+              <div className="rounded-xl border border-primary/20 bg-warm-sand/20 p-3 space-y-2">
+                <p className="text-[11px] text-foreground/80">
+                  This product is in <strong>Design Your Own</strong>, so customers bring their
+                  own artwork instead of choosing from the design library. Upload the design here
+                  and it is attached to this product only.
+                </p>
+                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed border-primary/20 cursor-pointer hover:border-primary/40 transition-colors text-xs text-foreground">
+                  {ownDesignUploading ? "Uploading…" : "Upload the design file"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={ownDesignUploading}
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) await handleOwnDesignUpload(file);
+                    }}
+                  />
+                </label>
+                {(form.designAssets ?? []).length > 0 && (
+                  <p className="text-[11px] text-foreground/70">
+                    Attached: {(form.designAssets ?? []).map((a) => a.name).join(", ")}
+                  </p>
+                )}
+                {designNote && <p className="text-[11px] text-foreground">{designNote}</p>}
+              </div>
+            ) : (
+              <>
+                {allDesigns.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <button
                   type="button"
@@ -2699,6 +2925,31 @@ export default function ProductManager({ categories }: Props) {
                   Refresh pinned from library
                 </button>
                 {designNote && <span className="text-[11px] text-foreground/70">{designNote}</span>}
+              </div>
+            )}
+            {/* Group selection as a dropdown: a whole design group in one pick,
+                with the count so an empty group is obvious before choosing it. */}
+            {allDesigns.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <label htmlFor="design-group" className="text-[11px] font-medium text-primary">
+                  Add a design group
+                </label>
+                <select
+                  id="design-group"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) applyDesignGroup(e.target.value);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg border border-primary/20 bg-white text-xs text-foreground focus:border-gold outline-none max-w-[260px]"
+                >
+                  <option value="">Choose a group…</option>
+                  {designGroups.map((group) => (
+                    <option key={group.label} value={group.label}>
+                      {group.label}
+                      {group.count > 0 ? ` (${group.count})` : " (no designs yet)"}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
             {allDesigns.length === 0 ? (
@@ -2730,6 +2981,8 @@ export default function ProductManager({ categories }: Props) {
                   );
                 })}
               </div>
+            )}
+              </>
             )}
           </div>
 
