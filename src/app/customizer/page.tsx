@@ -376,7 +376,20 @@ function CustomizerContent() {
   const colorMockup = selectedColor
     ? selectedProduct?.mockupImagesByColor?.[selectedColor]?.[activeView as "front" | "back" | "sleeve" | "sideL" | "sideR"]
     : undefined;
-  const effectiveBaseImage = colorMockup ?? currentView.baseImage;
+  // A selected modifier can supply its own background for this view — the
+  // "background image with a design printed on top" case. It takes precedence
+  // over the colour mockup, because the modifier changes what is actually shown.
+  const modifierMockup = Array.from(selectedAddons)
+    .map((id) => effectiveModifiers.find((m) => m.id === id)?.name)
+    .map((name) =>
+      name
+        ? selectedProduct?.mockupImagesByModifier?.[name]?.[
+            activeView as "front" | "back" | "sleeve" | "sideL" | "sideR"
+          ]
+        : undefined,
+    )
+    .find((url) => url);
+  const effectiveBaseImage = modifierMockup ?? colorMockup ?? currentView.baseImage;
   const tintColor = !colorMockup && selectedColor ? selectedProduct?.colorTints?.[selectedColor] : undefined;
   const basePrice = getProductPrice(selectedProduct, variantIndex);
   // Add-on cost uses modifiers when available (percentage modifiers resolve against

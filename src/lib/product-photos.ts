@@ -19,6 +19,8 @@ import {
 export type MockupImages = Partial<Record<ProductPhotoView, string>>;
 /** Colour -> views -> URL, i.e. ManagedProduct.mockupImagesByColor. */
 export type ColorMockupImages = Record<string, MockupImages>;
+/** Modifier name -> views -> URL, i.e. ManagedProduct.mockupImagesByModifier. */
+export type ModifierMockupImages = Record<string, MockupImages>;
 
 /**
  * Every photo of one blank product.
@@ -34,6 +36,8 @@ export interface BlankPhotoSet {
   categoryIds: string[];
   byView: MockupImages;
   byColorView: ColorMockupImages;
+  /** Photos keyed by the modifier they depict, then by view. */
+  byModifier: ModifierMockupImages;
   /** Photos of this blank with no view — gallery material only. */
   unplaced: ProductPhoto[];
   /** Total photos in the set. */
@@ -49,6 +53,11 @@ function place(set: BlankPhotoSet, photo: ProductPhoto): void {
   if (photo.color) {
     const forColor = (set.byColorView[photo.color] ??= {});
     if (!forColor[photo.view]) forColor[photo.view] = photo.image_url;
+    return;
+  }
+  if (photo.modifier) {
+    const forModifier = (set.byModifier[photo.modifier] ??= {});
+    if (!forModifier[photo.view]) forModifier[photo.view] = photo.image_url;
     return;
   }
   if (!set.byView[photo.view]) set.byView[photo.view] = photo.image_url;
@@ -69,7 +78,7 @@ export function blankPhotoSets(photos: readonly ProductPhoto[]): BlankPhotoSet[]
     const name = (photo.name ?? "").trim() || "Untitled blank";
     let set = byName.get(name);
     if (!set) {
-      set = { name, byView: {}, byColorView: {}, unplaced: [], categoryIds: [], size: 0, productType: undefined };
+      set = { name, byView: {}, byColorView: {}, byModifier: {}, unplaced: [], categoryIds: [], size: 0, productType: undefined };
       byName.set(name, set);
     }
     // The newest photo of a set decides the metadata the picker filters on.
@@ -87,7 +96,8 @@ export function blankPhotoSets(photos: readonly ProductPhoto[]): BlankPhotoSet[]
 
   const viewCount = (s: BlankPhotoSet) =>
     Object.keys(s.byView).length +
-    Object.values(s.byColorView).reduce((n, views) => n + Object.keys(views).length, 0);
+    Object.values(s.byColorView).reduce((n, views) => n + Object.keys(views).length, 0) +
+    Object.values(s.byModifier).reduce((n, views) => n + Object.keys(views).length, 0);
 
   return [...byName.values()].sort(
     (a, b) => viewCount(b) - viewCount(a) || a.name.localeCompare(b.name),
@@ -112,6 +122,7 @@ export interface ApplySetResult {
   /** Spread over the form: only the views the set actually provides. */
   mockupImages?: MockupImages;
   mockupImagesByColor?: ColorMockupImages;
+  mockupImagesByModifier?: ModifierMockupImages;
   /** Views this set filled. */
   appliedViews: ProductPhotoView[];
   /** Views it could not fill, so the operator is not left guessing. */
@@ -142,6 +153,16 @@ export function applySetPatch(set: BlankPhotoSet): ApplySetResult {
     if (Object.keys(filled).length > 0) mockupImagesByColor[color] = filled;
   }
 
+  const mockupImagesByModifier: ModifierMockupImages = {};
+  for (const [modifier, views] of Object.entries(set.byModifier)) {
+    const filled: MockupImages = {};
+    for (const view of PRODUCT_PHOTO_VIEWS) {
+      const url = views[view];
+      if (url) filled[view] = url;
+    }
+    if (Object.keys(filled).length > 0) mockupImagesByModifier[modifier] = filled;
+  }
+
   const appliedViews = Object.keys(mockupImages) as ProductPhotoView[];
   const colorViews = Object.values(mockupImagesByColor).flatMap(
     (views) => Object.keys(views) as ProductPhotoView[],
@@ -152,6 +173,7 @@ export function applySetPatch(set: BlankPhotoSet): ApplySetResult {
   const result: ApplySetResult = { appliedViews, missingViews: missing };
   if (appliedViews.length > 0) result.mockupImages = mockupImages;
   if (Object.keys(mockupImagesByColor).length > 0) result.mockupImagesByColor = mockupImagesByColor;
+  if (Object.keys(mockupImagesByModifier).length > 0) result.mockupImagesByModifier = mockupImagesByModifier;
   return result;
 }
 

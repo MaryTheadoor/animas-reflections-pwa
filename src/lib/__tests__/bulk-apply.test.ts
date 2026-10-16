@@ -177,3 +177,22 @@ describe("descriptions and summaries", () => {
     expect(summarizePricePlans(plans)).toEqual({ products: 2, variants: 3 });
   });
 });
+
+describe("bulk modifier backgrounds", () => {
+  it("plans and describes modifier-keyed background changes", () => {
+    const set = blankPhotoSets([photo({ id: "bp", view: "back", modifier: "Back Print" })])[0];
+    const plans = planBlankApply([product({ id: "a" })], set);
+    expect(plans).toHaveLength(1);
+    expect(plans[0].fillByModifier).toEqual({ "Back Print": { back: "https://example.test/bp.png" } });
+    expect(describeBlankPlan(plans[0])).toContain("modifier view");
+  });
+
+  it("omits a product that already has that modifier background", () => {
+    const set = blankPhotoSets([photo({ id: "bp", view: "back", modifier: "Back Print" })])[0];
+    const target = product({
+      id: "a",
+      mockupImagesByModifier: { "Back Print": { back: "https://example.test/bp.png" } },
+    });
+    expect(planBlankApply([target], set)).toEqual([]);
+  });
+});

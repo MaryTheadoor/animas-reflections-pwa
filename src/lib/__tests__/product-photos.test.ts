@@ -235,3 +235,33 @@ describe("safePhotoName", () => {
     expect(safePhotoName(withPath)).toBe("tee-front.png");
   });
 });
+
+describe("modifier backgrounds", () => {
+  it("separates a modifier-tagged photo from the general and colour buckets", () => {
+    const sets = blankPhotoSets([
+      photo({ id: "f", view: "front" }),
+      photo({ id: "bp", view: "back", modifier: "Back Print" }),
+    ]);
+    expect(sets[0].byView.front).toBe("https://example.test/f.png");
+    expect(sets[0].byView.back).toBeUndefined();
+    expect(sets[0].byModifier).toEqual({ "Back Print": { back: "https://example.test/bp.png" } });
+  });
+
+  it("applySetPatch emits the modifier map without touching the general views", () => {
+    const set = blankPhotoSets([
+      photo({ id: "f", view: "front" }),
+      photo({ id: "bp", view: "back", modifier: "Back Print" }),
+    ])[0];
+    const patch = applySetPatch(set);
+    expect(patch.mockupImages).toEqual({ front: "https://example.test/f.png" });
+    expect(patch.mockupImagesByModifier).toEqual({
+      "Back Print": { back: "https://example.test/bp.png" },
+    });
+  });
+
+  it("does not treat a modifier photo as filling the general view", () => {
+    const set = blankPhotoSets([photo({ id: "bp", view: "back", modifier: "Back Print" })])[0];
+    expect(applySetPatch(set).mockupImages).toBeUndefined();
+    expect(applySetPatch(set).appliedViews).toEqual([]);
+  });
+});

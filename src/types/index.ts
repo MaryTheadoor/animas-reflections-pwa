@@ -93,6 +93,12 @@ export interface ProductPhoto {
   view?: ProductPhotoView;
   /** Colour depicted, keyed exactly as `product.colors` entries are. */
   color?: string;
+  /**
+   * A MODIFIER this photo depicts, matched against the modifier's name. When a
+   * customer selects that modifier in the customizer, this becomes the background
+   * for its view — the "background image with a design printed on top" case.
+   */
+  modifier?: string;
   /** Categories this photo suits. Absent = any. Empty = none (an opt-out). */
   categoryIds?: string[];
   /** Product type this photo is for, so the picker can pre-filter. */
@@ -326,6 +332,8 @@ export interface ManagedProduct {
   /** Optional per-color mockup photos. When a color has a real photo it takes
    *  precedence over the colorTints overlay. */
   mockupImagesByColor?: Record<string, { front?: string; back?: string; sleeve?: string; sideL?: string; sideR?: string }>;
+  /** Per-MODIFIER background photos, keyed by modifier name then view. */
+  mockupImagesByModifier?: Record<string, { front?: string; back?: string; sleeve?: string; sideL?: string; sideR?: string }>;
   /** Optional per-color thumbnail images for display on product page.
    *  Allows toggling between color swatch and thumbnail image display. */
 }

@@ -395,12 +395,20 @@ export default function ProductManager({ categories }: Props) {
       }
       updateField("mockupImagesByColor", merged);
     }
+    if (patch.mockupImagesByModifier) {
+      const merged = { ...(form.mockupImagesByModifier ?? {}) };
+      for (const [modifier, views] of Object.entries(patch.mockupImagesByModifier)) {
+        merged[modifier] = { ...(merged[modifier] ?? {}), ...views };
+      }
+      updateField("mockupImagesByModifier", merged);
+    }
     const filled = patch.appliedViews.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ");
     const short = patch.missingViews.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ");
+    const modifierNames = Object.keys(patch.mockupImagesByModifier ?? {});
     setBlankNote(
       patch.appliedViews.length === 0
         ? `“${set.name}” has no view set yet — give its photos a view in the Product Photos tab.`
-        : `Filled ${filled} from “${set.name}”${short ? `. No photo saved yet for: ${short}` : "."}`,
+        : `Filled ${filled} from “${set.name}”${short ? `. No photo saved yet for: ${short}` : ""}${modifierNames.length ? `. Modifier backgrounds: ${modifierNames.join(", ")}` : ""}.`,
     );
   };
 
@@ -713,11 +721,16 @@ export default function ProductManager({ categories }: Props) {
         for (const [color, views] of Object.entries(plan.fillByColor)) {
           merged[color] = { ...(merged[color] ?? {}), ...views };
         }
+        const mergedModifiers = { ...(target.mockupImagesByModifier ?? {}) };
+        for (const [modifier, views] of Object.entries(plan.fillByModifier)) {
+          mergedModifiers[modifier] = { ...(mergedModifiers[modifier] ?? {}), ...views };
+        }
         const payload: Record<string, unknown> = {
           mockupImages,
           updatedAt: new Date().toISOString(),
         };
         if (Object.keys(merged).length > 0) payload.mockupImagesByColor = merged;
+        if (Object.keys(mergedModifiers).length > 0) payload.mockupImagesByModifier = mergedModifiers;
         try {
           await setDoc(doc(db, "products", plan.productId), payload, { merge: true });
           done += 1;

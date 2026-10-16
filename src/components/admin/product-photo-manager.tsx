@@ -44,6 +44,7 @@ interface FormState {
   name: string;
   view: "" | ProductPhotoView;
   color: string;
+  modifier: string;
   productType: "" | ProductType;
   categoryIds: string[];
   tags: string;
@@ -53,6 +54,7 @@ const EMPTY_FORM: FormState = {
   name: "",
   view: "",
   color: "",
+  modifier: "",
   productType: "",
   categoryIds: [],
   tags: "",
@@ -61,7 +63,17 @@ const EMPTY_FORM: FormState = {
 export default function ProductPhotoManager() {
   const { photos, loading, error: loadError, refresh } = useProductPhotos();
   const siteConfig = useSiteConfig();
-  const { categories } = useCatalog();
+  const { categories, products } = useCatalog();
+  /** Modifier names already used across the catalogue, for the datalist. */
+  const modifierOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const product of products) {
+      for (const modifier of product.modifiers ?? []) {
+        if (modifier.name) names.add(modifier.name);
+      }
+    }
+    return [...names].sort();
+  }, [products]);
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [files, setFiles] = useState<File[]>([]);
@@ -113,6 +125,7 @@ export default function ProductPhotoManager() {
       categoryIds: form.categoryIds.length > 0 ? form.categoryIds : null,
       tags: tags.length > 0 ? tags : null,
       color: form.color.trim() || null,
+      modifier: form.modifier.trim() || null,
       productType: form.productType || null,
     };
   };
@@ -226,6 +239,7 @@ export default function ProductPhotoManager() {
       name: photo.name ?? "",
       view: photo.view ?? "",
       color: photo.color ?? "",
+      modifier: photo.modifier ?? "",
       productType: photo.productType ?? "",
       categoryIds: photo.categoryIds ?? [],
       tags: (photo.tags ?? []).join(", "),
@@ -322,6 +336,28 @@ export default function ProductPhotoManager() {
                 <option key={c.name} value={c.name} />
               ))}
             </datalist>
+          </div>
+
+          <div>
+            <label htmlFor="pp-modifier" className="text-xs font-medium text-primary block mb-1">
+              Modifier (optional)
+            </label>
+            <input
+              id="pp-modifier"
+              list="pp-modifier-options"
+              value={form.modifier}
+              onChange={(e) => set("modifier", e.target.value)}
+              placeholder="e.g. Back Print"
+              className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm"
+            />
+            <datalist id="pp-modifier-options">
+              {modifierOptions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+            <p className="text-[10px] text-foreground/70 mt-1">
+              The background shown when a customer picks this modifier.
+            </p>
           </div>
 
           <div>
@@ -505,7 +541,7 @@ export default function ProductPhotoManager() {
                     </div>
                     <figcaption className="text-[10px] text-foreground/70 leading-tight">
                       {photo.view ? PRODUCT_PHOTO_VIEW_LABELS[photo.view] : "no view"}
-                      {photo.color ? ` · ${photo.color}` : ""}
+                      {photo.color ? ` · ${photo.color}` : ""}{photo.modifier ? ` · ${photo.modifier}` : ""}
                     </figcaption>
                     <div className="flex gap-2 text-[10px]">
                       <button onClick={() => startEdit(photo)} className="text-primary hover:underline">

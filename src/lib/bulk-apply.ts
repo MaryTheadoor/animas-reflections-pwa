@@ -10,7 +10,7 @@
    ────────────────────────────────────────────────────────────────────── */
 
 import { PRODUCT_PHOTO_VIEWS, type ManagedProduct, type ProductPhotoView, type ProductType } from "@/types";
-import type { BlankPhotoSet, MockupImages } from "@/lib/product-photos";
+import type { BlankPhotoSet, MockupImages, ModifierMockupImages } from "@/lib/product-photos";
 
 export interface BulkFilters {
   /** Only products in this category. */
@@ -40,6 +40,8 @@ export interface BlankApplyPlan {
   fill: MockupImages;
   /** Colour-keyed views this product would gain. */
   fillByColor: Record<string, MockupImages>;
+  /** Modifier-keyed background views this product would gain. */
+  fillByModifier: ModifierMockupImages;
   /** Views the blank itself has no photo for, so nothing can be filled. */
   unavailable: ProductPhotoView[];
 }
@@ -79,13 +81,32 @@ export function planBlankApply(
       if (Object.keys(forColor).length > 0) fillByColor[color] = forColor;
     }
 
-    if (Object.keys(fill).length === 0 && Object.keys(fillByColor).length === 0) continue;
+    const fillByModifier: ModifierMockupImages = {};
+    for (const [modifier, views] of Object.entries(set.byModifier)) {
+      const forModifier: MockupImages = {};
+      for (const view of PRODUCT_PHOTO_VIEWS) {
+        const url = views[view];
+        if (!url) continue;
+        if (product.mockupImagesByModifier?.[modifier]?.[view] === url) continue;
+        forModifier[view] = url;
+      }
+      if (Object.keys(forModifier).length > 0) fillByModifier[modifier] = forModifier;
+    }
+
+    if (
+      Object.keys(fill).length === 0 &&
+      Object.keys(fillByColor).length === 0 &&
+      Object.keys(fillByModifier).length === 0
+    ) {
+      continue;
+    }
 
     plans.push({
       productId: product.id,
       productName: product.name,
       fill,
       fillByColor,
+      fillByModifier,
       unavailable: PRODUCT_PHOTO_VIEWS.filter((view) => !set.byView[view] && !hasColorView(set, view)),
     });
   }
@@ -135,9 +156,11 @@ export function planPriceApply(
 export function describeBlankPlan(plan: BlankApplyPlan): string {
   const general = Object.keys(plan.fill).length;
   const byColor = Object.values(plan.fillByColor).reduce((n, views) => n + Object.keys(views).length, 0);
+  const byModifier = Object.values(plan.fillByModifier).reduce((n, views) => n + Object.keys(views).length, 0);
   const parts: string[] = [];
   if (general > 0) parts.push(`${general} view${general === 1 ? "" : "s"}`);
   if (byColor > 0) parts.push(`${byColor} colour view${byColor === 1 ? "" : "s"}`);
+  if (byModifier > 0) parts.push(`${byModifier} modifier view${byModifier === 1 ? "" : "s"}`);
   return parts.join(" + ") || "nothing";
 }
 
@@ -152,7 +175,8 @@ export function summarizeBlankPlans(plans: readonly BlankApplyPlan[]): {
       (n, plan) =>
         n +
         Object.keys(plan.fill).length +
-        Object.values(plan.fillByColor).reduce((m, views) => m + Object.keys(views).length, 0),
+        Object.values(plan.fillByColor).reduce((m, views) => m + Object.keys(views).length, 0) +
+        Object.values(plan.fillByModifier).reduce((m, views) => m + Object.keys(views).length, 0),
       0,
     ),
   };
