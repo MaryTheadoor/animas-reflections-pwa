@@ -975,6 +975,24 @@ export default function ProductManager({ categories }: Props) {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
   };
 
+  /** Delete a colour from the product entirely, including its tint and
+   *  per-colour photos — unlike the chip toggle, which keeps the settings so a
+   *  re-add restores them. */
+  const removeColor = (color: string) => {
+    setForm((prev) => {
+      const colorTints = { ...(prev.colorTints ?? {}) };
+      delete colorTints[color];
+      const mockupImagesByColor = { ...(prev.mockupImagesByColor ?? {}) };
+      delete mockupImagesByColor[color];
+      return {
+        ...prev,
+        colors: prev.colors.filter((c) => c !== color),
+        colorTints,
+        mockupImagesByColor,
+      };
+    });
+  };
+
   const toggleColor = (color: string) => {
     setForm((prev) => {
       const isOn = !prev.colors.includes(color);
@@ -2539,23 +2557,36 @@ export default function ProductManager({ categories }: Props) {
                 )}
               </div>
             </div>
-            {(siteConfig.catalog_options?.colors ?? []).length > 0 && form.colors.filter((c) => !(siteConfig.catalog_options?.colors ?? []).some((cc) => cc.name.toLowerCase() === c)).length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                <span className="text-[10px] text-foreground/70 w-full">Custom colors:</span>
-                {form.colors.filter((c) => !(siteConfig.catalog_options?.colors ?? []).some((cc) => cc.name.toLowerCase() === c)).map((c) => (
-                  <span key={c} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded-full text-[10px]">
-                    <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: colorSwatch(c) }} />
-                    {c}
-                    <button
-                      onClick={() => saveColorToLibrary(c)}
-                      className="text-gold-deep hover:underline ml-1"
-                      title="Save to the site color library (reusable on all products)"
-                    >
-                      Save
-                    </button>
-                    <button onClick={() => toggleColor(c)} className="text-danger hover:opacity-80 ml-0.5">&times;</button>
-                  </span>
-                ))}
+            {form.colors.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                <span className="text-[10px] text-foreground/70 w-full">Selected colors — click ✕ to delete:</span>
+                {form.colors.map((c) => {
+                  const inLibrary = (siteConfig.catalog_options?.colors ?? []).some(
+                    (cc) => cc.name.toLowerCase() === c,
+                  );
+                  return (
+                    <span key={c} className="flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 rounded-full text-[10px]">
+                      <span className="w-3 h-3 rounded-full border border-primary/20 inline-block" style={{ backgroundColor: colorSwatch(c) }} />
+                      {c}
+                      {!inLibrary && (
+                        <button
+                          onClick={() => saveColorToLibrary(c)}
+                          className="text-gold-deep hover:underline"
+                          title="Save to the site color library (reusable on all products)"
+                        >
+                          Save
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removeColor(c)}
+                        className="text-danger hover:opacity-80 font-bold"
+                        title="Delete this color from the product"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>
