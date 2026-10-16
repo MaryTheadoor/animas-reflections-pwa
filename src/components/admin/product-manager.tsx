@@ -411,6 +411,8 @@ export default function ProductManager({ categories }: Props) {
      ──────────────────────────────────────────────────────────────────────── */
   const [autoDesignIds, setAutoDesignIds] = useState<Set<string>>(new Set());
   const [designNote, setDesignNote] = useState<string | null>(null);
+  /** The pin limit is a SITE SETTING (default 25), not a hardcoded number. */
+  const pinLimit = siteConfig.design_pin_limit ?? DESIGN_PIN_LIMIT;
 
   const [designSort, setDesignSort] = useState<"name-asc" | "name-desc" | "newest" | "oldest">("name-asc");
 
@@ -432,6 +434,7 @@ export default function ProductManager({ categories }: Props) {
       pinned: form.designAssets ?? [],
       matching,
       autoIds: autoDesignIds,
+      limit: pinLimit,
     });
     const removed = new Set(result.removedIds);
     setAutoDesignIds(
@@ -445,7 +448,7 @@ export default function ProductManager({ categories }: Props) {
     const parts: string[] = [];
     if (result.addedIds.length > 0) parts.push(`pinned ${result.addedIds.length} from “${category.name}”`);
     if (result.removedIds.length > 0) parts.push(`unpinned ${result.removedIds.length} that no longer match`);
-    if (result.overflow > 0) parts.push(`${result.overflow} more match but the limit is ${DESIGN_PIN_LIMIT}`);
+    if (result.overflow > 0) parts.push(`${result.overflow} more match but the limit is ${pinLimit}`);
     setDesignNote(parts.join("; ") + ".");
   };
 
@@ -455,10 +458,10 @@ export default function ProductManager({ categories }: Props) {
     const selected = current.some((a) => a.id === design.id);
     if (selected) {
       updateField("designAssets", current.filter((a) => a.id !== design.id));
-    } else if (current.length < DESIGN_PIN_LIMIT) {
+    } else if (current.length < pinLimit) {
       updateField("designAssets", [...current, design]);
     } else {
-      setDesignNote(`The limit is ${DESIGN_PIN_LIMIT} designs — remove one first.`);
+      setDesignNote(`The limit is ${pinLimit} designs — remove one first.`);
       return;
     }
     // Either way the admin has spoken about this one, so stop auto-managing it.
@@ -571,6 +574,7 @@ export default function ProductManager({ categories }: Props) {
       pinned: form.designAssets ?? [],
       matching,
       autoIds: autoDesignIds,
+      limit: pinLimit,
     });
     const removed = new Set(result.removedIds);
     setAutoDesignIds(new Set([...autoDesignIds].filter((id) => !removed.has(id)).concat(result.addedIds)));
@@ -582,7 +586,7 @@ export default function ProductManager({ categories }: Props) {
     const parts: string[] = [];
     if (result.addedIds.length > 0) parts.push(`pinned ${result.addedIds.length} from “${label}”`);
     if (result.removedIds.length > 0) parts.push(`unpinned ${result.removedIds.length} that no longer match`);
-    if (result.overflow > 0) parts.push(`${result.overflow} more match but the limit is ${DESIGN_PIN_LIMIT}`);
+    if (result.overflow > 0) parts.push(`${result.overflow} more match but the limit is ${pinLimit}`);
     setDesignNote(parts.join("; ") + ".");
   };
 
@@ -2875,7 +2879,7 @@ export default function ProductManager({ categories }: Props) {
           {/* Design Pinning — select which designs are printable on this product */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <AdminTooltip content="Select up to 10 designs that customers can print on this product. These designs appear first in the customizer library when this product is selected. Designs tagged with this product's category are pinned automatically on a new product." dismissKey="product-designs">
+              <AdminTooltip content="Select which designs customers can print on this product. The number you may pin is the site's design limit (Settings → Store Settings, default 25). These designs appear first in the customizer library when this product is selected. Designs tagged with this product's category are pinned automatically on a new product." dismissKey="product-designs">
                 <label className="text-xs font-medium text-primary">
                   Printable Designs ({form.designAssets?.length ?? 0} selected)                <span className="ml-2 text-[10px] text-foreground/60">sort:</span>
                 <select

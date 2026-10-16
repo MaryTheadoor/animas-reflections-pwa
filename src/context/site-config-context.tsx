@@ -16,6 +16,9 @@ export interface SiteConfig {
   // ── Pricing ──
   addon_price: number;
 
+  /** How many designs a product may pin as its "Printable Designs". */
+  design_pin_limit: number;
+
   // ── Catalog Options (admin-managed) ──
   catalog_options: CatalogOptions;
   addon_defaults: AddonDefaults;
@@ -43,6 +46,8 @@ const FALLBACK: SiteConfig = {
   shipping_tier_apparel: 7.5,
   free_shipping_threshold: 100.0,
   addon_price: 5.0,
+
+  design_pin_limit: 25,
 
   catalog_options: {
     colors: [
@@ -121,6 +126,7 @@ export function SiteConfigProvider({ children }: { children: ReactNode }) {
           shipping_tier_apparel: Number(data.shipping_tier_apparel ?? FALLBACK.shipping_tier_apparel),
           free_shipping_threshold: Number(data.free_shipping_threshold ?? FALLBACK.free_shipping_threshold),
           addon_price: Number(data.addon_price ?? FALLBACK.addon_price),
+          design_pin_limit: Number(data.design_pin_limit ?? FALLBACK.design_pin_limit),
           catalog_options: (data.catalog_options as CatalogOptions) || FALLBACK.catalog_options,
           addon_defaults: (data.addon_defaults as AddonDefaults) || FALLBACK.addon_defaults,
           customer_fields: (data.customer_fields as CustomerField[]) || FALLBACK.customer_fields,

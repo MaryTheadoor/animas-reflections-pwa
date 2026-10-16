@@ -15,7 +15,7 @@
 import type { DesignAsset, ManagedCategory } from "@/types";
 
 /** Cap on pinned designs, matching the product editor's picker. */
-export const DESIGN_PIN_LIMIT = 10;
+export const DESIGN_PIN_LIMIT = 25;
 
 /**
  * Fold a name to a comparable key: lowercase, every non-alphanumeric removed.

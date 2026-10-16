@@ -56,6 +56,7 @@ interface SiteConfigData {
   shipping_tier_apparel: number;
   free_shipping_threshold: number;
   addon_price: number;
+  design_pin_limit: number;
   catalog_options?: {
     colors?: { name: string; hex: string }[];
     sizes?: string[];
@@ -82,6 +83,7 @@ const DEFAULT_CONFIG: SiteConfigData = {
   shipping_tier_apparel: 7.5,
   free_shipping_threshold: 100.0,
   addon_price: 5.0,
+  design_pin_limit: 25,
   catalog_options: {
     colors: [
       { name: "Black", hex: "#000000" },
@@ -940,6 +942,13 @@ function DashboardContent() {
                 <input type="number" step="0.01" value={config.addon_price}
                   onChange={(e) => setConfig({ ...config, addon_price: parseFloat(e.target.value) || 0 })}
                   className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-primary block mb-1">Designs per product (limit)</label>
+                <input type="number" step="1" min="1" value={config.design_pin_limit}
+                  onChange={(e) => setConfig({ ...config, design_pin_limit: Math.max(1, parseInt(e.target.value) || 25) })}
+                  className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm" />
+                <p className="text-[10px] text-foreground/70 mt-1">How many printable designs a product can pin (default 25).</p>
               </div>
             </div>
           </div>
