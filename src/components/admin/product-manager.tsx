@@ -26,7 +26,7 @@ import { findDuplicateGroups, mergeGroup, type DuplicateGroup } from "@/lib/dupl
 import { buildModifiersForProduct, type SquareModifierList } from "@/lib/square-addons";
 import { useProductPhotos } from "@/hooks/useProductPhotos";
 import { applySetPatch, blankPhotoSets, filterPhotos, type BlankPhotoSet } from "@/lib/product-photos";
-import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS } from "@/types";
+import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS, type ProductPhotoView } from "@/types";
 import { designMatchesCategory } from "@/lib/design-category";
 import {
   describeBlankPlan,
@@ -833,6 +833,27 @@ export default function ProductManager({ categories }: Props) {
     delete views[view];
     if (Object.keys(views).length > 0) perColor[color] = views; else delete perColor[color];
     updateField("mockupImagesByColor", Object.keys(perColor).length > 0 ? perColor : undefined);
+  };
+
+  /* ── Per-modifier background images ──────────────────────────────────────
+     The same idea as Color Images, one axis over: for a modifier that changes
+     what the item looks like (Back Print, a logo, "Please Select Design"), assign
+     the background the customer should see when they pick it. Modifiers had no
+     image control at all before this — the only route was tagging a photo in the
+     Product Photos library, which is not discoverable from the product.
+     ──────────────────────────────────────────────────────────────────────── */
+  const setPerModifierImage = (modifier: string, view: ProductPhotoView, url: string) =>
+    updateField("mockupImagesByModifier", {
+      ...(form.mockupImagesByModifier ?? {}),
+      [modifier]: { ...(form.mockupImagesByModifier?.[modifier] ?? {}), [view]: url },
+    });
+
+  const removePerModifierImage = (modifier: string, view: ProductPhotoView) => {
+    const perModifier = { ...(form.mockupImagesByModifier ?? {}) };
+    const views = { ...(perModifier[modifier] ?? {}) };
+    delete views[view];
+    if (Object.keys(views).length > 0) perModifier[modifier] = views; else delete perModifier[modifier];
+    updateField("mockupImagesByModifier", Object.keys(perModifier).length > 0 ? perModifier : undefined);
   };
 
   const loadProducts = useCallback(async () => {
@@ -1762,7 +1783,7 @@ export default function ProductManager({ categories }: Props) {
                   {!p.active && <span className="text-danger ml-1 text-xs">(hidden)</span>}
                 </p>
                 <p className="text-xs text-foreground/80">
-                  {p.variants?.length ?? 0} variants · {categories.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
+                  {p.variants?.length ?? 0} variant{(p.variants?.length ?? 0) === 1 ? "" : "s"} · {categories.find((c) => c.id === p.categoryId)?.name ?? p.categoryId}
                   {" · "}
                   {(p.variants ?? []).reduce((sum, v) => sum + (v.inventory ?? 0), 0)} in stock
                   {p.variants?.some((v) => v.inventory !== undefined) && (
@@ -2679,6 +2700,86 @@ export default function ProductManager({ categories }: Props) {
                           Click a thumbnail to assign it to this color. The front image is shown on the product page when this color is selected. Upload photos in the Image Manager first.
                         </p>
                       </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Modifier Images — assign a background per modifier, like Color Images */}
+          {(form.modifiers?.length ?? 0) > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <AdminTooltip content="Assign a background image to a modifier. When a customer picks that modifier in the customizer, this is the image they see — for items where the modifier adds something printed on top of a plain background." dismissKey="modifier-images">
+                  <label className="text-xs font-medium text-primary">Modifier Images</label>
+                </AdminTooltip>
+              </div>
+              <div className="space-y-2">
+                {(form.modifiers ?? []).map((mod) => {
+                  const perModifier = form.mockupImagesByModifier?.[mod.name] ?? {};
+                  return (
+                    <div key={mod.id} className="bg-warm-sand/30 rounded-lg px-3 py-2 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium">{mod.name || "(unnamed modifier)"}</span>
+                        {!mod.name && (
+                          <span className="text-[10px] text-danger">Name it above to assign images</span>
+                        )}
+                      </div>
+                      {mod.name && (
+                        <div className="flex items-start gap-2 flex-wrap">
+                          <span className="w-20 text-[10px] text-foreground/80 shrink-0 pt-0.5">Images</span>
+                          {PRODUCT_PHOTO_VIEWS.map((view) => {
+                            const photo = perModifier[view];
+                            return (
+                              <div key={view} className="flex items-center gap-1">
+                                <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-white border border-primary/10 shrink-0">
+                                  {photo ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={photo} alt={`${mod.name} ${view}`} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[8px] text-foreground/70 capitalize">
+                                      {PRODUCT_PHOTO_VIEW_LABELS[view]}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex gap-0.5 flex-wrap max-w-[120px]">
+                                    {form.images.length === 0 && (
+                                      <span className="text-[8px] text-foreground/70">no gallery images</span>
+                                    )}
+                                    {form.images.map((url, i) => (
+                                      <button
+                                        key={url}
+                                        type="button"
+                                        onClick={() => setPerModifierImage(mod.name, view, url)}
+                                        title={`Use image ${i + 1} for ${mod.name} ${PRODUCT_PHOTO_VIEW_LABELS[view]}`}
+                                        className={"w-6 h-6 rounded overflow-hidden border transition-all " + (
+                                          photo === url
+                                            ? "border-gold ring-1 ring-gold scale-110"
+                                            : "border-primary/15 hover:border-gold opacity-70 hover:opacity-100"
+                                        )}
+                                      >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={url} alt={`img ${i + 1}`} className="w-full h-full object-cover" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {photo && (
+                                    <button onClick={() => removePerModifierImage(mod.name, view)} className="text-[9px] text-danger hover:text-danger text-left">
+                                      remove
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <p className="text-[9px] text-foreground/70 w-full">
+                            Click a thumbnail to make it the background for this modifier. Only products with a
+                            matching modifier name in the customizer use it.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
