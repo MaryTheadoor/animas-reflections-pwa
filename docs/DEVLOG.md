@@ -2395,3 +2395,36 @@ Gate: tsc 0 · lint 0 · **328 tests / 22 suites** · build 25 pages, SEO gate O
 `cd functions && npm run build` clean · `npm run seo:fetch` reports "unchanged" and leaves the
 tree clean.
 
+---
+
+## Session 39 — 2026-11-11 | Black Friday release: shipped to production
+
+Deadline: Black Friday is Fri 2026-11-27. Feature freeze — nothing from the migration roadmap
+(Zustand, XState, Fabric/Konva, Medusa) lands before launch.
+
+**Shipped.** Commit `502de0c` (tag `rc-blackfriday-1`), pushed to `origin/development` so the
+admin's Publish path rebuilds the same code. Deployed in dependency order:
+`firestore:rules,storage` → `functions` (one retry; the documented analysis timeout, Known Issue
+#14) → `hosting`.
+
+**Verified after deploy:**
+- `health` → `{"squareConfigured":true,"squareEnvironment":"production"}` — the production Square
+  token is in the deployed environment, which was the single riskiest unknown.
+- Seven routes return 200 with the expected `<title>` (`/`, `/shop/`, `/product/`, `/checkout/`,
+  `/admin/login/`, `/search/`, `/services/`); an unknown URL returns **404**, not a soft 200.
+- The deployed chunk hash equals the local build, and the new strings are in it (tax disclosure,
+  "Saved and confirmed by the server", "Uncategorised").
+- Rules matrix, anonymous REST: `config/admin` 403, `orders` 403, `products` 200, `config/site`
+  200, `product_photos` 200.
+
+**Outstanding (needs a human + a card):** admin sign-in → product save → fresh session (this also
+proves the new `email_verified` gate does not lock the owner out), and the canary purchase +
+refund. Both are step 4/5 in `docs/RELEASE_BLACK_FRIDAY.md`.
+
+**Last changes before the tag:** tax-aware order verification (compare pre-tax, charge Square's
+total, mirror the real tax), `buyerEmailAddress` on the payment so Square can email the receipt,
+checkout discloses that tax is added, and Pay is disabled until `config/site` resolves so fallback
+shipping rates cannot make `expectedTotal` diverge.
+
+**Rollback:** `firebase hosting:rollback`, or redeploy `rc-blackfriday-1` for functions/rules.
+

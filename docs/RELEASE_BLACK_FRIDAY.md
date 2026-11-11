@@ -37,7 +37,7 @@ pricing, admin durability, storefront fixes), gate green (lint 0, tsc 0, 328 tes
 - [ ] Client: confirm Square location has **taxes on**, **receipts on**, and that the access token in
       `functions/.env` is the **production** token (`SQUARE_ENVIRONMENT=production`)
 
-## 2. Deploy + prove it (Nov 13–14, low-traffic window)
+## 2. Deploy + prove it — DONE 2026-11-11, canary outstanding
 
 Order matters — functions and rules before hosting.
 
@@ -47,7 +47,22 @@ firebase deploy --only functions                    # pricing, auth, tax, invent
 firebase deploy --only hosting                      # the 25-page static export
 ```
 
-Then, in this order:
+**Deployed:** commit `502de0c` (tag `rc-blackfriday-1`), pushed to `origin/development`.
+Rules released, functions deployed (one retry — Known Issue #14 analysis timeout), hosting
+released. Verification completed:
+
+1. ✅ `GET .../health` → `{"squareConfigured":true,"squareEnvironment":"production"}`
+2. ✅ Frontend: `/`, `/shop/`, `/product/`, `/checkout/`, `/admin/login/`, `/search/`, `/services/`
+   all 200 with correct `<title>`; unknown URL returns **404**; deployed bundle hash matches the
+   local build and contains the new strings (tax disclosure, "Saved and confirmed by the server",
+   "Uncategorised")
+3. ✅ Rules (anonymous, REST): `config/admin` 403, `orders` 403, `products` 200, `config/site` 200,
+   `product_photos` 200
+4. ⬜ **Admin sign-in → save → fresh session** (needs an admin session; also confirms the
+   `email_verified` gate does not lock the owner out)
+5. ⬜ **Canary purchase + refund** (needs a real card)
+
+Remaining checks: 4 and 5 below — both need a signed-in human.
 
 1. `GET https://us-central1-animas-reflections-pwa.cloudfunctions.net/health` →
    `squareEnvironment` must be **production** and `squareConfigured` **true**.
