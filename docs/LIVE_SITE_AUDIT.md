@@ -1,6 +1,7 @@
 # Live Site Audit — animas-reflections-pwa.web.app
 
-**Audited:** 2026-11-11 · **Baseline build:** `502de0c` (deployed 2026-11-11 15:58 UTC)
+**Audited:** 2026-11-11 · **Baseline build:** `502de0c` (deployed 2026-11-11 15:58 UTC), with items
+re-checked against `0798391` (deployed 16:22 UTC) — see the status line on each item.
 **Method:** real Chrome via the browser bridge (admin session `mary.theadoor.doctor@gmail.com`), a clean
 headless Chrome (no profile, no extensions — so nothing here is a browser-extension artifact), and
 Firestore REST reads with the public web API key.
@@ -48,23 +49,28 @@ That points at the app/location/domain triple being rejected, not at the SDK fai
 
 Where: `src/app/checkout/page.tsx:75-101` (`initSquare`), `src/lib/constants.ts:27-28`
 
-Action, in likelihood order:
+**Updated 2026-11-11 (second pass) — the first action below is now disproven.** The 401 fires for
+every hostname (web.app, the custom domain, localhost, example.com), so the domain allowlist is not
+the cause. The server side is verified correct by the deployed `squareDiagnostics` endpoint
+(`environment: production`, token configured, exactly one location, and it matches
+`L6VCX130RHYQR`). What is left is the **Application ID**
+`sq0idp-QAzYzFHiOcHrBmGfmdfGTQ` — it must come from the application that owns that location, with
+Web Payments SDK enabled. Full evidence and the rest of the order path:
+`docs/ORDER_FULFILLMENT_AND_SQUARE.md`.
 
-1. **Check the Web Payments SDK domain allowlist in the Square Developer Dashboard.** A `*.web.app`
-   hosting preview host is normally not registered, and an unregistered hostname is the classic cause
-   of a 401 from `pci-connect`. Add `animas-reflections-pwa.web.app` (and
-   `animas-reflections-pwa.firebaseapp.com` if it is used) for the production application.
-2. Confirm `sq0idp-QAzYzFHiOcHrBmGfmdfGTQ` and location `L6VCX130RHYQR` belong to the **same
-   account and the same environment**. A sandbox app ID is prefixed `sandbox-sq0idb-`; this one is
-   production, so a sandbox location ID here would produce exactly this failure.
-3. Surface the failure better: log the raw Square error (and `e.errors`) so the next occurrence is
-   diagnosable from the console rather than a generic sentence.
+Action:
+
+1. In the Square Developer Dashboard, open the app whose ID is `sq0idp-QAzYzFHiOcHrBmGfmdfGTQ`.
+   Confirm it belongs to the same account that owns location `L6VCX130RHYQR` and that Web Payments
+   SDK is enabled for it. If not, take the Application ID from the app that owns the location,
+   update `src/lib/constants.ts:27` and the CI fallback in `.github/workflows/rebuild.yml:100`.
+2. Keep the improved error logging (`src/app/checkout/page.tsx`) — it now surfaces Square's
+   `errors[]` in the console instead of a generic sentence.
 
 Note: `www.animasreflections.com` is served by Cloudflare and is a **different site** (title
-"Home | Animas Reflections"). If Square is allowlisted only for that domain, the web.app preview host
-will keep failing even though production is fine — worth confirming which host is meant to be live.
+"Home | Animas Reflections"), so it cannot be used to test this checkout.
 
-### AR-02 · The cart is memory-only and dies on reload · `FIXED` (deployed with the next hosting release)
+### AR-02 · The cart is memory-only and dies on reload · `FIXED` (verified live 2026-11-11, deploy 16:22 UTC)
 
 Add an item, reload, and the cart is empty; the nav badge disappears. `localStorage` on the site holds
 exactly one key: `theme`.
@@ -77,6 +83,9 @@ for display but the server still re-derives every amount, so a stale price canno
 an empty cart instead of a broken page. Five unit tests in
 `src/lib/__tests__/cart-storage.test.ts` (round-trip, dropped invalid lines, quantity clamp,
 unknown view, corrupt add-ons).
+
+Live check on the 16:22 UTC deploy: add to cart, reload → badge still shows 1; direct navigation to
+`/checkout/` → cart renders with `Total $27.50` instead of "Your cart is empty".
 
 Where: `src/context/cart-context.tsx` — `useReducer(cartReducer, initialCart)` now hydrates from
 storage in an effect; `HYDRATE` is a reducer action.

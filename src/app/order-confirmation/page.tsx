@@ -28,7 +28,9 @@ function ConfirmationContent() {
         </h1>
         <p className="text-foreground mb-8 max-w-md mx-auto leading-relaxed">
           Thank you for your order! We&apos;ve received it and will begin processing
-          right away. You&apos;ll receive a confirmation email with your order details.
+          right away. Please keep your order reference below — we&apos;ll be in touch at
+          the email address you gave us. If a Square receipt is enabled for our shop,
+          it arrives separately from Square.
         </p>
 
         {mirrorFailed && (

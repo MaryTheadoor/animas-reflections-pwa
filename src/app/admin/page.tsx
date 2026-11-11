@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Component, type ReactNode } from "react";
+import { useState, useEffect, useCallback, Fragment, Component, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, orderBy, limit } from "firebase/firestore";
@@ -20,6 +20,18 @@ import { useSiteConfigLoading } from "@/hooks/useSiteConfig";
 import ImageManager from "@/components/admin/image-manager";
 import ProductPhotoManager from "@/components/admin/product-photo-manager";
 import HelpGuide from "@/components/admin/help-guide";
+import OrderFulfillment from "@/components/admin/order-fulfillment";
+import {
+  formatDate,
+  formatMoney,
+  mergeOrders,
+  parseOrderMirror,
+  statusClass,
+  toDate,
+  type AdminOrder,
+  type OrderMirror,
+  type SquareOrder,
+} from "@/components/admin/order-model";
 import type { ManagedCategory, DesignAsset } from "@/types";
 import { designMatchesCategory } from "@/lib/design-category";
 import PlaceholderImage from "@/components/ui/placeholder-image";
@@ -1237,10 +1249,37 @@ function DashboardContent() {
   );
 }
 
+/** How many mirrors the orders table reads at most (newest first). */
+const ORDERS_LIMIT = 100;
+
+/**
+ * Read the order mirrors from Firestore — the source of truth for the list.
+ *
+ * `orderBy("createdAt")` silently excludes documents that have no `createdAt`,
+ * so if that read fails (or is not satisfiable) fall back to an unordered but
+ * still bounded read and let `mergeOrders` sort by date in memory.
+ */
+async function loadOrderMirrors(): Promise<OrderMirror[]> {
+  const read = async (ordered: boolean) => {
+    const snap = await getDocs(ordered
+      ? query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(ORDERS_LIMIT))
+      : query(collection(db, "orders"), limit(ORDERS_LIMIT)));
+    return snap.docs.map((d) => parseOrderMirror(d.id, d.data() as Record<string, unknown>));
+  };
+  try {
+    return await read(true);
+  } catch {
+    return read(false);
+  }
+}
+
 function OrdersSection() {
-  const [orders, setOrders] = useState<{ id: string; squareOrderId?: string; state: string; total: number; createdAt: string; customerEmail?: string; customerName?: string; trackingUrl?: string; trackingNumber?: string; items?: { name: string; quantity: number; designUrl?: string }[] }[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  /** False when the Square lookup itself failed, so "not found in Square" is not a claim. */
+  const [squareAvailable, setSquareAvailable] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [designOpenId, setDesignOpenId] = useState<string | null>(null);
   const [trackingUrl, setTrackingUrl] = useState("");
@@ -1249,36 +1288,70 @@ function OrdersSection() {
   const [page, setPage] = useState(0);
   const PER_PAGE = 15;
 
-  const loadOrders = useCallback(() => {
-    Promise.all([
-      httpsCallable(functions, "fetchRecentOrders")({}),
-      // Bounded read — the mirror exists to enrich Square orders with design
-      // files/tracking, so the 200 most recent mirrors is plenty.
-      getDocs(query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(200))),
-    ])
-      .then(([r, fsSnap]) => {
-        const squareOrders = (r.data as { orders: typeof orders }).orders ?? [];
-        // Build a lookup of Firestore mirror orders by Square order ID to merge
-        // rich data (design files, customer info, tracking) into the view.
-        const fsMap = new Map<string, typeof orders[0]>();
-        fsSnap.forEach((d) => {
-          const data = d.data() as { squareOrderId?: string; items?: { name: string; quantity: number; designUrl?: string }[] };
-          if (data.squareOrderId) fsMap.set(data.squareOrderId, data as typeof orders[0]);
-        });
-        setOrders(squareOrders.map((o) => ({ ...o, ...(fsMap.get(o.id as string) ?? {}) })));
-      })
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false));
+  /**
+   * Firestore drives the list; Square only enriches it. Square's order search
+   * returns COMPLETED/CANCELED orders and the newest 50 of those, so a list
+   * built from it silently drops orders the shop still has to ship (F-11).
+   */
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+    setPage(0);
+
+    let mirrors: OrderMirror[] | null = null;
+    let mirrorError = "";
+    try {
+      mirrors = await loadOrderMirrors();
+    } catch (e) {
+      mirrorError = e instanceof Error ? e.message : "Unknown error";
+    }
+
+    let square: SquareOrder[] = [];
+    let squareError = "";
+    try {
+      const res = await httpsCallable(functions, "fetchRecentOrders")({});
+      square = (res.data as { orders?: SquareOrder[] }).orders ?? [];
+    } catch (e) {
+      squareError = e instanceof Error ? e.message : "Unknown error";
+    }
+
+    setSquareAvailable(!squareError);
+
+    if (mirrors) {
+      setOrders(mergeOrders(mirrors, square));
+      setNotice(squareError
+        ? `Square lookup failed (${squareError}) — showing Firestore records only. Without Square, each order's state and charged total come from its own record.`
+        : null);
+    } else if (squareError) {
+      // Neither source answered — that is a real error, not an empty shop.
+      setOrders([]);
+      setError(`Could not load orders. Firestore: ${mirrorError}. Square: ${squareError}.`);
+    } else {
+      // Firestore is unreadable but Square answered: fall back to the old
+      // Square-only view rather than showing an empty table.
+      setOrders(mergeOrders([], square));
+      setNotice(`Could not read orders from Firestore (${mirrorError}) — showing Square's recent orders only, so anything Square does not list is missing.`);
+    }
+    setLoading(false);
   }, []);
 
-  useEffect(() => { loadOrders(); }, [loadOrders]);
+  useEffect(() => {
+    // Deferred so the fetch does not set state synchronously in the effect body
+    // (same pattern as the designs-tab loader).
+    const t = setTimeout(() => { void loadOrders(); }, 0);
+    return () => clearTimeout(t);
+  }, [loadOrders]);
 
-  const saveTracking = async (orderId: string, orderDocId: string) => {
+  const saveTracking = async (order: AdminOrder) => {
     setSavingTracking(true);
     try {
       const callable = httpsCallable(functions, "updateOrderTracking");
-      await callable({ orderId: orderDocId || `order_${orderId}`, trackingUrl, trackingNumber });
-      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, trackingUrl, trackingNumber } : o));
+      await callable({ orderId: order.docId, trackingUrl, trackingNumber });
+      // updateOrderTracking flips the mirror to SHIPPED; reflect that locally.
+      setOrders((prev) => prev.map((o) => (o.docId === order.docId
+        ? { ...o, trackingUrl, trackingNumber, status: "SHIPPED" }
+        : o)));
       setTrackingUrl("");
       setTrackingNumber("");
     } catch (e) {
@@ -1288,138 +1361,214 @@ function OrdersSection() {
     }
   };
 
-  const totalPages = Math.ceil(orders.length / PER_PAGE);
-  const pagedOrders = orders.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(orders.length / PER_PAGE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const pagedOrders = orders.slice(currentPage * PER_PAGE, (currentPage + 1) * PER_PAGE);
+  const selected = orders.find((o) => o.id === expandedId) ?? null;
 
   if (loading) return <p className="text-sm text-foreground">Loading orders...</p>;
-  if (error) return <p className="text-sm text-danger">{error}</p>;
-  if (!orders?.length) return <p className="text-sm text-foreground/80">No orders yet.</p>;
+  if (error) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-danger">{error}</p>
+        <button
+          onClick={() => { void loadOrders(); }}
+          className="px-2.5 py-1 rounded-lg border border-warm-sand bg-white text-xs font-medium hover:border-gold"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs text-foreground/80">
-        <span>{orders.length} orders</span>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(0)} disabled={page === 0} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&laquo;</button>
-            <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&lsaquo;</button>
-            <span className="px-2">{page + 1} / {totalPages}</span>
-            <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&rsaquo;</button>
-            <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&raquo;</button>
-          </div>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-foreground/80">
+        <span>
+          {orders.length} order{orders.length === 1 ? "" : "s"}
+          {orders.length >= ORDERS_LIMIT && ` (newest ${ORDERS_LIMIT})`}
+        </span>
+        <div className="flex items-center gap-2">
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(0)} disabled={currentPage === 0} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&laquo;</button>
+              <button onClick={() => setPage(Math.max(0, currentPage - 1))} disabled={currentPage === 0} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&lsaquo;</button>
+              <span className="px-2">{currentPage + 1} / {totalPages}</span>
+              <button onClick={() => setPage(Math.min(totalPages - 1, currentPage + 1))} disabled={currentPage >= totalPages - 1} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&rsaquo;</button>
+              <button onClick={() => setPage(totalPages - 1)} disabled={currentPage >= totalPages - 1} className="px-2 py-1 rounded hover:bg-warm-sand disabled:opacity-30">&raquo;</button>
+            </div>
+          )}
+          <button
+            onClick={() => { void loadOrders(); }}
+            className="px-2.5 py-1 rounded-lg border border-warm-sand bg-white font-medium hover:border-gold"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead><tr className="text-left text-foreground border-b border-warm-sand">
-          <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Customer</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Designs</th><th className="pb-2 font-medium">Date</th><th className="pb-2 font-medium">Tracking</th>
-        </tr></thead>
-        <tbody>
-          {pagedOrders.map((o) => {
-            const designCount = (o.items ?? []).filter((i) => i.designUrl).length;
-            const isOpen = designOpenId === o.id;
-            return (
-              <>
-                <tr key={o.id} className="border-b border-warm-sand/30">
-                  <td className="py-2 font-mono text-xs text-foreground">{o.id?.slice(0, 12)}</td>
-                  <td className="py-2 text-xs text-foreground">{o.customerEmail || o.customerName || "-"}</td>
-                  <td className="py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${o.state === "COMPLETED" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{o.state}</span></td>
-                  <td className="py-2 text-right font-mono">${o.total.toFixed(2)}</td>
-                  <td className="py-2 text-xs">
-                    {designCount > 0 ? (
-                      <button
-                        onClick={() => setDesignOpenId(isOpen ? null : o.id)}
-                        className="text-gold-deep hover:underline font-medium"
-                      >
-                        {isOpen ? "▾" : "▸"} {designCount} file{designCount > 1 ? "s" : ""}
-                      </button>
-                    ) : (
-                      <span className="text-foreground/70">—</span>
-                    )}
-                  </td>
-                  <td className="py-2 text-foreground">{new Date(o.createdAt as string).toLocaleDateString()}</td>
-                  <td className="py-2">
-                    {o.trackingUrl ? (
-                      <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold-deep text-xs hover:underline">Track</a>
-                    ) : (
-                      <button
-                        onClick={() => { setExpandedId(o.id); setTrackingUrl(""); setTrackingNumber(""); }}
-                        className="text-xs text-foreground/70 hover:text-gold-deep"
-                      >
-                        + Add
-                      </button>
-                    )}
-                  </td>
-                </tr>
-                {isOpen && designCount > 0 && (
-                  <tr className="bg-warm-sand/10">
-                    <td colSpan={7} className="py-3 px-4">
-                      <p className="text-xs font-medium text-foreground mb-2">Design files for printing:</p>
-                      <div className="space-y-1">
-                        {(o.items ?? []).filter((i) => i.designUrl).map((item, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs">
-                            <span className="text-foreground/80">{item.name} × {item.quantity}</span>
-                            <a href={item.designUrl} target="_blank" rel="noopener noreferrer"
-                              className="text-gold-deep hover:underline truncate max-w-xs">
-                              {item.designUrl?.split("/").pop()?.split("?")[0] ?? "View design"} ↗
-                            </a>
+
+      {notice && (
+        <p className="text-xs text-gold-ink bg-gold/10 rounded-lg px-3 py-2">{notice}</p>
+      )}
+
+      {orders.length === 0 ? (
+        <p className="text-sm text-foreground/80">No orders yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-foreground border-b border-warm-sand">
+              <th className="pb-2 font-medium">Order ID</th><th className="pb-2 font-medium">Customer</th><th className="pb-2 font-medium">Status</th><th className="pb-2 font-medium text-right">Total</th><th className="pb-2 font-medium">Designs</th><th className="pb-2 font-medium">Date</th><th className="pb-2 font-medium">Tracking</th>
+            </tr></thead>
+            <tbody>
+              {pagedOrders.map((o) => {
+                const designCount = (o.items ?? []).filter((i) => i.designUrl).length;
+                const isDesignOpen = designOpenId === o.id;
+                const isOpen = expandedId === o.id;
+                const tax = o.totals?.tax ?? 0;
+                return (
+                  <Fragment key={o.docId}>
+                    <tr className="border-b border-warm-sand/30 align-top">
+                      <td className="py-2 font-mono text-xs text-foreground">
+                        <button
+                          onClick={() => {
+                            setExpandedId(isOpen ? null : o.id);
+                            setTrackingUrl(o.trackingUrl ?? "");
+                            setTrackingNumber(o.trackingNumber ?? "");
+                          }}
+                          className="text-gold-deep hover:underline"
+                          title="Address, customization notes and packing slip"
+                        >
+                          {isOpen ? "▾" : "▸"} {o.id.slice(0, 12)}
+                        </button>
+                        {o.paymentId && (
+                          <span className="block text-[10px] font-normal text-foreground/60" title={o.paymentId}>
+                            pay {o.paymentId.slice(0, 10)}…
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 text-xs text-foreground">{o.customerEmail || o.customerName || "-"}</td>
+                      <td className="py-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass(o.status)}`}>{o.status}</span>
+                        {!o.inSquare && squareAvailable && (
+                          <span className="block text-[10px] font-medium text-danger mt-1">not found in Square</span>
+                        )}
+                        {o.inSquare && o.squareState && o.squareState.toUpperCase() !== o.status && (
+                          <span className="block text-[10px] text-foreground/60 mt-0.5">Square: {o.squareState}</span>
+                        )}
+                        {!o.hasMirror && (
+                          <span className="block text-[10px] text-foreground/60 mt-0.5">no Firestore record</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-right font-mono">
+                        {formatMoney(o.total)}
+                        {tax > 0 && <span className="block text-[10px] text-foreground/60">tax {formatMoney(tax)}</span>}
+                      </td>
+                      <td className="py-2 text-xs">
+                        {designCount > 0 ? (
+                          <button
+                            onClick={() => setDesignOpenId(isDesignOpen ? null : o.id)}
+                            className="text-gold-deep hover:underline font-medium"
+                          >
+                            {isDesignOpen ? "▾" : "▸"} {designCount} file{designCount > 1 ? "s" : ""}
+                          </button>
+                        ) : (
+                          <span className="text-foreground/70">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-foreground">{formatDate(o.createdAt) ?? "—"}</td>
+                      <td className="py-2">
+                        {o.trackingUrl ? (
+                          <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-gold-deep text-xs hover:underline">Track</a>
+                        ) : (
+                          <button
+                            onClick={() => { setExpandedId(o.id); setTrackingUrl(""); setTrackingNumber(""); }}
+                            className="text-xs text-foreground/70 hover:text-gold-deep"
+                          >
+                            + Add
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {isDesignOpen && designCount > 0 && (
+                      <tr className="bg-warm-sand/10">
+                        <td colSpan={7} className="py-3 px-4">
+                          <p className="text-xs font-medium text-foreground mb-2">Design files for printing:</p>
+                          <div className="space-y-1">
+                            {(o.items ?? []).filter((i) => i.designUrl).map((item, i) => (
+                              <div key={i} className="flex items-center gap-2 text-xs">
+                                <span className="text-foreground/80">{item.name} × {item.quantity}</span>
+                                <a href={item.designUrl} target="_blank" rel="noopener noreferrer"
+                                  className="text-gold-deep hover:underline truncate max-w-xs">
+                                  {item.designUrl?.split("/").pop()?.split("?")[0] ?? "View design"} ↗
+                                </a>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
-            );
-          })}
-        </tbody>
-      </table>
-      {expandedId && (
-        <div className="mt-4 p-4 bg-warm-sand/30 rounded-xl space-y-2">
-          <input
-            type="url"
-            value={trackingUrl}
-            onChange={(e) => setTrackingUrl(e.target.value)}
-            placeholder="https://track.carrier.com/..."
-            className="w-full px-3 py-2 rounded-lg border border-primary/20 bg-white text-sm focus:border-gold outline-none"
-          />
-          <div className="flex items-center gap-2">
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selected && (
+        <div className="mt-4 p-4 bg-warm-sand/30 rounded-xl space-y-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="text-xs text-foreground/80">
+              <p className="font-mono text-foreground">{selected.id}</p>
+              {selected.customerName && <p>{selected.customerName}</p>}
+              {selected.customerEmail && <p>{selected.customerEmail}</p>}
+              {!selected.customerName && !selected.customerEmail && <p>No customer on record</p>}
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass(selected.status)}`}>{selected.status}</span>
+              <button onClick={() => setExpandedId(null)} className="text-xs text-foreground/70 hover:text-primary">Close ✕</button>
+            </div>
+          </div>
+
+          <OrderFulfillment key={selected.docId} order={selected} />
+
+          <div className="border-t border-warm-sand/60 pt-3 space-y-2">
+            <p className="text-xs font-medium text-foreground">Tracking</p>
             <input
-              type="text"
-              value={trackingNumber}
-              onChange={(e) => setTrackingNumber(e.target.value)}
-              placeholder="Tracking number (e.g. 1Z999AA10123456784)"
-              className="flex-1 px-3 py-2 rounded-lg border border-primary/20 bg-white text-sm focus:border-gold outline-none"
+              type="url"
+              value={trackingUrl}
+              onChange={(e) => setTrackingUrl(e.target.value)}
+              placeholder="https://track.carrier.com/..."
+              className="w-full px-3 py-2 rounded-lg border border-primary/20 bg-white text-sm focus:border-gold outline-none"
             />
-            <button
-              onClick={() => saveTracking(expandedId, `order_${expandedId}`)}
-              disabled={savingTracking || (!trackingUrl && !trackingNumber)}
-              className="px-4 py-2 bg-gold text-on-gold rounded-lg text-sm font-semibold disabled:opacity-50"
-            >
-              {savingTracking ? "Saving..." : "Save"}
-            </button>
-            <button onClick={() => setExpandedId(null)} className="px-3 py-2 text-sm text-foreground/80 hover:text-primary">Cancel</button>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="Tracking number (e.g. 1Z999AA10123456784)"
+                className="flex-1 px-3 py-2 rounded-lg border border-primary/20 bg-white text-sm focus:border-gold outline-none"
+              />
+              <button
+                onClick={() => { void saveTracking(selected); }}
+                disabled={savingTracking || (!trackingUrl && !trackingNumber)}
+                className="px-4 py-2 bg-gold text-on-gold rounded-lg text-sm font-semibold disabled:opacity-50"
+              >
+                {savingTracking ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => { setTrackingUrl(""); setTrackingNumber(""); }}
+                className="px-3 py-2 text-sm text-foreground/80 hover:text-primary"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="text-[11px] text-foreground/60">Saving tracking marks this order SHIPPED.</p>
           </div>
         </div>
       )}
-      </div>
     </div>
   );
-}
-
-// Firestore stores timestamps as Timestamp objects (with .toDate()); some older
-// docs may hold ISO strings. Normalize both to a Date, or null if invalid —
-// calling `new Date()` on a raw Timestamp yields "Invalid Date".
-function toDate(value: unknown): Date | null {
-  if (!value) return null;
-  const d = typeof (value as { toDate?: () => Date }).toDate === "function"
-    ? (value as { toDate: () => Date }).toDate()
-    : new Date(value as string);
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function formatDate(value: unknown): string | null {
-  return toDate(value)?.toLocaleDateString() ?? null;
 }
 
 function UsersSection() {

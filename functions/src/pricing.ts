@@ -177,6 +177,22 @@ function findAddonDef(
  * Re-derive the full order (line items, add-ons, shipping, totals) from the
  * catalog. Returns { ok: false, error } for anything the server cannot verify.
  */
+/** A design URL ends up in the fulfilment note staff click, so it must point at
+ *  our own Storage bucket — never at an arbitrary host a crafted cart supplied. */
+export function isTrustedDesignUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "https:" &&
+      (parsed.hostname === "firebasestorage.googleapis.com" ||
+        parsed.hostname === "storage.googleapis.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function deriveOrder(
   products: ReadonlyMap<string, PricingProduct>,
   siteConfig: SitePricingConfig,
@@ -272,7 +288,7 @@ export function deriveOrder(
       catalogPath: !!variant.squareVariationId,
       squareVariationId: variant.squareVariationId,
       note: raw.note,
-      designUrl: raw.designUrl,
+      designUrl: raw.designUrl && isTrustedDesignUrl(raw.designUrl) ? raw.designUrl : undefined,
       addons: resolvedAddons,
     };
     lines.push(line);

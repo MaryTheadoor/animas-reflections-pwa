@@ -88,6 +88,25 @@ describe("deriveOrder — base items", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("keeps a design URL from our own Storage bucket", () => {
+    const result = derive(
+      [product()],
+      [line({ designUrl: "https://firebasestorage.googleapis.com/v0/b/x/o/uploads%2Fu%2Fa.png?alt=media" })],
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.order.lines[0].designUrl).toContain("firebasestorage.googleapis.com");
+  });
+
+  it("drops a design URL pointing anywhere else", () => {
+    for (const url of ["https://evil.example/a.png", "javascript:alert(1)", "http://firebasestorage.googleapis.com/x.png"]) {
+      const result = derive([product()], [line({ designUrl: url })]);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.order.lines[0].designUrl).toBeUndefined();
+    }
+  });
+
   it("rejects a missing product", () => {
     const result = derive([], [line()]);
     expect(result.ok).toBe(false);

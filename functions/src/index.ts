@@ -177,6 +177,18 @@ async function applyAdminClaims(): Promise<{
 
 // ─── Create Square Order & Process Payment ─────────────────────────
 
+/** Square limits the length of a line-item note; the composed customization note
+ *  (design URL + text + options + placement) can exceed that on a fully
+ *  customised item. The authoritative design URL is stored separately in the
+ *  order mirror, so clipping the tail cannot lose the artwork. */
+const MAX_SQUARE_NOTE = 250;
+function clampNote(note?: string): string | undefined {
+  if (!note) return undefined;
+  return note.length <= MAX_SQUARE_NOTE
+    ? note
+    : `${note.slice(0, MAX_SQUARE_NOTE - 1)}…`;
+}
+
 interface CreateOrderRequest {
   /** Client cart lines. Prices inside are VERIFIED against the Firestore
    *  catalog by deriveOrder() — they are never charged directly. */
@@ -193,6 +205,7 @@ interface CreateOrderRequest {
     phone?: string;
     address?: {
       addressLine1?: string;
+      addressLine2?: string;
       locality?: string;
       administrativeDistrictLevel1?: string;
       postalCode?: string;
@@ -282,14 +295,14 @@ export const createSquareOrderAndPay = onCall(
           squareLineItems.push({
             quantity: String(line.quantity),
             catalogObjectId: line.squareVariationId,
-            ...(line.note ? { note: line.note } : {}),
+            ...(line.note ? { note: clampNote(line.note) } : {}),
           });
         } else {
           squareLineItems.push({
             quantity: String(line.quantity),
             name: line.name,
             basePriceMoney: { amount: BigInt(line.baseCents), currency: "USD" },
-            ...(line.note ? { note: line.note } : {}),
+            ...(line.note ? { note: clampNote(line.note) } : {}),
           });
         }
         for (const addon of line.addons) {
@@ -337,7 +350,7 @@ export const createSquareOrderAndPay = onCall(
         ].filter(Boolean).join(" | ");
 
         if (customerNote && squareLineItems.length > 0 && !squareLineItems[0].note) {
-          squareLineItems[0].note = customerNote;
+          squareLineItems[0].note = clampNote(customerNote);
         }
 
         if (addr?.addressLine1) {
@@ -351,6 +364,7 @@ export const createSquareOrderAndPay = onCall(
                 phoneNumber: c.phone || undefined,
                 address: {
                   addressLine1: addr.addressLine1,
+                  addressLine2: addr.addressLine2,
                   locality: addr.locality,
                   administrativeDistrictLevel1: addr.administrativeDistrictLevel1,
                   postalCode: addr.postalCode,
@@ -435,6 +449,16 @@ export const createSquareOrderAndPay = onCall(
       });
 
       const payment = paymentResponse.payment as Record<string, unknown> | undefined;
+      const paymentStatus = String(payment?.status ?? "");
+      const paymentId = typeof payment?.id === "string" ? payment.id : "";
+      // Never mirror a payment that Square says did not go through.
+      if (paymentStatus === "FAILED" || paymentStatus === "CANCELED") {
+        logger.error("Payment did not complete", { paymentId, paymentStatus });
+        throw new HttpsError(
+          "failed-precondition",
+          "The card payment did not complete — you have not been charged. Please try again.",
+        );
+      }
       logger.info("Payment processed", {
         paymentId: payment?.id,
         status: payment?.status,
@@ -505,11 +529,15 @@ export const createSquareOrderAndPay = onCall(
           // Normalized lookup key — email matching is case-insensitive end to end.
           customerEmailLower,
           customerName,
-          status: "PENDING",
+          status: paymentStatus === "COMPLETED" ? "PAID" : (paymentStatus || "PENDING"),
+          paymentId,
+          paymentStatus,
+          squarePaymentId: paymentId,
           items: orderItems,
           shipping: data.customer?.address?.addressLine1 ? {
             name: customerName,
             line1: data.customer.address.addressLine1,
+            line2: data.customer.address.addressLine2,
             city: data.customer.address.locality,
             state: data.customer.address.administrativeDistrictLevel1,
             zip: data.customer.address.postalCode,
