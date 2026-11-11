@@ -75,8 +75,20 @@ describe("designMatchesCategory", () => {
     expect(designMatchesCategory(design({ id: "d1", tags: ["Durango High Football"] }), DURANGO)).toBe(true);
   });
 
-  it("ignores a tag that merely contains the category name", () => {
+  it("only matches when the TAG contains the category key, never the reverse", () => {
     expect(designMatchesCategory(design({ id: "d1", tags: ["durango high"] }), DURANGO)).toBe(false);
+  });
+
+  it("matches a tag that WRAPS the category name — 'little stranger logos' under 'Little Stranger'", () => {
+    const littleStranger = cat("c4", "Little Stranger");
+    expect(
+      designMatchesCategory(design({ id: "d1", tags: ["little stranger logos"] }), littleStranger),
+    ).toBe(true);
+  });
+
+  it("does not let a short category name swallow unrelated tags", () => {
+    const art = cat("c5", "Art");
+    expect(designMatchesCategory(design({ id: "d1", tags: ["cartoon"] }), art)).toBe(false);
   });
 
   it("matches by slug when the display name has punctuation", () => {

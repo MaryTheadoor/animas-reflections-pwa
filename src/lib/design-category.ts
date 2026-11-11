@@ -51,10 +51,19 @@ export function designMatchesCategory(
 
   if (design.categoryIds) return design.categoryIds.includes(category.id);
 
-  const keys = new Set([categoryKey(category.name), categoryKey(category.slug)].filter(Boolean));
-  if (keys.size === 0) return false;
-  if (keys.has(categoryKey(design.category))) return true;
-  return (design.tags ?? []).some((tag) => keys.has(categoryKey(tag)));
+  const keys = [...new Set([categoryKey(category.name), categoryKey(category.slug)].filter(Boolean))];
+  if (keys.length === 0) return false;
+  if (keys.includes(categoryKey(design.category))) return true;
+
+  // Tags are free text an operator types onto an image, so they rarely equal the
+  // category name: the live library tags 97 designs "little stranger logos" under
+  // the "Little Stranger" category, which an exact compare silently missed. Accept
+  // a tag that CONTAINS a category key, but only for keys long enough not to match
+  // everything ("art" must not swallow "cartoon").
+  const tagKeys = (design.tags ?? []).map(categoryKey).filter(Boolean);
+  return tagKeys.some((tagKey) =>
+    keys.some((key) => tagKey === key || (key.length >= 5 && tagKey.includes(key))),
+  );
 }
 
 /** Every design in the library that belongs to `category`. */

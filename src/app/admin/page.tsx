@@ -33,6 +33,7 @@ import {
   type SquareOrder,
 } from "@/components/admin/order-model";
 import type { ManagedCategory, DesignAsset } from "@/types";
+import { designAssetLabel } from "@/lib/design-assets";
 import { designMatchesCategory } from "@/lib/design-category";
 import PlaceholderImage from "@/components/ui/placeholder-image";
 import { DismissedTooltipsCount } from "@/components/ui/admin-tooltip";
@@ -1173,9 +1174,8 @@ function DashboardContent() {
                     />
                     <PlaceholderImage className="hidden h-full" />
                   </div>
-                  <p className="text-xs font-medium truncate">{d.name}</p>
+                  <p className="text-xs font-medium truncate">{designAssetLabel(d)}</p>
                   <p className="text-xs text-foreground/80 truncate">{d.category}</p>
-                  {d.description && <p className="text-[10px] text-foreground/70 truncate mt-0.5">{d.description}</p>}
                   {d.tags && d.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1 justify-center">
                       {d.tags.slice(0, 3).map((t) => (

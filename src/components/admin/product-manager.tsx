@@ -31,6 +31,7 @@ import { buildModifiersForProduct, type SquareModifierList } from "@/lib/square-
 import { useProductPhotos } from "@/hooks/useProductPhotos";
 import { applySetPatch, blankPhotoSets, filterPhotos, type BlankPhotoSet } from "@/lib/product-photos";
 import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS, type ProductPhotoView } from "@/types";
+import { designAssetLabel } from "@/lib/design-assets";
 import { designMatchesCategory } from "@/lib/design-category";
 import {
   describeBlankPlan,
@@ -3290,12 +3291,12 @@ export default function ProductManager({ categories }: Props) {
                     >
                       <Image
                         src={d.image_url}
-                        alt={d.name}
+                        alt={designAssetLabel(d)}
                         width={20}
                         height={20}
                         className="rounded object-cover shrink-0"
                       />
-                      <span className="truncate max-w-[120px]">{d.name}</span>
+                      <span className="truncate max-w-[120px]">{designAssetLabel(d)}</span>
                     </button>
                   );
                 })}

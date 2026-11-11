@@ -198,7 +198,15 @@ function ProductContent() {
   const colorImage = effectiveColor
     ? product?.mockupImagesByColor?.[effectiveColor]?.front
     : undefined;
-  const imageUrl = colorImage ?? product?.mockupImages?.front ?? getProductImageUrl(product);
+  // A selected modifier can carry its own background for this view — the
+  // "design already printed on the garment" case the admin builds under
+  // Modifier Images. It outranks the colour photo, exactly as in the customizer,
+  // so an assignment made there is visible here too.
+  const modifierImage = selectedModifiers
+    .map((m) => product?.mockupImagesByModifier?.[m.name]?.front)
+    .find((url) => Boolean(url));
+  const imageUrl =
+    modifierImage ?? colorImage ?? product?.mockupImages?.front ?? getProductImageUrl(product);
   // Gated by modifiers (Phase 3) or productAddons so the Name/Number field only
   // shows when a personalization/text input is enabled per product (undefined = site defaults).
   // A text modifier rendered inside its own group already has that input, so the
