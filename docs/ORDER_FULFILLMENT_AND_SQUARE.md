@@ -179,7 +179,7 @@ is appended to the first line when that line has no note (`index.ts:339-341`). S
 line-item notes; a long filename plus several modifier groups could cross it and fail the payment at
 the last step. Add a truncation guard and test a worst-case item.
 
-### F-10 · Add-ons and $0.00 modifiers become their own Square lines · `OPEN (cosmetic)`
+### F-10 · Add-ons and $0.00 modifiers become their own Square lines · `FIXED` (2026-11-11: $0 options folded into the line note)
 
 Every add-on — including a $0.00 colour/size modifier — is pushed as `Add-on: <label>`
 (`index.ts:295-302`). The admin and Square both show these as separate items, inflating item counts

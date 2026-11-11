@@ -3,7 +3,12 @@
 import { useCart } from "@/context/cart-context";
 
 export default function CartToast() {
-  const { lastAdded, dismissToast, itemCount } = useCart();
+  const { lastAdded, dismissToast, itemCount, setCartOpen } = useCart();
+
+  const viewCart = () => {
+    setCartOpen(true);
+    dismissToast();
+  };
 
   if (!lastAdded) return null;
 
@@ -45,9 +50,20 @@ export default function CartToast() {
           </svg>
         </button>
       </div>
-      <p className="text-xs text-foreground/80 text-right mt-1 mr-1">
-        {itemCount} item{itemCount !== 1 ? "s" : ""} in cart
-      </p>
+      {/* Outside the live region on purpose: a role="status" region must not
+          wrap a control, or a screen reader traps the user inside it each time
+          the announcement re-fires. */}
+      <div className="flex items-center justify-between mt-1 mr-1">
+        <button
+          onClick={viewCart}
+          className="text-xs font-semibold text-gold-deep underline underline-offset-2 hover:text-primary transition-colors"
+        >
+          View cart
+        </button>
+        <p className="text-xs text-foreground/80 text-right">
+          {itemCount} item{itemCount !== 1 ? "s" : ""} in cart
+        </p>
+      </div>
     </div>
   );
 }

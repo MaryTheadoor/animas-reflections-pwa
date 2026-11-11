@@ -48,7 +48,7 @@ The cart shows `Coffee Cup 15 oz / Price / $20.00` — the variant's placeholder
 leaks into the customer's view. Same root cause as the audit's placeholder-variant finding; worth
 suppressing a variant label when the catalog name is `Regular`/`Price`/`One Size`.
 
-### U-03 · Cart drawer has no "Continue shopping" · `P3`
+### U-03 · Cart drawer has no "Continue shopping" · `FIXED` (2026-11-11)
 
 It has close / −  + / Remove / Checkout. Acceptable, but every mainstream cart offers a continue link.
 
@@ -88,7 +88,7 @@ with email/password and Google. There is no customer sign-in page, no create-acc
 Where: `src/components/layout/nav-auth.tsx`. Action: a `/login` route branded for customers (or
 reused from `/account`), with password reset; keep `/admin/login` for staff.
 
-### U-08 · Mobile header shows 10 items above the fold · `P2`
+### U-08 · Mobile header shows 10 items above the fold · `FIXED` (2026-11-11: one row of five + More, 80px → 45px)
 
 Shop, Customizer, Cart, Our Story, Fundraising, FAQ, Contact, Search, Theme, Login wrap into two rows
 and consume ~200px of a 390px viewport before any content. Trim to the 4-5 that matter and move the

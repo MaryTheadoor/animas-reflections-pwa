@@ -76,7 +76,19 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {cart.items.length === 0 ? (
-            <p className="text-foreground text-center py-8">Your cart is empty</p>
+            <div className="text-center py-8">
+              <p className="text-foreground">Your cart is empty</p>
+              {/* Inside the panel so it joins the Tab trap; closing before the
+                  route change also restores focus to the button that opened
+                  the drawer. */}
+              <Link
+                href="/shop"
+                onClick={onClose}
+                className="inline-block mt-4 py-2 px-4 rounded-2xl border border-warm-sand text-sm font-semibold text-primary hover:border-primary/40 transition-colors"
+              >
+                Continue shopping
+              </Link>
+            </div>
           ) : (
             cart.items.map((item) => (
               <div key={item.id} className="flex gap-3 p-3 bg-warm-sand/50 rounded-xl">
@@ -164,6 +176,15 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               className="block w-full text-center py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors"
             >
               Checkout
+            </Link>
+            {/* Sits after Checkout in the Tab trap, so keyboard users still
+                reach the primary action first. */}
+            <Link
+              href="/shop"
+              onClick={onClose}
+              className="block w-full text-center py-2 text-sm text-foreground hover:text-gold-deep transition-colors"
+            >
+              Continue shopping
             </Link>
           </div>
         )}

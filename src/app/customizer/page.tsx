@@ -10,6 +10,9 @@ import { useCart } from "@/context/cart-context";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import Customizer, { type DesignState, defaultDesignPosition } from "@/components/customizer/customizer";
 import FileUpload from "@/components/customizer/file-upload";
+import ProductPicker from "@/components/customizer/product-picker";
+import CustomizerCartButton from "@/components/customizer/customizer-cart-button";
+import { designAssetLabel, filterDesignAssets } from "@/lib/design-assets";
 import { SITE_NAME } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import type { AddonType, DesignAsset, ManagedProduct, ManagedVariant, ModifierInput, PrintZone, PrintZoneTemplate, ProductAddon, ProductModifier } from "@/types";
@@ -142,7 +145,7 @@ function CustomizerContent() {
   const { addItem } = useCart();
   const siteConfig = useSiteConfig();
   const addonPrice = siteConfig.addon_price;
-  const { products: catalogProducts, loading: catalogLoading } = useCatalog();
+  const { products: catalogProducts, categories: catalogCategories, loading: catalogLoading } = useCatalog();
 
   const [selectedProduct, setSelectedProduct] = useState<ManagedProduct | null>(null);
   const [variantIndex, setVariantIndex] = useState(0);
@@ -197,6 +200,9 @@ function CustomizerContent() {
       : `+$${mod.price.toFixed(2)}`;
   const [designLibrary, setDesignLibrary] = useState<DesignAsset[]>([]);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  // 98 thumbnails in one scroll column is unnavigable, and 97 of them used to
+  // share one label — a plain text filter is what makes the list usable.
+  const [libraryQuery, setLibraryQuery] = useState("");
 
   // Per-product designs from product.designAssets
   const productDesigns = selectedProduct?.designAssets ?? [];
@@ -425,9 +431,6 @@ function CustomizerContent() {
       }, 0);
   const totalPrice = (variantPrice ?? 0) + addonsCost;
 
-  // Sort catalog products for dropdown
-  const sortedCatalog = [...catalogProducts].sort((a, b) => a.name.localeCompare(b.name));
-
   return (
     <div className="flex flex-col flex-1">
       {/* Header */}
@@ -446,12 +449,18 @@ function CustomizerContent() {
               {SITE_NAME}
             </span>
           </Link>
-          <Link
-            href="/shop"
-            className="text-sm font-medium hover:text-gold-deep transition-colors"
-          >
-            Back to Shop
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/shop"
+              className="text-sm font-medium hover:text-gold-deep transition-colors"
+            >
+              Back to Shop
+            </Link>
+            {/* This header replaces the site nav, so it must carry the cart
+                too — otherwise the drawer is unreachable once something is in
+                the cart. */}
+            <CustomizerCartButton />
+          </div>
         </nav>
       </header>
 
@@ -492,24 +501,15 @@ function CustomizerContent() {
                 </div>
               ) : (
                 <>
-                  <select
-                    value={selectedProduct?.id ?? ""}
-                    onChange={(e) => handleProductSelect(e.target.value)}
-                    className="w-full p-2.5 border border-primary/20 rounded-xl bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
-                  >
-                    <option value="">Select a product...</option>
-                    {sortedCatalog.map((p) => {
-                      // Dropdown label must not promise a $0.00 price the cart
-                      // can't actually charge — unpriced variants are not
-                      // orderable online.
-                      const from = getProductPrice(p, 0);
-                      return (
-                        <option key={p.id} value={p.id}>
-                          {p.name} — {from === undefined ? "contact us for pricing" : `from $${from.toFixed(2)}`}
-                        </option>
-                      );
-                    })}
-                  </select>
+                  {/* 235-option native <select> replaced: searchable, grouped by
+                      product type, and free of the unpriced $0.00 rows. */}
+                  <ProductPicker
+                    products={catalogProducts}
+                    categories={catalogCategories}
+                    selectedProductId={selectedProduct?.id ?? ""}
+                    selectedLabel={selectedProduct?.name ?? ""}
+                    onSelect={handleProductSelect}
+                  />
 
                   {/* Variation Picker */}
                   {selectedProduct && (selectedProduct.variants ?? []).length > 1 && (
@@ -602,82 +602,107 @@ function CustomizerContent() {
                 </button>
 
                 {libraryOpen && (
-                  <div className="mt-3 max-h-64 overflow-y-auto space-y-2">
-                    {/* Per-product designs */}
-                    {productDesigns.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider mb-1 px-1">Product Designs</p>
-                        <div className="space-y-1">
-                          {productDesigns.map((asset) => (
-                            <button
-                              key={asset.id}
-                              onClick={() => handleSelectDesign(asset)}
-                              className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
-                                designUrl === asset.image_url
-                                  ? "bg-gold/10 border border-gold/30"
-                                  : "hover:bg-warm-sand/50 border border-transparent"
-                              }`}
-                            >
-                              <Image
-                                src={asset.image_url}
-                                alt={asset.name}
-                                width={36}
-                                height={36}
-                                className="rounded-lg object-cover shrink-0"
-                              />
-                              <p className="text-xs font-medium truncate">{asset.name}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {/* Global design library — exclude designs already shown above */}
-                    {(() => {
-                      const pinnedIds = new Set(productDesigns.map((d) => d.id));
-                      const filteredLibrary = designLibrary.filter((d) => !pinnedIds.has(d.id));
-                      if (filteredLibrary.length === 0 && productDesigns.length === 0) {
+                  <div className="mt-3">
+                    <label htmlFor="design-library-filter" className="sr-only">
+                      Filter designs
+                    </label>
+                    <input
+                      id="design-library-filter"
+                      type="text"
+                      value={libraryQuery}
+                      onChange={(e) => setLibraryQuery(e.target.value)}
+                      placeholder="Filter designs…"
+                      className="w-full mb-2 px-3 py-2 rounded-xl border border-primary/20 bg-white text-sm focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+                    />
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {(() => {
+                        const pinnedIds = new Set(productDesigns.map((d) => d.id));
+                        const unpinned = designLibrary.filter((d) => !pinnedIds.has(d.id));
+                        if (productDesigns.length === 0 && unpinned.length === 0) {
+                          return (
+                            <p className="text-xs text-foreground/70 text-center py-4">
+                              No designs available. Upload designs in the Admin Dashboard.
+                            </p>
+                          );
+                        }
+                        // 97 of 123 designs share one `name`; `description` is
+                        // what tells them apart, so it labels and alts the tile.
+                        const matchingPinned = filterDesignAssets(productDesigns, libraryQuery);
+                        const matchingLibrary = filterDesignAssets(unpinned, libraryQuery);
+                        if (matchingPinned.length === 0 && matchingLibrary.length === 0) {
+                          return (
+                            <p className="text-xs text-foreground/70 text-center py-4">
+                              No designs match &quot;{libraryQuery.trim()}&quot;.
+                            </p>
+                          );
+                        }
                         return (
-                          <p className="text-xs text-foreground/70 text-center py-4">
-                            No designs available. Upload designs in the Admin Dashboard.
-                          </p>
-                        );
-                      }
-                      if (filteredLibrary.length === 0) return null;
-                      return (
-                        <div>
-                          {productDesigns.length > 0 && (
-                            <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider mb-1 px-1 mt-2">All Designs</p>
-                          )}
-                          <div className="space-y-1">
-                            {filteredLibrary.map((asset) => (
-                              <button
-                                key={asset.id}
-                                onClick={() => handleSelectDesign(asset)}
-                                className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
-                                  designUrl === asset.image_url
-                                    ? "bg-gold/10 border border-gold/30"
-                                    : "hover:bg-warm-sand/50 border border-transparent"
-                                }`}
-                              >
-                                <Image
-                                  src={asset.image_url}
-                                  alt={asset.name}
-                                  width={36}
-                                  height={36}
-                                  className="rounded-lg object-cover shrink-0"
-                                />
-                                <div className="min-w-0">
-                                  <p className="text-xs font-medium truncate">{asset.name}</p>
-                                  <p className="text-[10px] text-foreground/80 truncate">
-                                    {asset.category}
-                                  </p>
+                          <>
+                            {matchingPinned.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider mb-1 px-1">Product Designs</p>
+                                <div className="space-y-1">
+                                  {matchingPinned.map((asset) => (
+                                    <button
+                                      key={asset.id}
+                                      onClick={() => handleSelectDesign(asset)}
+                                      className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
+                                        designUrl === asset.image_url
+                                          ? "bg-gold/10 border border-gold/30"
+                                          : "hover:bg-warm-sand/50 border border-transparent"
+                                      }`}
+                                    >
+                                      <Image
+                                        src={asset.image_url}
+                                        alt={designAssetLabel(asset)}
+                                        width={36}
+                                        height={36}
+                                        className="rounded-lg object-cover shrink-0"
+                                      />
+                                      <p className="text-xs font-medium truncate">{designAssetLabel(asset)}</p>
+                                    </button>
+                                  ))}
                                 </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                              </div>
+                            )}
+                            {matchingLibrary.length > 0 && (
+                              <div>
+                                {productDesigns.length > 0 && (
+                                  <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider mb-1 px-1 mt-2">All Designs</p>
+                                )}
+                                <div className="space-y-1">
+                                  {matchingLibrary.map((asset) => (
+                                    <button
+                                      key={asset.id}
+                                      onClick={() => handleSelectDesign(asset)}
+                                      className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
+                                        designUrl === asset.image_url
+                                          ? "bg-gold/10 border border-gold/30"
+                                          : "hover:bg-warm-sand/50 border border-transparent"
+                                      }`}
+                                    >
+                                      <Image
+                                        src={asset.image_url}
+                                        alt={designAssetLabel(asset)}
+                                        width={36}
+                                        height={36}
+                                        className="rounded-lg object-cover shrink-0"
+                                      />
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-medium truncate">{designAssetLabel(asset)}</p>
+                                        <p className="text-[10px] text-foreground/80 truncate">
+                                          {asset.category}
+                                        </p>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 )}
               </div>
@@ -796,7 +821,13 @@ function CustomizerContent() {
                 <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand">
                   <span>Total</span>
                   <span className="text-gold-deep">
-                    {variantPrice === undefined ? "Contact us" : `$${totalPrice.toFixed(2)}`}
+                    {/* "Contact us" only means something once a product is
+                        chosen; before that there is nothing to total. */}
+                    {variantPrice !== undefined
+                      ? `$${totalPrice.toFixed(2)}`
+                      : selectedProduct
+                        ? "Contact us"
+                        : "—"}
                   </span>
                 </div>
               </div>
@@ -805,9 +836,14 @@ function CustomizerContent() {
                 disabled={!selectedProduct || variantPrice === undefined || (!designUrl && !designText)}
                 className="mt-4 w-full py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {variantPrice === undefined
-                  ? "Contact us to order"
-                  : `Add to Cart — $${totalPrice.toFixed(2)}`}
+                {/* No price is quoted until there is a product to price: the
+                    button used to read "Add to Cart — $20.00" while the picker
+                    still said "Select a product...". */}
+                {!selectedProduct
+                  ? "Add to Cart"
+                  : variantPrice === undefined
+                    ? "Contact us to order"
+                    : `Add to Cart — $${totalPrice.toFixed(2)}`}
               </button>
               {!selectedProduct && (
                 <p className="text-xs text-amber-500 text-center mt-2">

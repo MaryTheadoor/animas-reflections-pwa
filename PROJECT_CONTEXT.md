@@ -176,7 +176,7 @@
 2. ~~**Square items have NO categoryId**~~ — OBSOLETE: sync removed. Firestore is the master catalog.
 3. ~~**ecom_visibility filter**~~ — OBSOLETE: sync removed.
 4. **Nav dock stability:** DO NOT use position:fixed on nav-dock directly. Use a SINGLE fixed wrapper div containing both announcement banner and nav-dock. The nav-dock itself should NOT be position:fixed — let the parent wrapper handle positioning.
-5. **Mobile nav:** Use CSS Grid `grid-template-columns: repeat(4, 1fr)` for 2-row layout on mobile. Desktop: centered pill with `max-width: fit-content; margin: 0 auto`.
+5. **Mobile nav is ONE row (2026-11-11):** `grid-template-columns: repeat(6, minmax(0, 1fr))` — five primary slots (Home, Shop, Cart, Search, Login) plus a **More** disclosure holding the rest. The old 10-item two-row dock ate ~136px of a 390px viewport. The More panel is absolutely positioned INSIDE the single fixed wrapper, so opening it must never change `--header-height`; real CSS `@media (min-width:768px)` hides it on desktop (Tailwind `md:hidden` loses to the unlayered `.nav-dock-link` rule). Desktop stays a centered pill.
 6. **Hero overlap:** Add `pt-12 sm:pt-16` to hero section to push content below fixed header.
 7. **Synthetic data:** Currently USE_SYNTHETIC=false. Products load from Firestore (manual admin-built catalog — Square sync de-prioritized).
 8. **Images:** Product images uploaded via Admin (not just Square). All fallbacks use PlaceholderImage / initial-letter placeholder.

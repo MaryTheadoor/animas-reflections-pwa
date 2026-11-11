@@ -195,7 +195,7 @@ names collide; quarantine the 297-variant product from the shop entirely.
 
 ## P2 — customizer
 
-### AR-08 · No cart access anywhere on `/customizer/` · `OPEN`
+### AR-08 · No cart access anywhere on `/customizer/` · `FIXED` (2026-11-11)
 
 The page renders a standalone header (`Animas Reflections` + `Back to Shop`): no site nav, no cart
 button (verified: 0 cart controls in the DOM). The add-to-cart toast
@@ -205,7 +205,7 @@ the only route to checkout is Back to Shop → Cart.
 Action: add a cart button with the item count to the customizer header, and a "View cart" action in
 the toast.
 
-### AR-09 · The design library shows 97 tiles all labelled "Little Stranger Logos" · `OPEN`
+### AR-09 · The design library shows 97 tiles all labelled "Little Stranger Logos" · `FIXED` (2026-11-11)
 
 Live on `502de0c`: 97 tiles, one distinct label. In Firestore, 97 of 123 design docs share
 `name: "Little Stranger Logos"`; the distinguishing text is in `description` ("Shrooming Stranger",
@@ -217,7 +217,7 @@ render `asset.name`.
 Action: label with `description || name` (and use the same string for `alt`). Consider grouping by
 `category` and adding a filter — 98 thumbnails in one scroll column is a lot.
 
-### AR-10 · The product picker is one ungrouped native `<select>` with 235 options · `OPEN`
+### AR-10 · The product picker is one ungrouped native `<select>` with 235 options · `FIXED` (2026-11-11)
 
 235 options including `$0.00` products and duplicate names; no search, no grouping by product type or
 category.
@@ -226,7 +226,7 @@ Where: `src/app/customizer/page.tsx:495-500`
 
 Action: searchable combobox grouped by `productType` (or category), excluding unpriced products.
 
-### AR-11 · The add button quotes a price before a product is chosen · `OPEN`
+### AR-11 · The add button quotes a price before a product is chosen · `FIXED` (2026-11-11)
 
 It reads "Add to Cart — $20.00" with `Select a product...` selected. The button is correctly disabled,
 so this is a labelling bug, not a money bug.

@@ -290,22 +290,33 @@ export const createSquareOrderAndPay = onCall(
       const squareLineItems: Record<string, unknown>[] = [];
       let allAdHoc = true;
       for (const line of totals.lines) {
+        // A $0.00 modifier (size, colour) is an OPTION, not a product: keep it out
+        // of the Square line list and put it in the parent line's note, so the
+        // picking list shows the garment the customer actually bought.
+        const freeOptions = line.addons.filter((a) => a.perUnitCents <= 0).map((a) => a.label);
+        const lineNote = clampNote(
+          [line.note, freeOptions.length ? `Options: ${freeOptions.join(", ")}` : ""]
+            .filter(Boolean)
+            .join(" | "),
+        );
         if (line.catalogPath && line.squareVariationId) {
           allAdHoc = false;
           squareLineItems.push({
             quantity: String(line.quantity),
             catalogObjectId: line.squareVariationId,
-            ...(line.note ? { note: clampNote(line.note) } : {}),
+            ...(lineNote ? { note: lineNote } : {}),
           });
         } else {
           squareLineItems.push({
             quantity: String(line.quantity),
             name: line.name,
             basePriceMoney: { amount: BigInt(line.baseCents), currency: "USD" },
-            ...(line.note ? { note: clampNote(line.note) } : {}),
+            ...(lineNote ? { note: lineNote } : {}),
           });
         }
         for (const addon of line.addons) {
+          // $0.00 options were folded into the note above.
+          if (addon.perUnitCents <= 0) continue;
           squareLineItems.push({
             quantity: String(line.quantity),
             name: `Add-on: ${addon.label}`,

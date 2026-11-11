@@ -218,7 +218,11 @@ html.dark .nav-dock-theme {
   border-bottom: 1px solid rgba(240, 235, 227, 0.8);
   padding: 4px 4px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* Six equal slots below 768px = one row: Home, Shop, Cart, Search, Account,
+     More. Anything beyond those five sits in the More panel (.nav-more-panel).
+     At 390px each slot is ~65px, which is why the dock labels stay at 0.55rem
+     and the auth pill is shrunk by the media query further down. */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   justify-items: center;
   align-items: center;
   row-gap: 0px;
@@ -284,6 +288,102 @@ html.dark .nav-dock-theme {
 }
 html.dark .nav-dock-theme {
   border-left-color: rgba(132, 0, 255, 0.25);
+}
+
+/* The auth link ships its own pill styling (nav-auth.tsx); at six slots on a
+   390px viewport it has to shrink to stay inside its ~65px column. */
+@media (max-width: 767.98px) {
+  .nav-dock-auth a {
+    padding: 3px 6px;
+    border-radius: 10px;
+    font-size: 0.55rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+}
+
+/* Mobile "More" disclosure. Sits inside the single fixed wrapper, absolutely
+   positioned under the dock, so opening it never changes the wrapper's height
+   (and therefore never changes --header-height or the page padding from it). */
+.nav-more-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 10px 10px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(240, 235, 227, 0.8);
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.12);
+}
+
+/* Panel cells. The theme toggle keeps its .nav-dock-link/.nav-dock-theme
+   classes (shared component), so it is normalised to the same row layout as
+   the plain text links beside it. */
+.nav-more-link,
+.nav-more-panel .nav-dock-link {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 9px 4px;
+  border-radius: 12px;
+  background: rgba(240, 235, 227, 0.55);
+  color: var(--color-foreground);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  opacity: 1;
+}
+.nav-more-link:hover,
+.nav-more-panel .nav-dock-link:hover {
+  background: rgba(217, 119, 6, 0.12);
+}
+.nav-more-link.active {
+  color: var(--color-gold-deep);
+  background: rgba(217, 119, 6, 0.12);
+}
+.nav-more-panel .nav-dock-theme {
+  border-left: 0;
+  margin-left: 0;
+  padding-left: 4px;
+}
+html.dark .nav-more-panel {
+  background: rgba(30, 41, 59, 0.97);
+  border-bottom-color: rgba(100, 116, 139, 0.25);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+html.dark .nav-more-link,
+html.dark .nav-more-panel .nav-dock-link {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--color-foreground);
+}
+html.dark .nav-more-link:hover,
+html.dark .nav-more-panel .nav-dock-link:hover,
+html.dark .nav-more-link.active {
+  background: rgba(217, 119, 6, 0.2);
+}
+html.dark .nav-more-link.active {
+  color: var(--color-gold-deep);
+}
+
+/* Hide the disclosure from the desktop pill. This cannot be a Tailwind
+   `md:hidden` utility: `.nav-dock-link` and `.nav-more-panel` below are
+   unlayered rules, and unlayered CSS outranks the utilities layer whatever the
+   specificity — `md:hidden` loses and the button stayed visible at 1280px. */
+@media (min-width: 768px) {
+  .nav-dock .nav-more-toggle,
+  .nav-more-panel {
+    display: none;
+  }
 }
 
 .has-announcement .nav-dock {
