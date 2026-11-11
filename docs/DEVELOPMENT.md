@@ -5,7 +5,7 @@
 | Command | Purpose |
 |---------|---------|
 | `npm run dev` | Next.js dev server (hot reload) |
-| `npm run build` | Static export → `out/` (25 pages). Needs **Node 22** — see below |
+| `npm run build` | Static export → `out/` (26 pages). Needs **Node 22** — see below |
 | `npm run lint` | ESLint (0 errors required before deploy) |
 | `npm run emulators` | Firebase emulators (Firestore + Functions) |
 | `npm run deploy` | Deploy all (functions + hosting + rules) |
@@ -34,8 +34,8 @@ The durable fix is `winget install OpenJS.NodeJS.LTS`.
 1. `npm run lint` — 0 errors
 2. `npx tsc --noEmit` — 0 errors (a running `npm run dev` can make this fail on its own generated
    `.next/dev/types/validator.ts`; stop the server first — Known Issue #55)
-3. `npm test` — 328 tests, 22 suites, all passing
-4. `npm run build` — 25 pages, and the SEO gate (`check-seo`) runs automatically afterwards
+3. `npm test` — 380 tests, 25 suites, all passing
+4. `npm run build` — 26 pages, and the SEO gate (`check-seo`) runs automatically afterwards
 5. `cd functions && npm run build` — must compile clean
 6. `firebase deploy --only firestore:rules,storage` **first** if any rules changed, then
    `firebase deploy --only hosting` (or `firebase deploy` for everything)
@@ -59,7 +59,7 @@ was deleted after verifying every commit on it was an ancestor of `development`.
 hazard — two branches that both looked authoritative is how the two lines of work split in the first place.
 Do not recreate a second "main" branch.
 
-**Flow:** work on `development` → verify (lint 0, tsc clean, tests pass, build 25 pages, live UI check) → push →
+**Flow:** work on `development` → verify (lint 0, tsc clean, tests pass, build 26 pages, live UI check) → push →
 `firebase deploy --only firestore:rules,storage` if rules changed, then hosting.
 
 **Rollback options (most to least granular):**
@@ -111,7 +111,7 @@ Note: GitHub branch *protection rules* require a Pro plan on private repos — r
 
 ## Build Output
 
-Static export generates 25 pages to `out/`:
+Static export generates 26 pages to `out/`:
 ```
 /  /about  /account  /shop  /product  /customizer  /checkout
 /admin  /admin/login  /contact  /custom  /terms

@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useRef, type ReactNode 
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
+  sendPasswordResetEmail,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
@@ -21,6 +22,7 @@ interface AuthContextValue {
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -132,12 +134,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Customer "forgot password". Same account store as the admin console, so the
+  // reset email works for shoppers and staff alike.
+  const sendPasswordReset = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, login, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, login, loginWithGoogle, sendPasswordReset, logout }}>
       {children}
     </AuthContext.Provider>
   );

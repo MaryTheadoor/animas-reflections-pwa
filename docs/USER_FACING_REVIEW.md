@@ -13,7 +13,7 @@ and are reachable only from the homepage.
 
 ## 1. Purchase path — the functional gaps that cost sales
 
-### U-01 · Product pages have no size or colour selection · `P1`
+### U-01 · Product pages have no size or colour selection · `FIXED` (2026-11-11)
 
 157 of 234 active products carry Square modifier groups (`Adult Size`, colour, etc.). The product page
 renders **none of them**. The section is even labelled "Style / Size" but contains five identical
@@ -42,7 +42,7 @@ consumed by the customizer (`src/app/customizer/page.tsx`).
 Action: render modifier groups on the PDP — single-select for `Adult Size`, multi-select for add-ons —
 and pass them through as the customizer already does. This is the single highest-impact storefront fix.
 
-### U-02 · Cart line reads "Price" instead of a variant · `P2`
+### U-02 · Cart line reads "Price" instead of a variant · `FIXED` (2026-11-11)
 
 The cart shows `Coffee Cup 15 oz / Price / $20.00` — the variant's placeholder name from the catalog
 leaks into the customer's view. Same root cause as the audit's placeholder-variant finding; worth
@@ -52,7 +52,7 @@ suppressing a variant label when the catalog name is `Regular`/`Price`/`One Size
 
 It has close / −  + / Remove / Checkout. Acceptable, but every mainstream cart offers a continue link.
 
-### U-04 · Checkout has no terms acknowledgement and no legal links · `P1`
+### U-04 · Checkout has no terms acknowledgement and no legal links · `FIXED` (2026-11-11)
 
 No `terms`/`privacy` string appears anywhere in `src/app/checkout/page.tsx`, and the checkout page has
 no footer. A shopper pays without ever seeing the terms of sale, and there is no "I agree" line to
@@ -60,7 +60,7 @@ point at if a dispute arises. Add a short consent line with links under the Pay 
 
 ## 2. Site chrome — missing footer and no way home
 
-### U-05 · No footer on any page except the homepage · `P1`
+### U-05 · No footer on any page except the homepage · `FIXED` (2026-11-11, except /checkout and /customizer)
 
 `<footer>` count per route: home **1**, every other route **0**. The footer carries the return policy,
 payment methods, social link and the only Terms/Privacy links in the site — so 13 of 14 pages have no
@@ -69,7 +69,7 @@ legal, policy, or contact affordance at all.
 Where: the footer is inlined in `src/app/(home)/page.tsx:118`, not in `PageLayout`
 (`src/components/layout/page-layout.tsx`). Moving it into the layout fixes the whole site at once.
 
-### U-06 · There is no link to the homepage · `P1`
+### U-06 · There is no link to the homepage · `FIXED` (2026-11-11)
 
 `homeLinks: []` on `/shop/`. The nav's first slot is commented `{/* Home */}` and defaults to `/`, but
 it renders `c.navigation.primary[0]` — which is now `{ label: "Shop", href: "/shop" }`. The intended
@@ -79,7 +79,7 @@ Home entry disappeared when the nav data changed, and no logo link replaced it. 
 Where: `src/components/layout/header-bar.tsx:78-87`. Fix: hard-code the home slot to `/`, move the
 label to `Home` (or make it a logo link), and re-map the following slots.
 
-### U-07 · "Login" sends customers to the admin console · `P1`
+### U-07 · "Login" sends customers to the admin console · `FIXED` (2026-11-11: /login)
 
 The header's Login link is `/admin/login/`, which renders **"Admin Login — Animas Reflections CMS"**
 with email/password and Google. There is no customer sign-in page, no create-account path, no
@@ -209,3 +209,23 @@ and no route overflows horizontally at 390px.
 4. **U-07 customer login** with password reset; stop sending shoppers to the admin console.
 5. **U-04 terms line at checkout**; **U-16 decide the canonical host** before any SEO work.
 6. Content pass (U-15), then the P2/P3 polish.
+
+---
+
+## 9. Fix pass — 2026-11-11 (deployed)
+
+| Item | What changed |
+| --- | --- |
+| U-01 | **Product pages render modifier groups.** `src/lib/modifier-selection.ts` decides when modifiers carry the choice (`hasGenericVariants`: all variant names in Regular/Price/One Size/Default/blank). When they do, the PDP renders one fieldset per `modifier.group` with toggle chips (+ text inputs; file modifiers link to the customizer), prices them with `resolveAddonPrice`, and puts them in `addons`, `selectedOptions` and `modifierInputs` exactly as the customizer does. Verified on the live catalog: the Bella+Canvas tee went from five identical "Regular $40" buttons to 7 groups, XXL +$3 → $43.00; products with real variants (`3 Inch / 4 Inch`) keep the picker. 157 active products carry modifiers; 154 take the new path. |
+| U-02 | Placeholder variant names suppressed in the cart drawer **and** the Square line name (`isPlaceholderVariantName`). |
+| U-04 | Checkout carries a consent line under Pay with links to Terms, Privacy and Contact. |
+| U-05 | The footer moved into `PageLayout`, so every route that uses it has one (26-page export verified). `/checkout` and `/customizer` keep their own minimal chrome. |
+| U-06 | Home is the first nav slot, hard-coded, with any CMS `/` entry filtered out so it cannot duplicate. |
+| U-07 | New `/login/` customer page (email/password, Google, forgot-password via `sendPasswordReset`), `noindex`, nav Login points at it; `/admin/login` stays staff-only. |
+
+Deployed: hosting at 2026-11-11. Gate: tsc 0 · lint 0 · **380 tests / 25 suites** · 26-page build,
+`check-seo: OK — 26 pages, 16 sitemap URLs`.
+
+Still open: U-03, U-08–U-16 (content, policy and SEO items — U-09's three return policies, U-10's
+missing Shipping/Returns pages, U-11's address, U-12's stale Terms and U-16's canonical pointing at a
+domain that does not serve the site yet are all **client content decisions**, not code).

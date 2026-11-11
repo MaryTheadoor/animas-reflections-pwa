@@ -178,6 +178,13 @@ export const PAGE_SEO: readonly PageSeo[] = [
   // ── Utility routes: real pages, but nothing a search engine should index ──
   { path: "/search/", title: "Search", description: "Search the Animas Reflections catalog.", indexable: false },
   { path: "/checkout/", title: "Checkout", description: "Complete your Animas Reflections order.", indexable: false },
+  {
+    path: "/login/",
+    title: "Sign In",
+    description:
+      "Sign in to your Animas Reflections account to see your orders, saved addresses and profile, or reset your password.",
+    indexable: false,
+  },
   { path: "/account/", title: "Your Account", description: "Your Animas Reflections orders, addresses and profile.", indexable: false },
   { path: "/order-confirmation/", title: "Order Confirmed", description: "Your Animas Reflections order confirmation.", indexable: false },
   { path: "/admin/", title: "Admin", description: "Animas Reflections administration.", indexable: false },

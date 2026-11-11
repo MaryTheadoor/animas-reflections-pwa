@@ -12,6 +12,7 @@ import { SQUARE_APP_ID, SQUARE_LOCATION_ID } from "@/lib/constants";
 import { resolveAddonPrice } from "@/types";
 import type { CustomerField } from "@/types";
 import { useSiteConfig, useSiteConfigLoading } from "@/hooks/useSiteConfig";
+import { isPlaceholderVariantName } from "@/lib/modifier-selection";
 
 // Square SDK is loaded once per page lifecycle. The module-level flag prevents
 // re-initialization on React re-renders, but the useEffect cleanup resets it on
@@ -166,7 +167,9 @@ export default function CheckoutPage() {
         product_id: item.product_id,
         variant_id: item.variant_id,
         squareVariationId: item.squareVariationId,
-        name: `${item.name} — ${item.variant_name}`,
+        name: isPlaceholderVariantName(item.variant_name)
+          ? item.name
+          : `${item.name} — ${item.variant_name}`,
         price: item.base_price,
         quantity: item.quantity,
         designUrl: item.design_url,
@@ -360,6 +363,21 @@ export default function CheckoutPage() {
           {processing ? "Processing..." : `Pay $${total.toFixed(2)}`}
         </button>
         {!customerValid && <p className="text-xs text-foreground/80 text-center mt-2">Fill in all required fields (*) to continue</p>}
+        <p className="text-xs text-foreground/80 text-center mt-3">
+          By placing this order you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-gold-deep transition-colors">
+            Terms of Sale
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline hover:text-gold-deep transition-colors">
+            Privacy Policy
+          </Link>
+          . Questions?{" "}
+          <Link href="/contact" className="underline hover:text-gold-deep transition-colors">
+            Contact us
+          </Link>
+          .
+        </p>
         <p className="text-xs text-foreground/80 text-center mt-4">Secured by Square. We accept Visa, Mastercard, Amex, Discover, JCB, Apple Pay, Google Pay, and Cash App.</p>
       </main>
     </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useCart, MAX_LINE_QUANTITY } from "@/context/cart-context";
 import { resolveAddonPrice } from "@/types";
+import { isPlaceholderVariantName } from "@/lib/modifier-selection";
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { cart, removeItem, updateQuantity, subtotal, addonsTotal, shipping, total } = useCart();
@@ -81,7 +82,10 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               <div key={item.id} className="flex gap-3 p-3 bg-warm-sand/50 rounded-xl">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-sm truncate">{item.name}</h3>
-                  {item.variant_name && (
+                  {/* The catalog's placeholder variant names ("Regular", "Price",
+                      "One Size") are not a customer-facing option, so a coffee cup
+                      no longer reads "Coffee Cup 15 oz / Price". */}
+                  {item.variant_name && !isPlaceholderVariantName(item.variant_name) && (
                     <p className="text-xs text-foreground/80">{item.variant_name}</p>
                   )}
                   {item.selected_color && (
@@ -97,11 +101,13 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                       +{a.label} (${resolveAddonPrice(a, item.base_price).toFixed(2)})
                     </span>
                   ))}
-                  {item.modifierInputs?.map((m) => (
-                    <p key={m.modifierId} className="text-xs text-foreground/80 mt-1">
-                      {m.modifierName}: {m.value ?? ""}
-                    </p>
-                  ))}
+                  {item.modifierInputs
+                    ?.filter((m) => !item.selectedOptions?.some((o) => o.optionId === m.modifierId))
+                    .map((m) => (
+                      <p key={m.modifierId} className="text-xs text-foreground/80 mt-1">
+                        {m.modifierName}: {m.value ?? ""}
+                      </p>
+                    ))}
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="font-semibold text-sm">${(item.base_price * item.quantity).toFixed(2)}</span>

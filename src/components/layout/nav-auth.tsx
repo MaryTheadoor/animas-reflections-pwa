@@ -22,8 +22,9 @@ export default function NavAuth() {
     );
   }
 
+  // Shoppers sign in at /login; /admin/login is for staff only.
   return (
-    <Link href="/admin/login" className="px-3 py-1.5 rounded-xl border border-primary/20 text-primary text-xs hover:border-primary/40 transition-colors">
+    <Link href="/login" className="px-3 py-1.5 rounded-xl border border-primary/20 text-primary text-xs hover:border-primary/40 transition-colors">
       Login
     </Link>
   );

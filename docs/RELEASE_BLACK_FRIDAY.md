@@ -5,8 +5,8 @@ Goal: a site that takes real money, fulfils orders, and does not fall over on Bl
 before launch — no Zustand, no XState, no Fabric/Konva, no Medusa. Those are post-launch work.
 
 Code state at the start of this plan: `development` has 45 uncommitted changed files (security,
-pricing, admin durability, storefront fixes), gate green (lint 0, tsc 0, 328 tests / 22 suites,
-25-page build, SEO gate OK, functions compile clean). Live site is running `e6850d9` (2026-10-16).
+pricing, admin durability, storefront fixes), gate green (lint 0, tsc 0, 380 tests / 25 suites,
+26-page build, SEO gate OK, functions compile clean). Live site runs the 2026-11-11 releases (`4becced` + the user-facing pass) — verify with the bundle hash before trusting any claim in these docs.
 
 ---
 
@@ -30,7 +30,7 @@ pricing, admin durability, storefront fixes), gate green (lint 0, tsc 0, 328 tes
 - [x] Tax-aware order verification; Square buyer email on payments; checkout discloses that tax is added by Square
 - [x] Checkout blocks Pay until `config/site` resolves — paying against fallback shipping rates (stickers $3 vs live $1) would make `expectedTotal` diverge and the server would refuse the order
 - [x] `npm run verify`, `npm run build`, `cd functions && npm run build` — all green
-      (lint 0 · tsc 0 · **328 tests / 22 suites** · 25-page build, SEO gate OK · functions compile clean)
+      (lint 0 · tsc 0 · **380 tests / 25 suites** · 26-page build, SEO gate OK · functions compile clean)
 - [ ] Commit the change set on `development` and tag `rc-blackfriday-1` (owner: me, needs your go-ahead)
 - [ ] Client: fix the 9 unpriced active products (set a price or deactivate) — list in §5
 - [ ] Client: restock or accept the 10 zero-inventory items (§5)
@@ -44,7 +44,7 @@ Order matters — functions and rules before hosting.
 ```bash
 firebase deploy --only firestore:rules,storage     # storage.rules changed (upload caps)
 firebase deploy --only functions                    # pricing, auth, tax, inventory
-firebase deploy --only hosting                      # the 25-page static export
+firebase deploy --only hosting                      # the 26-page static export
 ```
 
 **Deployed:** commit `502de0c` (tag `rc-blackfriday-1`), pushed to `origin/development`.

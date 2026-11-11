@@ -10,6 +10,15 @@ import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { sanitizeHTML, stripTags } from "@/lib/html-utils";
 import { useCart } from "@/context/cart-context";
 import type { CartAddon, DesignAsset } from "@/types";
+import {
+  buildModifierAddons,
+  captureModifierInputs,
+  formatModifierDelta,
+  groupModifiers,
+  hasGenericVariants,
+  modifierSelectedOptions,
+  modifierTotal,
+} from "@/lib/modifier-selection";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
 
@@ -85,6 +94,10 @@ function ProductContent() {
   const [descExpanded, setDescExpanded] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>();
   const [selectedDesign, setSelectedDesign] = useState<DesignAsset | null>(null);
+  // Modifier choices (sizes, colours, add-ons) for products whose variants are
+  // placeholders — see usesModifierGroups below.
+  const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>([]);
+  const [modifierInputs, setModifierInputs] = useState<Record<string, string>>({});
 
   // /product?id=A → /product?id=B keeps the same component instance, so all
   // per-product selection state must reset when the product changes. Without
@@ -96,6 +109,8 @@ function ProductContent() {
     setSelectedColor(undefined);
     setSelectedDesign(null);
     setCustomText("");
+    setSelectedModifierIds([]);
+    setModifierInputs({});
   }, [productId]);
 
   const variants = product?.variants ?? [];
@@ -159,6 +174,20 @@ function ProductContent() {
   }
 
   const price = variant?.price ?? 0;
+  // 157 active products keep their real size and colour choices in `modifiers`
+  // while their `variants` are placeholders (five identical "Regular" rows), so
+  // the variant picker cannot express them. Those products render the modifier
+  // groups instead; a product whose variant names are real and distinct already
+  // expresses choice through the picker and keeps today's behaviour.
+  const modifiers = product.modifiers ?? [];
+  const usesModifierGroups = hasGenericVariants(product) && modifiers.length > 0;
+  const modifierGroups = usesModifierGroups ? groupModifiers(modifiers) : [];
+  const selectedModifierIdsInUse = usesModifierGroups ? selectedModifierIds : [];
+  const selectedModifiers = modifiers.filter((m) => selectedModifierIdsInUse.includes(m.id));
+  // Dollars added by the selected modifiers, resolved against THIS variant's
+  // price (a percentage modifier applies to the base price, as in the cart).
+  const modifierCost = modifierTotal(modifiers, selectedModifierIdsInUse, price);
+  const unitPrice = Math.round((price + modifierCost) * 100) / 100;
   // The displayed color falls back to the product's first color until the
   // customer picks one. Selections reset on product change (see the effect
   // above), so a stale color can only survive for a single render.
@@ -172,12 +201,32 @@ function ProductContent() {
   const imageUrl = colorImage ?? product?.mockupImages?.front ?? getProductImageUrl(product);
   // Gated by modifiers (Phase 3) or productAddons so the Name/Number field only
   // shows when a personalization/text input is enabled per product (undefined = site defaults).
+  // A text modifier rendered inside its own group already has that input, so the
+  // standalone field is suppressed to avoid two boxes for the same value.
   const showPersonalization =
-    product.modifiers !== undefined
+    !usesModifierGroups &&
+    (product.modifiers !== undefined
       ? product.modifiers.some((m) => m.inputType === "text")
-      : product.productAddons === undefined || product.productAddons.some((a) => a.id === "personalization");
+      : product.productAddons === undefined || product.productAddons.some((a) => a.id === "personalization"));
   // When modifiers provide the text input, capture it as a modifier input too.
-  const textModifier = product.modifiers?.find((m) => m.inputType === "text");
+  const textModifier = usesModifierGroups ? undefined : product.modifiers?.find((m) => m.inputType === "text");
+  // Text to print on the mockup: the selected text modifier's value, or the
+  // legacy Name/Number field.
+  const activeTextModifier = selectedModifiers.find(
+    (m) => m.inputType === "text" && (modifierInputs[m.id] ?? "").trim() !== "",
+  );
+  const personalizationText = usesModifierGroups
+    ? (modifierInputs[activeTextModifier?.id ?? ""] ?? "").trim()
+    : showPersonalization
+      ? customText
+      : "";
+
+  const toggleModifier = (id: string) => {
+    setSelectedModifierIds((prev) =>
+      prev.includes(id) ? prev.filter((selected) => selected !== id) : [...prev, id],
+    );
+  };
+
 
   return (
     <PageLayout>
@@ -216,10 +265,10 @@ function ProductContent() {
             ) : (
               <PlaceholderImage />
             )}
-            {/* Text overlay — only when personalization is on for this product */}
-            {showPersonalization && customText && (
+            {/* Text overlay — the selected text modifier, or the Name/Number field */}
+            {personalizationText && (
               <div className="absolute top-[30%] left-1/2 -translate-x-1/2 text-xl font-bold text-foreground pointer-events-none">
-                {customText}
+                {personalizationText}
               </div>
             )}
           </div>
@@ -287,18 +336,28 @@ function ProductContent() {
               );
             })()}
 
-            {/* Price — never quote $0.00 for a variant checkout would reject */}
-            <p className="text-3xl font-bold text-gold-deep mb-6">
-              {price > 0 ? `$${price.toFixed(2)}` : "Contact us for pricing"}
-              {variants.length > 1 && minVariantPrice > 0 && price > 0 && (
-                <span className="text-sm font-normal text-foreground ml-2">
-                  Starting at ${minVariantPrice.toFixed(2)}
-                </span>
+            {/* Price — base variant plus the selected modifiers, never $0.00 for
+                a variant checkout would reject */}
+            <div className="mb-6">
+              <p className="text-3xl font-bold text-gold-deep">
+                {price > 0 ? `$${unitPrice.toFixed(2)}` : "Contact us for pricing"}
+                {variants.length > 1 && minVariantPrice > 0 && price > 0 && (
+                  <span className="text-sm font-normal text-foreground ml-2">
+                    Starting at ${minVariantPrice.toFixed(2)}
+                  </span>
+                )}
+              </p>
+              {modifierCost > 0 && (
+                <p className="text-xs text-foreground/80 mt-1">
+                  Includes ${modifierCost.toFixed(2)} for the selected options
+                </p>
               )}
-            </p>
+            </div>
 
-            {/* Variant Picker */}
-            {variants.length > 1 && (
+            {/* Variant Picker — only for products whose variants are real,
+                distinguishable options. A product whose variants are placeholders
+                (five identical "Regular" rows) names its choices in modifiers. */}
+            {variants.length > 1 && !usesModifierGroups && (
               <div className="mb-6">
                 <span className="text-xs font-medium text-primary block mb-2">Style / Size</span>
                 <div className="flex flex-wrap gap-2">
@@ -317,6 +376,89 @@ function ProductContent() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Modifier groups — the real size/colour/add-on choices. Every group
+                is multi-select, exactly as the customizer renders it, because a
+                toggle is what the cart can express as an add-on. */}
+            {usesModifierGroups && (
+              <div className="mb-6">
+                {modifierGroups.map((group) => (
+                  <fieldset key={group.name} className="mb-4 last:mb-0">
+                    <legend className="text-xs font-medium text-primary mb-2">{group.name}</legend>
+                    <div className="flex flex-wrap gap-2">
+                      {group.modifiers.map((mod) => {
+                        const active = selectedModifierIdsInUse.includes(mod.id);
+                        const delta = formatModifierDelta(mod);
+                        return (
+                          <button
+                            key={mod.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => toggleModifier(mod.id)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                              active
+                                ? "bg-primary text-white"
+                                : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
+                            }`}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={`flex items-center justify-center w-3.5 h-3.5 rounded border shrink-0 ${
+                                active ? "bg-white border-white" : "border-primary/30"
+                              }`}
+                            >
+                              {active && (
+                                <svg className="w-3 h-3 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </span>
+                            {mod.name}
+                            {delta && <span className={active ? "text-white/80" : "text-gold-deep"}>{delta}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* Text and file modifiers collect their value once selected.
+                        Artwork upload stays in the customizer, which owns the
+                        storage path — the product page only links to it. */}
+                    {group.modifiers
+                      .filter(
+                        (mod) =>
+                          selectedModifierIdsInUse.includes(mod.id) &&
+                          (mod.inputType === "text" || mod.inputType === "file"),
+                      )
+                      .map((mod) =>
+                        mod.inputType === "text" ? (
+                          <div key={mod.id} className="mt-2">
+                            <label htmlFor={`modifier-${mod.id}`} className="block text-[11px] text-foreground/70 mb-1">
+                              {mod.inputLabel ?? mod.name}
+                            </label>
+                            <input
+                              id={`modifier-${mod.id}`}
+                              type="text"
+                              value={modifierInputs[mod.id] ?? ""}
+                              onChange={(e) => setModifierInputs((prev) => ({ ...prev, [mod.id]: e.target.value }))}
+                              placeholder={mod.inputLabel ?? "Enter text"}
+                              className="w-full max-w-xs px-3 py-1.5 rounded-lg border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
+                            />
+                          </div>
+                        ) : (
+                          <p key={mod.id} className="mt-2 text-xs text-foreground/80">
+                            {mod.name}:{" "}
+                            <Link
+                              href={`/customizer/?product=${encodeURIComponent(product.id)}`}
+                              className="text-gold-deep hover:underline"
+                            >
+                              upload your artwork in the customizer
+                            </Link>
+                          </p>
+                        ),
+                      )}
+                  </fieldset>
+                ))}
               </div>
             )}
 
@@ -413,26 +555,32 @@ function ProductContent() {
               <button
                 onClick={() => {
                   if (!variant || !hasSellableVariant) return;
-                  // Capture the customer's variant option choices for fulfillment display.
-                  const selectedOptions = variant.options
-                    ? Object.entries(variant.options).map(([optionName, value]) => ({
-                        optionId: optionName.toLowerCase().replace(/\s+/g, "_"),
-                        optionName,
-                        value,
-                      }))
-                    : undefined;
-                  // Capture personalization text as a modifier input when the product
-                  // uses the Phase 3 modifier model.
-                  const modifierInputs =
-                    textModifier && showPersonalization && customText
-                      ? [{ modifierId: textModifier.id, modifierName: textModifier.name, value: customText }]
-                      : undefined;
+                  // Capture the customer's variant option choices and the chosen
+                  // modifier options for fulfilment. The checkout note is built
+                  // from these, so the line reads "Adult Size: XX-Large | Colour: Black".
+                  const selectedOptions = [
+                    ...(variant.options
+                      ? Object.entries(variant.options).map(([optionName, value]) => ({
+                          optionId: optionName.toLowerCase().replace(/\s+/g, "_"),
+                          optionName,
+                          value,
+                        }))
+                      : []),
+                    ...modifierSelectedOptions(modifiers, selectedModifierIdsInUse, modifierInputs),
+                  ];
+                  // Typed/uploaded values for the selected modifiers, for fulfilment.
+                  const capturedModifierInputs = captureModifierInputs(
+                    modifiers,
+                    selectedModifierIdsInUse,
+                    modifierInputs,
+                  );
                   // The personalization add-on price must ride on the cart line —
                   // the text alone is fulfillment data. Resolve the definition the
                   // same way the customizer does: product modifier → legacy
-                  // productAddons → site-standard add-on.
-                  const addons: CartAddon[] = [];
-                  if (customText.trim()) {
+                  // productAddons → site-standard add-on. Modifier groups carry
+                  // their own add-ons below, so the legacy path is skipped there.
+                  const addons: CartAddon[] = buildModifierAddons(modifiers, selectedModifierIdsInUse);
+                  if (showPersonalization && customText.trim()) {
                     const standardAddons = siteConfig.addon_defaults?.standardAddons ?? [];
                     const legacy = product.productAddons?.find((a) => a.id === "personalization");
                     const std = standardAddons.find((a) => a.id === "personalization");
@@ -472,13 +620,13 @@ function ProductContent() {
                     productType: product.productType,
                     quantity: 1,
                     selected_view: "front",
-                    design_text: showPersonalization ? (customText || undefined) : undefined,
+                    design_text: personalizationText || undefined,
                     selected_color: effectiveColor,
                     design_url: selectedDesign?.image_url || undefined,
                     shipping_rate: product.shippingRate,
                     addons,
                     selectedOptions,
-                    modifierInputs,
+                    modifierInputs: capturedModifierInputs.length > 0 ? capturedModifierInputs : undefined,
                   });
                 }}
                 disabled={!canAddToCart}
@@ -491,7 +639,7 @@ function ProductContent() {
                 {isOutOfStock
                   ? "Out of Stock"
                   : hasSellableVariant
-                    ? `Add to Cart — $${price.toFixed(2)}`
+                    ? `Add to Cart — $${unitPrice.toFixed(2)}`
                     : "Not Available Online"}
               </button>
               {product.customizable !== false && (

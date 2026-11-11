@@ -18,6 +18,9 @@ export default function HeaderBar() {
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
   const c = useSiteContent();
+  // The CMS primary list drives the slots AFTER the fixed Home slot, so a "/"
+  // entry in it would render Home twice.
+  const primary = c.navigation.primary.filter((link) => link.href !== "/");
   const [offline, setOffline] = useState(false);
 
   // Measure the fixed header wrapper height and expose it as a CSS variable
@@ -75,43 +78,47 @@ export default function HeaderBar() {
         </div>
       )}
       <nav className="nav-dock">
-        {/* Home */}
+        {/* Home — always first and always "/". The CMS primary list now starts
+            at Shop, so reading primary[0] here (the old behaviour) replaced the
+            only route back to the homepage with a second Shop link. Any "/"
+            entry an editor adds to the CMS list is dropped below so the slot
+            can never appear twice. */}
         <Link
-          href={c.navigation.primary[0]?.href || "/"}
-          className={`nav-dock-link${isActive(c.navigation.primary[0]?.href || "/") ? " active" : ""}`}
-          aria-label={c.navigation.primary[0]?.label || "Home"}
+          href="/"
+          className={`nav-dock-link${isActive("/") ? " active" : ""}`}
+          aria-label="Home"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[0].d} />
           </svg>
-          <span>{c.navigation.primary[0]?.label || "Home"}</span>
+          <span>Home</span>
         </Link>
 
-        {/* Shop */}
+        {/* Shop — CMS slot 1 (primary[0]) */}
         <Link
-          href={c.navigation.primary[1]?.href || "/shop"}
-          className={`nav-dock-link${isActive(c.navigation.primary[1]?.href || "/shop") ? " active" : ""}`}
-          aria-label={c.navigation.primary[1]?.label || "Shop"}
+          href={primary[0]?.href || "/shop"}
+          className={`nav-dock-link${isActive(primary[0]?.href || "/shop") ? " active" : ""}`}
+          aria-label={primary[0]?.label || "Shop"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[1].d} />
           </svg>
-          <span>{c.navigation.primary[1]?.label || "Shop"}</span>
+          <span>{primary[0]?.label || "Shop"}</span>
         </Link>
 
         {/* Cart */}
         <CartNavButton />
 
-        {/* About */}
+        {/* About — CMS slot 2 (primary[1]) */}
         <Link
-          href={c.navigation.primary[2]?.href || "/about"}
-          className={`nav-dock-link${isActive(c.navigation.primary[2]?.href || "/about") ? " active" : ""}`}
-          aria-label={c.navigation.primary[2]?.label || "About"}
+          href={primary[1]?.href || "/about"}
+          className={`nav-dock-link${isActive(primary[1]?.href || "/about") ? " active" : ""}`}
+          aria-label={primary[1]?.label || "About"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d={NAV_LINKS[2].d} />
           </svg>
-          <span>{c.navigation.primary[2]?.label || "About"}</span>
+          <span>{primary[1]?.label || "About"}</span>
         </Link>
 
         {/* Fundraising */}
