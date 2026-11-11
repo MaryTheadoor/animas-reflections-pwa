@@ -8,7 +8,7 @@ import {
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth, type UserRecord } from "firebase-admin/auth";
-import { SquareClient, SquareEnvironment, SquareError, type Square } from "square";
+import type { Square } from "square";
 import { defineString } from "firebase-functions/params";
 import {
   deriveOrder,
@@ -19,11 +19,19 @@ import {
 
 initializeApp();
 
+// Credential diagnostic for the checkout card-form failure — see the file.
+export { squareDiagnostics } from "./diagnostics.js";
+
 const squareAccessToken = defineString("SQUARE_ACCESS_TOKEN");
 const squareEnvironment = defineString("SQUARE_ENVIRONMENT", { default: "sandbox" });
 const squareLocationId = defineString("SQUARE_LOCATION_ID");
 
-function getSquareClient(): SquareClient {
+/** The Square SDK costs ~7 s to load, and the deploy analyzer allows the WHOLE
+ *  codebase 10 s. A static import here made `firebase deploy --only functions`
+ *  fail intermittently ("Cannot determine backend specification. Timeout after
+ *  10000") and slowed every cold start. Load it on first use; never hoist it. */
+async function getSquareClient(): Promise<import("square").SquareClient> {
+  const { SquareClient, SquareEnvironment } = await import("square");
   return new SquareClient({
     token: squareAccessToken.value(),
     environment:
@@ -217,7 +225,7 @@ export const createSquareOrderAndPay = onCall(
     }
 
     try {
-      const client = getSquareClient();
+      const client = await getSquareClient();
       const locationId = squareLocationId.value();
       if (!locationId) {
         throw new Error("SQUARE_LOCATION_ID is not configured");
@@ -533,9 +541,11 @@ export const createSquareOrderAndPay = onCall(
       };
     } catch (err) {
       if (err instanceof HttpsError) throw err;
-      if (err instanceof SquareError) {
+      // Square's SDK is loaded lazily, so `instanceof SquareError` is not
+      // available here. Its errors always carry an `errors[]` array.
+      if (err && typeof err === "object" && "errors" in err) {
         logger.error("Square API error", err);
-        throw new Error(`Payment failed: ${err.message}`);
+        throw new Error(`Payment failed: ${(err as { message?: string }).message ?? "unknown Square error"}`);
       }
       logger.error("Unexpected error", err);
       throw new Error(
@@ -688,7 +698,7 @@ export const fetchRecentOrders = onCall(
     await requireAdmin(request);
     logger.info("fetchRecentOrders invoked");
     try {
-      const client = getSquareClient();
+      const client = await getSquareClient();
       const locationId = squareLocationId.value();
 
       const response = await client.orders.search({
@@ -721,9 +731,11 @@ export const fetchRecentOrders = onCall(
       logger.info("Orders fetched", { count: orders.length });
       return { orders };
     } catch (err) {
-      if (err instanceof SquareError) {
+      // Square's SDK is loaded lazily, so `instanceof SquareError` is not
+      // available here. Its errors always carry an `errors[]` array.
+      if (err && typeof err === "object" && "errors" in err) {
         logger.error("Square API error fetching orders", err);
-        throw new Error(`Square API error: ${err.message}`);
+        throw new Error(`Square API error: ${(err as { message?: string }).message ?? "unknown Square error"}`);
       }
       logger.error("Unexpected error fetching orders", err);
       throw new Error("Failed to fetch orders");
@@ -750,7 +762,7 @@ export const createSquareProduct = onCall(
     const variants = (product.variants ?? []) as Array<Record<string, unknown>>;
     if (!variants.length) throw new Error("Product has no variants");
 
-    const client = getSquareClient();
+    const client = await getSquareClient();
 
     const tempItemId = `#${productId}`;
     const objects: Array<Record<string, unknown>> = [];
@@ -867,7 +879,7 @@ export const fetchSquareModifiers = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
     await requireAdmin(request);
-    const client = getSquareClient();
+    const client = await getSquareClient();
 
     type ModifierDto = { id: string; name: string; price: number; onByDefault: boolean; hiddenOnline: boolean };
     type ListDto = {

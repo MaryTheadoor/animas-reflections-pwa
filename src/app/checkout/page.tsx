@@ -96,7 +96,18 @@ export default function CheckoutPage() {
       squareInitialized = true;
       setCardReady(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment system unavailable");
+      // Square's card() rejects with a generic sentence; the reason is in
+      // err.errors[]. Surface it in the console so a 401 is diagnosable instead
+      // of reading as "payment unavailable".
+      console.error("Square payment init failed", {
+        error: err,
+        errors: (err as { errors?: unknown }).errors,
+      });
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Payment system unavailable — please refresh, or call us to order.",
+      );
     }
   }, []);
 

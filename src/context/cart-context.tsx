@@ -7,11 +7,13 @@ import {
   useCallback,
   useState,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react";
 import type { CartItem, CartAddon, AddonType, AddonPriceType } from "@/types";
 import { resolveAddonPrice } from "@/types";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { readStoredCart, writeStoredCart } from "@/lib/cart-storage";
 
 interface CartState {
   items: CartItem[];
@@ -26,7 +28,8 @@ type CartAction =
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
   | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; addonId?: string; addonPrice: number; addonLabel?: string; priceType?: AddonPriceType }
-  | { type: "CLEAR_CART" };
+  | { type: "CLEAR_CART" }
+  | { type: "HYDRATE"; items: CartItem[] };
 
 /** Keep a line quantity a whole number inside 1..MAX_LINE_QUANTITY. Non-finite
  *  input (a cleared field) falls back to 1 rather than NaN. */
@@ -87,6 +90,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
     case "CLEAR_CART":
       return { ...state, items: [] };
+    case "HYDRATE":
+      // Replacing, not merging: this runs once, before any user interaction.
+      return { ...state, items: action.items };
     default:
       return state;
   }
@@ -156,6 +162,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, dispatch] = useReducer(cartReducer, initialCart);
   const [cartOpen, setCartOpen] = useState(false);
   const [lastAdded, setLastAdded] = useState<CartItem | null>(null);
+  // Restore once on mount, then persist on every change. A ref (not state)
+  // because this is a one-time hydration, not a render input — and the writer
+  // must not run before the hydration dispatch, or the first empty render would
+  // blank the stored cart.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    const stored = readStoredCart();
+    if (stored.length) dispatch({ type: "HYDRATE", items: stored });
+    hydratedRef.current = true;
+  }, []);
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    writeStoredCart(cart.items);
+  }, [cart.items]);
   const siteConfig = useSiteConfig();
   const freeThreshold = siteConfig.free_shipping_threshold;
   const shippingTierStickers = siteConfig.shipping_tier_stickers;

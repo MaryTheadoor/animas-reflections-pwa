@@ -60,7 +60,12 @@ released. Verification completed:
    `product_photos` 200
 4. ⬜ **Admin sign-in → save → fresh session** (needs an admin session; also confirms the
    `email_verified` gate does not lock the owner out)
-5. ⬜ **Canary purchase + refund** (needs a real card)
+5. ⬜ **Canary purchase + refund** — needs a real card, in a **real browser**. Do not judge the card
+   form from headless Chrome: it blocks the third-party cookies Square's PCI iframe needs, which
+   looks exactly like a credential fault. `squareDiagnostics?locationId=L6VCX130RHYQR` reports the
+   server side is healthy (production token, 1 location, and it matches the build), so a failure in a
+   real browser points at the application's Web Payments configuration in the Square Developer
+   Dashboard — not at the token or the location id.
 
 Remaining checks: 4 and 5 below — both need a signed-in human.
 
