@@ -38,7 +38,7 @@ worth knowing the build is not your first typecheck.
 
 ### 2. No release path could fail on a test or a lint error (FIXED locally, see below)
 
-`rebuild.yml` runs only `npm run build`; `npm run publish` is build + deploy. So 286 tests and a 40 s lint
+`rebuild.yml` ran only `npm run build`; `npm run publish` is build + deploy. So the test suite (303 now) and a 40 s lint
 pass could not stop a publish. `PROJECT_CONTEXT.md` asserted they "MUST pass" — a rule nobody was enforcing.
 
 ### 3. `jest --passWithNoTests` made the test gate vacuous (FIXED)
@@ -98,10 +98,10 @@ including a stale or half-built export. Functions were always rebuilt; hosting n
 
 | Change | Verified by |
 |---|---|
-| `npm run verify` (lint + typecheck + tests) runs in `rebuild.yml` before the build | The step is in the workflow; the same command is green locally (286 tests) |
+| `npm run verify` (lint + typecheck + tests) runs in `rebuild.yml` before the build | The step is in the workflow; the same command is green locally (303 tests, 2026-11-04) |
 | `check-seo.mjs` asserts `out/og-image.png` exists and carries the PNG signature | Canary: with the file removed the gate fails with a precise message, and passes again when restored |
 | `fetch-seo-config.mjs` emits a GitHub Actions `::warning::` when it falls back to the snapshot, and takes `--strict` to fail instead | Warning path unchanged in behaviour; `--strict` is opt-in and not wired into CI, because blocking a publish on a transient network error is a worse trade than a visible stale snapshot |
-| `next` upgraded 16.2.7 → 16.3.8 | Audit: production findings 10 → 7, **critical cleared**. tsc, lint, 286 tests, build (25 pages) and the SEO gate all green; dev server 200 on six routes with no errors in the log |
+| `next` upgraded 16.2.7 → 16.3.8 | Audit: production findings 10 → 7, **critical cleared**. tsc, lint, the full suite (286 at the time), build (25 pages) and the SEO gate all green; dev server 200 on six routes with no errors in the log |
 
 ## Recommended, still open (needs a decision)
 

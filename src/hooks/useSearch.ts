@@ -14,11 +14,41 @@ export interface SearchFilters {
   maxPrice: number | null;
 }
 
+/**
+ * Lowest sellable variant price, or null when the product has none.
+ *
+ * A variant priced 0 (or blank) is rejected at checkout as "no price
+ * configured", so it is not sellable and must not be quoted or sorted as if it
+ * cost $0.00. Both the shop and search pages sort with this one rule so the
+ * same sort mode cannot order the same catalog two different ways.
+ */
+export function lowestVariantPrice(product: ManagedProduct): number | null {
+  const prices = (product.variants ?? [])
+    .map((v) => v.price)
+    .filter((p) => Number.isFinite(p) && p > 0);
+  return prices.length > 0 ? Math.min(...prices) : null;
+}
+
+/** Sort comparator on lowestVariantPrice. Products with no price are always
+ *  last, whichever direction the customer picked — an unpriced product is
+ *  "unknown", not "cheapest". */
+export function compareByPrice(
+  a: ManagedProduct,
+  b: ManagedProduct,
+  direction: "asc" | "desc"
+): number {
+  const pa = lowestVariantPrice(a);
+  const pb = lowestVariantPrice(b);
+  if (pa === null && pb === null) return 0;
+  if (pa === null) return 1;
+  if (pb === null) return -1;
+  return direction === "asc" ? pa - pb : pb - pa;
+}
+
 // Fuzzy text matching with weighted scoring:
 // - Exact match: 100, prefix match: 80, contains: 60, word prefix: 40, partial: 20
 // - Product name matches are weighted 3x (most relevant)
 // - Tag and design name matches are weighted 2x
-// - Category match adds a flat +50 bonus
 // - Color match adds a flat +30 bonus
 function fuzzyScore(text: string, query: string): number {
   const lower = text.toLowerCase();
@@ -59,10 +89,6 @@ export function searchProducts(
       }
     }
 
-    if (filters.categoryId && product.categoryId === filters.categoryId) {
-      score += 50;
-    }
-
     if (filters.colors.length > 0) {
       const productColors = (product.colors ?? []).map((c) => c.toLowerCase());
       // OR semantics: a product matching ANY selected color qualifies
@@ -79,9 +105,13 @@ export function searchProducts(
     scored = scored.filter((s) => s.score > 0);
   }
 
+  // Hard category filter (AND): picking a category while searching narrows the
+  // results to that category. It must not be softened by the relevance score —
+  // a name match alone scores 150+, which used to let products from other
+  // categories through.
   if (filters.categoryId) {
     const catId = filters.categoryId;
-    scored = scored.filter((s) => s.product.categoryId === catId || s.score >= 50);
+    scored = scored.filter((s) => s.product.categoryId === catId);
   }
 
   if (filters.colors.length > 0) {
@@ -93,35 +123,23 @@ export function searchProducts(
 
   if (filters.minPrice !== null) {
     scored = scored.filter((s) => {
-      const prices = (s.product.variants ?? []).map((v) => v.price).filter((p) => p > 0);
-      if (prices.length === 0) return false;
-      return Math.min(...prices) >= filters.minPrice!;
+      const price = lowestVariantPrice(s.product);
+      if (price === null) return false;
+      return price >= filters.minPrice!;
     });
   }
   if (filters.maxPrice !== null) {
     scored = scored.filter((s) => {
-      const prices = (s.product.variants ?? []).map((v) => v.price).filter((p) => p > 0);
-      if (prices.length === 0) return false;
-      return Math.min(...prices) <= filters.maxPrice!;
+      const price = lowestVariantPrice(s.product);
+      if (price === null) return false;
+      return price <= filters.maxPrice!;
     });
   }
 
   if (sort === "price-asc") {
-    scored.sort((a, b) => {
-      const pricesA = (a.product.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
-      const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
-      const pricesB = (b.product.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
-      const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
-      return pa - pb;
-    });
+    scored.sort((a, b) => compareByPrice(a.product, b.product, "asc"));
   } else if (sort === "price-desc") {
-    scored.sort((a, b) => {
-      const pricesA = (a.product.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
-      const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
-      const pricesB = (b.product.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0);
-      const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
-      return pb - pa;
-    });
+    scored.sort((a, b) => compareByPrice(a.product, b.product, "desc"));
   } else if (sort === "name-asc") {
     scored.sort((a, b) => (a.product.name ?? "").localeCompare(b.product.name ?? ""));
   } else {

@@ -3,7 +3,7 @@
  * These are pure functions — no mocking needed.
  */
 import { describe, it, expect } from "@jest/globals";
-import { searchProducts, type SearchFilters } from "@/hooks/useSearch";
+import { searchProducts, compareByPrice, type SearchFilters } from "@/hooks/useSearch";
 import type { ManagedProduct } from "@/types";
 
 // --- Test data ---
@@ -128,9 +128,74 @@ describe("searchProducts", () => {
   });
 
   it("combines query + category filter", () => {
-    // Category filter keeps items matching category OR with score >= 50
     const result = searchProducts(catalog, { ...emptyFilters, query: "jersey", categoryId: "cat_apparel" });
     expect(result.length).toBeGreaterThanOrEqual(1);
     expect(result.some((p) => p.id === "6")).toBe(true);
+  });
+
+  it("treats category as a hard AND filter alongside a query", () => {
+    // "hockey" scores far above 50 on a name match alone, so the old
+    // OR-with-score rule let the hockey tee through when filtering on another
+    // category. The category filter must win.
+    const wrongCategory = searchProducts(catalog, {
+      ...emptyFilters,
+      query: "hockey",
+      categoryId: "cat_stickers",
+    });
+    expect(wrongCategory).toHaveLength(0);
+
+    const rightCategory = searchProducts(catalog, {
+      ...emptyFilters,
+      query: "hockey",
+      categoryId: "cat_hockey",
+    });
+    expect(rightCategory.map((p) => p.id)).toEqual(["1"]);
+  });
+
+  it("excludes products outside the category even with a matching name", () => {
+    const result = searchProducts(catalog, { ...emptyFilters, query: "hoodie", categoryId: "cat_hockey" });
+    expect(result).toHaveLength(0);
+    expect(result.every((p) => p.categoryId === "cat_hockey")).toBe(true);
+  });
+});
+
+// --- Pricing edge cases: a variant priced 0 is not sellable ---
+
+describe("searchProducts price handling", () => {
+  const emptyFilters: SearchFilters = { query: "", categoryId: null, colors: [], minPrice: null, maxPrice: null };
+
+  // "9" has a $0 variant, "10" has no variants at all — neither is orderable
+  // (checkout rejects a non-positive price), so neither may sort as "cheapest".
+  const withUnpriced: ManagedProduct[] = [
+    makeProduct("7", "Priced Low", "Cheap item", "cat_a", 10),
+    makeProduct("8", "Priced High", "Expensive item", "cat_a", 90),
+    makeProduct("9", "Zero Price", "Not configured", "cat_b", 0),
+    {
+      ...makeProduct("10", "No Variants", "Variant-less item", "cat_b", 0),
+      variants: [],
+    },
+  ];
+
+  it("sorts products with no price last when ascending", () => {
+    const result = searchProducts(withUnpriced, emptyFilters, "price-asc");
+    expect(result.map((p) => p.id)).toEqual(["7", "8", "9", "10"]);
+  });
+
+  it("sorts products with no price last when descending", () => {
+    const result = searchProducts(withUnpriced, emptyFilters, "price-desc");
+    expect(result.map((p) => p.id)).toEqual(["8", "7", "9", "10"]);
+  });
+
+  it("keeps unpriced products out of price range filters", () => {
+    const withMax = searchProducts(withUnpriced, { ...emptyFilters, maxPrice: 1000 });
+    expect(withMax.map((p) => p.id).sort()).toEqual(["7", "8"]);
+  });
+
+  it("orders the same way as the shop page comparator", () => {
+    const asc = searchProducts(withUnpriced, emptyFilters, "price-asc").map((p) => p.id);
+    const shared = [...withUnpriced]
+      .sort((a, b) => compareByPrice(a, b, "asc"))
+      .map((p) => p.id);
+    expect(asc).toEqual(shared);
   });
 });

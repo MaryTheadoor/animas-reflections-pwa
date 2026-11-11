@@ -37,13 +37,20 @@ function ProductJsonLd({
     description: stripTags(description).substring(0, 300),
     image: imageUrl || "https://www.animasreflections.com/logo.png",
     sku,
-    offers: {
-      "@type": "Offer",
-      price: price.toFixed(2),
-      priceCurrency: "USD",
-      availability,
-      url: `https://www.animasreflections.com/product?id=${productId}`,
-    },
+    // An unpriced item is not orderable online, so it must not advertise a
+    // $0.00 Offer — that is a false price to Google and to shoppers. A Product
+    // without `offers` is valid structured data.
+    ...(price > 0
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: price.toFixed(2),
+            priceCurrency: "USD",
+            availability,
+            url: `https://www.animasreflections.com/product?id=${productId}`,
+          },
+        }
+      : {}),
     brand: {
       "@type": "Brand",
       name: "Animas Reflections",
@@ -94,7 +101,11 @@ function ProductContent() {
   const variants = product?.variants ?? [];
   const colors = product?.colors ?? [];
   const variant = variants[selectedVariant] ?? variants[0];
-  const pricedVariantPrices = variants.map((v) => v.price).filter((p) => Number.isFinite(p));
+  // Only a variant with a real price is sellable: checkout REJECTS a variant
+  // whose catalog price is 0 or blank ("has no price configured"), so the
+  // storefront must not offer an orderable button for one.
+  const hasSellableVariant = variant != null && variant.price > 0;
+  const pricedVariantPrices = variants.map((v) => v.price).filter((p) => Number.isFinite(p) && p > 0);
   const minVariantPrice = pricedVariantPrices.length ? Math.min(...pricedVariantPrices) : 0;
   // Schema.org availability mirrors the card's stock-badge logic.
   const hasInventory = variants.some((v) => v.inventory !== undefined);
@@ -102,6 +113,7 @@ function ProductContent() {
   // Per-variant stock check: inventory undefined = "not tracked" → treat as in stock.
   // inventory 0 (or less) = out of stock → block add-to-cart.
   const isOutOfStock = variant != null && variant.inventory !== undefined && variant.inventory <= 0;
+  const canAddToCart = hasSellableVariant && !isOutOfStock;
   const availability =
     hasInventory && totalStock === 0
       ? "https://schema.org/OutOfStock"
@@ -275,10 +287,10 @@ function ProductContent() {
               );
             })()}
 
-            {/* Price */}
+            {/* Price — never quote $0.00 for a variant checkout would reject */}
             <p className="text-3xl font-bold text-gold-deep mb-6">
-              ${price.toFixed(2)}
-              {variants.length > 1 && minVariantPrice > 0 && (
+              {price > 0 ? `$${price.toFixed(2)}` : "Contact us for pricing"}
+              {variants.length > 1 && minVariantPrice > 0 && price > 0 && (
                 <span className="text-sm font-normal text-foreground ml-2">
                   Starting at ${minVariantPrice.toFixed(2)}
                 </span>
@@ -400,7 +412,7 @@ function ProductContent() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => {
-                  if (!variant) return;
+                  if (!variant || !hasSellableVariant) return;
                   // Capture the customer's variant option choices for fulfillment display.
                   const selectedOptions = variant.options
                     ? Object.entries(variant.options).map(([optionName, value]) => ({
@@ -469,14 +481,18 @@ function ProductContent() {
                     modifierInputs,
                   });
                 }}
-                disabled={isOutOfStock}
+                disabled={!canAddToCart}
                 className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-colors btn-tactile ${
-                  isOutOfStock
-                    ? "bg-foreground/10 text-foreground/70 cursor-not-allowed"
-                    : "bg-gold text-on-gold hover:bg-gold-light btn-gold-tactile"
+                  canAddToCart
+                    ? "bg-gold text-on-gold hover:bg-gold-light btn-gold-tactile"
+                    : "bg-foreground/10 text-foreground/70 cursor-not-allowed"
                 }`}
               >
-                {isOutOfStock ? "Out of Stock" : `Add to Cart — $${price.toFixed(2)}`}
+                {isOutOfStock
+                  ? "Out of Stock"
+                  : hasSellableVariant
+                    ? `Add to Cart — $${price.toFixed(2)}`
+                    : "Not Available Online"}
               </button>
               {product.customizable !== false && (
                 <Link
@@ -487,6 +503,12 @@ function ProductContent() {
                 </Link>
               )}
             </div>
+
+            {!hasSellableVariant && (
+              <p className="text-xs text-foreground/80 mt-3">
+                This item is not orderable online — contact us for pricing.
+              </p>
+            )}
           </div>
         </div>
       </main>

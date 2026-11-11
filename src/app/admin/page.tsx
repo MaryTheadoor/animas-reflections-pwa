@@ -8,6 +8,7 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebas
 import { httpsCallable } from "firebase/functions";
 import { db, storage, functions } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
+import { confirmServerWrite, SERVER_WRITE_NOT_CONFIRMED } from "@/lib/server-write";
 import { useAuth, RequireAdmin } from "@/context/auth-context";
 import { SITE } from "@/lib/content";
 import ProductManager from "@/components/admin/product-manager";
@@ -249,13 +250,19 @@ function DashboardContent() {
         return;
       }
       for (const item of items) {
-        await setDoc(doc(db, "designs", item.id), item);
+        const designRef = doc(db, "designs", item.id);
+        const payload: Record<string, unknown> = { ...item };
+        await setDoc(designRef, payload);
+        const confirmed = await confirmServerWrite(designRef, payload).catch(() => false);
+        if (!confirmed) throw new Error(SERVER_WRITE_NOT_CONFIRMED);
       }
       await deleteDoc(doc(db, "designs", "catalog"));
       setDesigns(items);
       alert(`Migrated ${items.length} designs to individual docs.`);
     } catch (err) {
-      alert("Migration failed: " + (err instanceof Error ? err.message : "Unknown"));
+      alert(err instanceof Error && err.message === SERVER_WRITE_NOT_CONFIRMED
+        ? SERVER_WRITE_NOT_CONFIRMED
+        : "Migration failed: " + (err instanceof Error ? err.message : "Unknown"));
     }
   };
 
@@ -306,7 +313,11 @@ function DashboardContent() {
       } as unknown as DesignAsset;
 
       // merge so fields this form does not model (e.g. productId) survive an edit.
-      await setDoc(doc(db, "designs", designId), stripUndefined(asset), { merge: true });
+      const designRef = doc(db, "designs", designId);
+      const payload: Record<string, unknown> = stripUndefined({ ...asset });
+      await setDoc(designRef, payload, { merge: true });
+      const confirmed = await confirmServerWrite(designRef, payload).catch(() => false);
+      if (!confirmed) throw new Error(SERVER_WRITE_NOT_CONFIRMED);
       setDesigns((prev) =>
         editing ? prev.map((d) => (d.id === designId ? asset : d)) : [...prev, asset],
       );
@@ -384,10 +395,18 @@ function DashboardContent() {
         if (updated.length === 0) {
           await deleteDoc(doc(db, "designs", "catalog"));
         } else {
-          await setDoc(doc(db, "designs", "catalog"), { items: updated });
+          const catalogRef = doc(db, "designs", "catalog");
+          const payload = { items: updated };
+          await setDoc(catalogRef, payload);
+          const confirmed = await confirmServerWrite(catalogRef, payload).catch(() => false);
+          if (!confirmed) throw new Error(SERVER_WRITE_NOT_CONFIRMED);
         }
       }
-    } catch {}
+    } catch (err) {
+      if (err instanceof Error && err.message === SERVER_WRITE_NOT_CONFIRMED) {
+        setUploadError(SERVER_WRITE_NOT_CONFIRMED);
+      }
+    }
   };
 
   const addAdmin = async () => {
@@ -486,9 +505,10 @@ function DashboardContent() {
           <SeoManager />
         </section>
 
-        {/* ── Settings ── */}
-        {tab === "settings" && (
-          <>
+        {/* ── Settings ── — keep-mounted like Products/Categories. This block is
+            two sibling cards, so the wrapper is a bare section and each card
+            keeps its own styling. */}
+        <section className={tab === "settings" ? "" : "hidden"}>
         {/* ── Catalog Options ── */}
         <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6 mb-6">
           <h2 className="text-xl font-bold font-display mb-6">Catalog Options</h2>
@@ -961,12 +981,10 @@ function DashboardContent() {
             {saved && <span className="text-sm text-green-600 animate-fade-in-up">Saved!</span>}
           </div>
         </section>
-          </>
-        )}
+        </section>
 
         {/* ── Admin Management ── */}
-        {tab === "admins" && (
-          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+        <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "admins" ? "" : "hidden"}`}>
             <h2 className="text-xl font-bold font-display mb-4">Admin Users</h2>
             <p className="text-sm text-foreground mb-4">
               Users listed here have full access to the admin dashboard. They must sign in first via the login page.
@@ -1008,11 +1026,9 @@ function DashboardContent() {
             The hardcoded fallback admin is <code className="bg-warm-sand px-1 rounded">mary.theadoor.doctor@gmail.com</code>.
           </p>
         </section>
-        )}
 
         {/* ── Design Catalog ── */}
-        {tab === "designs" && (
-          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
+        <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "designs" ? "" : "hidden"}`}>
             <h2 className="text-xl font-bold font-display mb-4">Design Catalog</h2>
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-foreground">
@@ -1170,21 +1186,16 @@ function DashboardContent() {
           )}
           {designs.length === 0 && <p className="text-sm text-foreground/80 text-center py-8">No designs uploaded yet.</p>}
         </section>
-        )}
 
         {/* ── Image Manager ── */}
-        {tab === "images" && (
-          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-            <ImageManager />
-          </section>
-        )}
+        <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "images" ? "" : "hidden"}`}>
+          <ImageManager />
+        </section>
 
         {/* ── Product Photo Library (shared, reusable blank-product photos) ── */}
-        {tab === "photos" && (
-          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-            <ProductPhotoManager />
-          </section>
-        )}
+        <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "photos" ? "" : "hidden"}`}>
+          <ProductPhotoManager />
+        </section>
 
         {/* ── Recent Orders ── */}
         {tab === "orders" && (
@@ -1202,20 +1213,18 @@ function DashboardContent() {
           </section>
         )}
 
-        {tab === "theme" && (
-          <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-6">
-            {siteConfigLoading ? (
-              <p className="text-sm text-foreground/70">Loading theme &amp; copy…</p>
-            ) : (
-              <div className="space-y-10">
-                <ThemeEditor />
-                <div className="border-t border-warm-sand pt-8">
-                  <CopyEditor onOpenHelp={() => setTab("help")} />
-                </div>
+        <section className={`bg-white rounded-2xl shadow-card border border-warm-sand p-6 ${tab === "theme" ? "" : "hidden"}`}>
+          {siteConfigLoading ? (
+            <p className="text-sm text-foreground/70">Loading theme &amp; copy…</p>
+          ) : (
+            <div className="space-y-10">
+              <ThemeEditor />
+              <div className="border-t border-warm-sand pt-8">
+                <CopyEditor onOpenHelp={() => setTab("help")} />
               </div>
-            )}
-          </section>
-        )}
+            </div>
+          )}
+        </section>
 
         {/* ── Help & Tutorials ── */}
         {tab === "help" && (

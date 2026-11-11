@@ -42,6 +42,11 @@ describe("extractColors", () => {
   it("returns an empty list when there is no colour", () => {
     expect(extractColors("L")).toEqual([]);
   });
+  it("does not match a colour prefix inside a longer word", () => {
+    expect(extractColors("Grayson Valley")).toEqual([]);
+    expect(extractColors("Gray")).toEqual(["gray"]);
+    expect(extractColors("Grey")).toEqual(["gray"]);
+  });
 });
 
 describe("detectBrand", () => {
@@ -67,6 +72,19 @@ describe("extractTags / detectProductType", () => {
     expect(detectProductType(["Wood Sign"])).toBe("sign");
     expect(detectProductType(["Sticker Pack"])).toBe("sticker");
     expect(detectProductType(["Mystery Item"])).toBe("other");
+  });
+  it("does not match type prefixes inside longer words", () => {
+    expect(detectProductType(["Slapstick Comedy Tee"])).toBe("apparel");
+    expect(extractTags("Slapstick Comedy Tee", "", [])).not.toContain("sticker");
+    expect(detectProductType(["Hatchet Design"])).toBe("other");
+    expect(extractTags("Hatchet Design", "", [])).not.toContain("accessory");
+  });
+  it("still matches whole-word type alternatives", () => {
+    expect(detectProductType(["Custom Slap"])).toBe("sticker");
+    expect(detectProductType(["Decal Pack"])).toBe("sticker");
+    expect(detectProductType(["Hat"])).toBe("accessory");
+    expect(detectProductType(["Cutting Board"])).toBe("accessory");
+    expect(detectProductType(["Crewneck"])).toBe("apparel");
   });
 });
 

@@ -85,7 +85,9 @@ function toBool(v: string | undefined): boolean | undefined {
 
 function toNum(v: string | undefined): number | undefined {
   if (v === undefined) return undefined;
-  const n = Number(String(v).replace(/[^0-9.]/g, ""));
+  const normalized = v.trim().replace(/\$/g, "");
+  if (!/^[+-]?(?:(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?|\.\d+)$/.test(normalized)) return undefined;
+  const n = Number(normalized.replace(/,/g, ""));
   return Number.isFinite(n) ? n : undefined;
 }
 
@@ -399,8 +401,13 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
   const noOptions: string[] = [];
 
   for (const row of rows) {
-    const key = row.id || row.name.toLowerCase();
-    let product = byKey.get(key);
+    // Identity, in order of authority: the sheet's own id, then an existing product of
+    // the same name (so a re-import updates in place instead of duplicating), then a
+    // slug of the name. Group by that document id so different names cannot overwrite
+    // one another when their slugs collide.
+    const existingId = opts.existingByName?.get(row.name.trim().toLowerCase());
+    const productId = row.id || existingId || slugifyKey(row.name);
+    let product = byKey.get(productId);
     const now = new Date().toISOString();
 
     if (!product) {
@@ -410,12 +417,7 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
       }
       // No brand fallback here: deriveTags needs the resolved category, which we do not
       // have yet. Both are filled in the post-pass below.
-      // Identity, in order of authority: the sheet's own id, then an existing product of
-      // the same name (so a re-import updates in place instead of duplicating), then a
-      // slug of the name.
-      const existingId = opts.existingByName?.get(row.name.trim().toLowerCase());
       const resolvedCategory = resolveCategory(row.category, opts);
-      const productId = row.id || existingId || slugifyKey(row.name);
       if (!resolvedCategory.id && resolvedCategory.unresolvedName) {
         unresolvedByProduct.set(productId, resolvedCategory.unresolvedName);
         unresolvedNames.add(resolvedCategory.unresolvedName);
@@ -438,7 +440,7 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
         seoTitle: row.seoTitle,
         seoDescription: row.seoDescription,
       };
-      byKey.set(key, product);
+      byKey.set(productId, product);
     }
 
     // A later row can carry the weight even when the first did not.
@@ -481,8 +483,15 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
         if (colors.length > 0) variantOptions.Color = colors[0];
       }
 
+      const variantIdBase = `${product.id}_${slugifyKey(variantName)}`;
+      let variantId = variantIdBase;
+      let suffix = 2;
+      while (product.variants.some((variant) => variant.id === variantId)) {
+        variantId = `${variantIdBase}_${suffix}`;
+        suffix++;
+      }
       product.variants.push({
-        id: crypto.randomUUID(),
+        id: variantId,
         name: variantName,
         price: row.price ?? 0,
         sku: row.sku ?? "",

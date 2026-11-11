@@ -10,6 +10,7 @@ import {
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import Image from "next/image";
 import { db, storage } from "@/lib/firebase";
+import { confirmServerWrite, SERVER_WRITE_NOT_CONFIRMED } from "@/lib/server-write";
 import type { ManagedProduct } from "@/types";
 
 interface UploadFile {
@@ -19,11 +20,24 @@ interface UploadFile {
   error?: string;
 }
 
+/**
+ * Tell the product editor (and any other admin surface holding a snapshot of
+ * this product) that its images changed on disk. Without it an open draft
+ * re-saves a stale image list and silently drops the upload. Mirrors
+ * `admin-categories-changed`.
+ */
+function notifyProductChanged(productId: string): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("admin-products-changed", { detail: { productId } }));
+  }
+}
+
 export default function ImageManager() {
   const [products, setProducts] = useState<ManagedProduct[]>([]);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [mockupView, setMockupView] = useState<"front" | "back" | "sleeve" | "sideL" | "sideR">("front");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,9 +60,41 @@ export default function ImageManager() {
     loadProducts();
   }, [loadProducts]);
 
+  useEffect(() => {
+    // The Products tab (and this tab's own writes) broadcast product changes;
+    // this list caches names and image counts, so reload it. A load never
+    // re-broadcasts, so there is no loop.
+    const onProductsChanged = () => {
+      loadProducts();
+    };
+    window.addEventListener("admin-products-changed", onProductsChanged);
+    return () => window.removeEventListener("admin-products-changed", onProductsChanged);
+  }, [loadProducts]);
+
   const selectedProduct = products.find((p) => p.id === selectedProductId) ?? null;
   const mockups = selectedProduct?.mockupImages ?? {};
   const images = selectedProduct?.images ?? [];
+
+  const writeProduct = async (payload: Record<string, unknown>): Promise<boolean> => {
+    const productRef = doc(db, "products", selectedProductId);
+    setError(null);
+    try {
+      await setDoc(productRef, payload, { merge: true });
+    } catch (err) {
+      console.error("Product image save failed", err);
+      setError(err instanceof Error ? err.message : "Failed to save product images");
+      return false;
+    }
+    const confirmed = await confirmServerWrite(productRef, payload).catch((err) => {
+      console.error("Product image confirmation failed", err);
+      return false;
+    });
+    if (!confirmed) {
+      setError(SERVER_WRITE_NOT_CONFIRMED);
+      return false;
+    }
+    return true;
+  };
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const newFiles: UploadFile[] = Array.from(files)
@@ -118,11 +164,12 @@ export default function ImageManager() {
     }
 
     // Update Firestore with new URLs
-    await setDoc(
-      doc(db, "products", selectedProductId),
-      { images: newUrls, updatedAt: new Date().toISOString() },
-      { merge: true }
-    );
+    const payload = { images: newUrls, updatedAt: new Date().toISOString() };
+    if (!(await writeProduct(payload))) {
+      setUploading(false);
+      return;
+    }
+    notifyProductChanged(selectedProductId);
 
     setUploadFiles([]);
     setUploading(false);
@@ -132,11 +179,9 @@ export default function ImageManager() {
   const assignMockup = async (url: string) => {
     if (!selectedProductId) return;
     const updated = { ...mockups, [mockupView]: url };
-    await setDoc(
-      doc(db, "products", selectedProductId),
-      { mockupImages: updated, updatedAt: new Date().toISOString() },
-      { merge: true }
-    );
+    const payload = { mockupImages: updated, updatedAt: new Date().toISOString() };
+    if (!(await writeProduct(payload))) return;
+    notifyProductChanged(selectedProductId);
     loadProducts();
   };
 
@@ -144,11 +189,9 @@ export default function ImageManager() {
     if (!selectedProductId) return;
     const updated = { ...mockups };
     delete updated[mockupView];
-    await setDoc(
-      doc(db, "products", selectedProductId),
-      { mockupImages: updated, updatedAt: new Date().toISOString() },
-      { merge: true }
-    );
+    const payload = { mockupImages: updated, updatedAt: new Date().toISOString() };
+    if (!(await writeProduct(payload))) return;
+    notifyProductChanged(selectedProductId);
     loadProducts();
   };
 
@@ -157,17 +200,15 @@ export default function ImageManager() {
   /** Assign a gallery image as the per-color mockup for a view */
   const setColorMockup = async (color: string, view: ColorView, url: string) => {
     if (!selectedProductId || !selectedProduct) return;
-    await setDoc(
-      doc(db, "products", selectedProductId),
-      {
-        mockupImagesByColor: {
-          ...(selectedProduct.mockupImagesByColor ?? {}),
-          [color]: { ...(selectedProduct.mockupImagesByColor?.[color] ?? {}), [view]: url },
-        },
-        updatedAt: new Date().toISOString(),
+    const payload = {
+      mockupImagesByColor: {
+        ...(selectedProduct.mockupImagesByColor ?? {}),
+        [color]: { ...(selectedProduct.mockupImagesByColor?.[color] ?? {}), [view]: url },
       },
-      { merge: true }
-    );
+      updatedAt: new Date().toISOString(),
+    };
+    if (!(await writeProduct(payload))) return;
+    notifyProductChanged(selectedProductId);
     loadProducts();
   };
 
@@ -194,23 +235,42 @@ export default function ImageManager() {
     if (Object.keys(views).length > 0) perColor[color] = views; else delete perColor[color];
     const payload: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (Object.keys(perColor).length > 0) payload.mockupImagesByColor = perColor;
-    await setDoc(doc(db, "products", selectedProductId), payload, { merge: true });
+    if (!(await writeProduct(payload))) return;
+    notifyProductChanged(selectedProductId);
     loadProducts();
+  };
+
+  /** URLs a product points at through its mockup fields (gallery excluded). */
+  const mockupUrlsOf = (p: ManagedProduct): string[] =>
+    [
+      ...Object.values(p.mockupImages ?? {}),
+      ...Object.values(p.mockupImagesByColor ?? {}).flatMap((views) => Object.values(views)),
+      ...Object.values(p.mockupImagesByModifier ?? {}).flatMap((views) => Object.values(views)),
+    ].filter((u): u is string => Boolean(u));
+
+  /** A gallery photo is often a mockup too. Deleting it from the gallery must
+   *  not delete the file while this product's mockup fields — or another
+   *  product — still point at it. */
+  const urlStillReferenced = (url: string): boolean => {
+    const current = products.find((p) => p.id === selectedProductId);
+    if (current && mockupUrlsOf(current).includes(url)) return true;
+    return products.some((p) => p.id !== selectedProductId && mockupUrlsOf(p).includes(url));
   };
 
   const deleteImage = async (url: string) => {
     if (!selectedProductId || !confirm("Delete this image?")) return;
-    try {
-      const urlPath = decodeURIComponent(url.split("/o/")[1]?.split("?")[0] ?? "");
-      if (urlPath) await deleteObject(ref(storage, urlPath));
-    } catch { /* storage ref may be external */ }
+    // Still used elsewhere: keep the URL and the file, drop only the gallery entry.
+    if (!urlStillReferenced(url)) {
+      try {
+        const urlPath = decodeURIComponent(url.split("/o/")[1]?.split("?")[0] ?? "");
+        if (urlPath) await deleteObject(ref(storage, urlPath));
+      } catch { /* storage ref may be external */ }
+    }
 
     const updated = images.filter((img) => img !== url);
-    await setDoc(
-      doc(db, "products", selectedProductId),
-      { images: updated, updatedAt: new Date().toISOString() },
-      { merge: true }
-    );
+    const payload = { images: updated, updatedAt: new Date().toISOString() };
+    if (!(await writeProduct(payload))) return;
+    notifyProductChanged(selectedProductId);
     loadProducts();
   };
 
@@ -219,6 +279,10 @@ export default function ImageManager() {
   return (
     <div className="space-y-6">
       <h3 className="font-bold font-display text-lg">Image Manager</h3>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 rounded-xl p-3 text-sm">{error}</div>
+      )}
 
       {/* Product Selector */}
       <div>

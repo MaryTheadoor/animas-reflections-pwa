@@ -17,12 +17,24 @@ interface CartState {
   items: CartItem[];
 }
 
+/** Upper bound for one line's quantity. Enforced by the reducer so the number
+ *  the drawer stepper shows is the number checkout sends to Square. */
+export const MAX_LINE_QUANTITY = 99;
+
 type CartAction =
   | { type: "ADD_ITEM"; item: CartItem }
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
   | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; addonId?: string; addonPrice: number; addonLabel?: string; priceType?: AddonPriceType }
   | { type: "CLEAR_CART" };
+
+/** Keep a line quantity a whole number inside 1..MAX_LINE_QUANTITY. Non-finite
+ *  input (a cleared field) falls back to 1 rather than NaN. */
+function clampQuantity(quantity: number): number {
+  const rounded = Math.round(quantity);
+  if (!Number.isFinite(rounded)) return 1;
+  return Math.min(MAX_LINE_QUANTITY, Math.max(1, rounded));
+}
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
@@ -37,7 +49,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return {
         ...state,
         items: state.items.map((i) =>
-          i.id === action.id ? { ...i, quantity: Math.max(1, action.quantity) } : i
+          i.id === action.id
+            ? { ...i, quantity: clampQuantity(action.quantity) }
+            : i
         ),
       };
     case "TOGGLE_ADDON": {
@@ -102,6 +116,42 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+function toCents(dollars: number): number {
+  return Math.round((Number.isFinite(dollars) ? dollars : 0) * 100);
+}
+
+export function calculateCartTotals(
+  items: CartItem[],
+  freeThreshold: number,
+  shippingTierStickers: number,
+  shippingTierApparel: number,
+) {
+  const subtotalCents = items.reduce(
+    (sum, item) => sum + toCents(item.base_price) * item.quantity,
+    0,
+  );
+  const addonsTotalCents = items.reduce(
+    (sum, item) => sum + item.addons.reduce(
+      (lineSum, addon) => lineSum + toCents(resolveAddonPrice(addon, item.base_price)),
+      0,
+    ) * item.quantity,
+    0,
+  );
+  const shippingCents = items.length === 0 || subtotalCents >= toCents(freeThreshold)
+    ? 0
+    : Math.max(
+        items.reduce((max, item) => Math.max(max, toCents(item.shipping_rate ?? 0)), 0),
+        toCents(items.every((item) => item.productType === "sticker") ? shippingTierStickers : shippingTierApparel),
+      );
+
+  return {
+    subtotal: subtotalCents / 100,
+    addonsTotal: addonsTotalCents / 100,
+    shipping: shippingCents / 100,
+    total: (subtotalCents + addonsTotalCents + shippingCents) / 100,
+  };
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, dispatch] = useReducer(cartReducer, initialCart);
   const [cartOpen, setCartOpen] = useState(false);
@@ -152,34 +202,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "CLEAR_CART" });
   }, []);
 
-  const subtotal = cart.items.reduce(
-    (sum, i) => sum + i.base_price * i.quantity,
-    0
+  const { subtotal, addonsTotal, shipping, total } = calculateCartTotals(
+    cart.items,
+    freeThreshold,
+    shippingTierStickers,
+    shippingTierApparel,
   );
-
-  // Addons are multiplied by quantity (each item gets its own add-ons).
-  // Percentage add-ons resolve against the line's base price via resolveAddonPrice.
-  // Example: 2 shirts with Back Print (+$5) = $10 addon total.
-  const addonsTotal = cart.items.reduce(
-    (sum, i) => sum + i.addons.reduce((s, a) => s + resolveAddonPrice(a, i.base_price), 0) * i.quantity,
-    0
-  );
-
-  // Shipping: free above threshold; otherwise the higher of the per-product
-  // rate or the global tier. An empty cart ships nothing.
-  const shipping =
-    cart.items.length === 0 || subtotal >= freeThreshold
-      ? 0
-      : (() => {
-          const perProductMax = cart.items.reduce((max, i) => Math.max(max, i.shipping_rate ?? 0), 0);
-          const tierRate =
-            cart.items.every((i) => i.productType === "sticker")
-              ? shippingTierStickers
-              : shippingTierApparel;
-          return Math.max(perProductMax, tierRate);
-        })();
-
-  const total = subtotal + addonsTotal + shipping;
   const itemCount = cart.items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (

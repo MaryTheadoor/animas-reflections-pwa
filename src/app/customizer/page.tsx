@@ -88,10 +88,13 @@ function getProductViews(product: ManagedProduct | null): ProductViewConfig[] {
   return views;
 }
 
+// Site-standard add-ons used when a product has no `productAddons`. Names carry
+// no price: the charged amount is siteConfig.addon_price (rendered next to each
+// label), so a hardcoded "(+$5)" was a lie the moment the config changed.
 const ADDONS: { type: AddonType; label: string }[] = [
-  { type: "back_print", label: "Back Print (+$5)" },
-  { type: "sleeve_print", label: "Sleeve Print (+$5)" },
-  { type: "personalization", label: "Name/Number (+$5)" },
+  { type: "back_print", label: "Back Print" },
+  { type: "sleeve_print", label: "Sleeve Print" },
+  { type: "personalization", label: "Name/Number Personalization" },
 ];
 
 const DEFAULT_DESIGN_STATE: DesignState = {
@@ -109,12 +112,14 @@ function defaultStateForView(views: ProductViewConfig[], viewKey: string): Desig
   return { ...pos, scale: 1, rotation: 0 };
 }
 
-const BASE_PRICE_FALLBACK = 20.0;
-
-function getProductPrice(product: ManagedProduct | null, variantIndex: number): number {
-  if (!product || !product.variants.length) return BASE_PRICE_FALLBACK;
-  const v = product.variants[variantIndex] ?? product.variants[0];
-  return v.price > 0 ? v.price : BASE_PRICE_FALLBACK;
+/** The selected variant's catalog price, or undefined when the catalog has none
+ *  (0 or blank). Checkout REJECTS an unpriced variant ("has no price
+ *  configured"), so an undefined result must render a not-orderable state — a
+ *  made-up fallback price would only fail after the customer typed their card. */
+function getProductPrice(product: ManagedProduct | null, variantIndex: number): number | undefined {
+  const v = product?.variants?.[variantIndex] ?? product?.variants?.[0];
+  if (!v || !Number.isFinite(v.price) || v.price <= 0) return undefined;
+  return v.price;
 }
 
 export default function CustomizerPage() {
@@ -261,6 +266,12 @@ function CustomizerContent() {
     setSelectedProduct(product);
     setVariantIndex(0);
     setPerViewDesign({});
+    // Add-ons, modifier inputs and uploaded artwork belong to the product they
+    // were chosen for. Carrying them over silently charged the next product for
+    // the previous one's paid add-ons and printed the wrong artwork.
+    setSelectedAddons(new Set());
+    setModifierInputs({});
+    setDesignUrl(undefined);
     // Default to the product's first color so the mockup tints immediately.
     setSelectedColor(product?.colors?.[0]);
     // Single-design products hide the text tool — clear any text from a prior
@@ -286,6 +297,9 @@ function CustomizerContent() {
 
   const handleAddToCart = () => {
     const price = getProductPrice(selectedProduct, variantIndex);
+    // No catalog price = checkout rejects the line. Guard here too so a
+    // disabled-looking path can never push a made-up price into the cart.
+    if (price === undefined) return;
     const variant: ManagedVariant | undefined = selectedProduct?.variants[variantIndex];
 
     // Build addons from modifiers (Phase 3) when available; otherwise fall back
@@ -298,7 +312,10 @@ function CustomizerContent() {
             const mod = effectiveModifiers.find((m) => m.id === id);
             if (!mod) return null;
             return {
-              type: (["back_print", "sleeve_print", "personalization"].includes(mod.id) ? mod.id : "back_print") as AddonType,
+              // Keep the modifier's real id. Coercing anything outside the three
+              // legacy types to "back_print" relabelled a "Gift wrap" add-on as
+              // a Back Print through the cart and into the Square note.
+              type: mod.id,
               label: mod.name,
               // Store the raw price + pricing model; the cart resolves percentage
               // add-ons against the line's base price via resolveAddonPrice.
@@ -391,20 +408,22 @@ function CustomizerContent() {
     .find((url) => url);
   const effectiveBaseImage = modifierMockup ?? colorMockup ?? currentView.baseImage;
   const tintColor = !colorMockup && selectedColor ? selectedProduct?.colorTints?.[selectedColor] : undefined;
-  const basePrice = getProductPrice(selectedProduct, variantIndex);
+  // undefined = the catalog carries no price for this variant → not orderable
+  // online (checkout rejects it as "has no price configured").
+  const variantPrice = getProductPrice(selectedProduct, variantIndex);
   // Add-on cost uses modifiers when available (percentage modifiers resolve against
   // the base price); otherwise falls back to the legacy flat-price add-ons.
   const useModifiersForCost = selectedProduct?.modifiers !== undefined || selectedProduct?.productAddons === undefined;
   const addonsCost = useModifiersForCost
     ? Array.from(selectedAddons).reduce((sum, id) => {
         const mod = effectiveModifiers.find((m) => m.id === id);
-        return mod ? sum + resolveModifierPrice(mod, basePrice) : sum;
+        return mod ? sum + resolveModifierPrice(mod, variantPrice ?? 0) : sum;
       }, 0)
     : Array.from(selectedAddons).reduce((sum, id) => {
         const addon = effectiveAddons.find((a) => a.id === id);
         return sum + (addon?.price ?? addonPrice);
       }, 0);
-  const totalPrice = basePrice + addonsCost;
+  const totalPrice = (variantPrice ?? 0) + addonsCost;
 
   // Sort catalog products for dropdown
   const sortedCatalog = [...catalogProducts].sort((a, b) => a.name.localeCompare(b.name));
@@ -479,11 +498,17 @@ function CustomizerContent() {
                     className="w-full p-2.5 border border-primary/20 rounded-xl bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
                   >
                     <option value="">Select a product...</option>
-                    {sortedCatalog.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} — from ${((p.variants ?? [])[0]?.price ?? 0).toFixed(2)}
-                      </option>
-                    ))}
+                    {sortedCatalog.map((p) => {
+                      // Dropdown label must not promise a $0.00 price the cart
+                      // can't actually charge — unpriced variants are not
+                      // orderable online.
+                      const from = getProductPrice(p, 0);
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {p.name} — {from === undefined ? "contact us for pricing" : `from $${from.toFixed(2)}`}
+                        </option>
+                      );
+                    })}
                   </select>
 
                   {/* Variation Picker */}
@@ -760,7 +785,7 @@ function CustomizerContent() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-foreground">Base price</span>
-                  <span>${basePrice.toFixed(2)}</span>
+                  <span>{variantPrice === undefined ? "—" : `$${variantPrice.toFixed(2)}`}</span>
                 </div>
                 {addonsCost > 0 && (
                   <div className="flex justify-between text-sm">
@@ -770,22 +795,35 @@ function CustomizerContent() {
                 )}
                 <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand">
                   <span>Total</span>
-                  <span className="text-gold-deep">${totalPrice.toFixed(2)}</span>
+                  <span className="text-gold-deep">
+                    {variantPrice === undefined ? "Contact us" : `$${totalPrice.toFixed(2)}`}
+                  </span>
                 </div>
               </div>
               <button
                 onClick={handleAddToCart}
-                disabled={!selectedProduct || (!designUrl && !designText)}
+                disabled={!selectedProduct || variantPrice === undefined || (!designUrl && !designText)}
                 className="mt-4 w-full py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Add to Cart — ${totalPrice.toFixed(2)}
+                {variantPrice === undefined
+                  ? "Contact us to order"
+                  : `Add to Cart — $${totalPrice.toFixed(2)}`}
               </button>
               {!selectedProduct && (
                 <p className="text-xs text-amber-500 text-center mt-2">
                   Select a product above first
                 </p>
               )}
-              {selectedProduct && !designUrl && !designText && (
+              {selectedProduct && variantPrice === undefined && (
+                <p className="text-xs text-foreground/70 text-center mt-2">
+                  This item isn&apos;t priced for online ordering yet.{" "}
+                  <Link href="/contact" className="underline hover:text-gold-deep">
+                    Contact us
+                  </Link>{" "}
+                  and we&apos;ll take it from there.
+                </p>
+              )}
+              {selectedProduct && variantPrice !== undefined && !designUrl && !designText && (
                 <p className="text-xs text-foreground/70 text-center mt-2">
                   Upload a design or add text to continue
                 </p>

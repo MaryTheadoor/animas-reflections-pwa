@@ -70,14 +70,22 @@ describe("deriveOrder — base items", () => {
     expect(result.order.lines[0].squareVariationId).toBe("sq_1");
   });
 
-  it("falls back to the client price for zero-priced variants (customizer $20 fallback)", () => {
+  it("refuses a zero-priced variant instead of trusting the client price", () => {
     const result = derive(
       [product({ variants: [variant({ price: 0 })] })],
       [line({ price: 20 })],
     );
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.order.lines[0].baseCents).toBe(2000);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("has no price configured");
+  });
+
+  it("refuses a negatively-priced variant", () => {
+    const result = derive(
+      [product({ variants: [variant({ price: -5 })] })],
+      [line({ price: 20 })],
+    );
+    expect(result.ok).toBe(false);
   });
 
   it("rejects a missing product", () => {

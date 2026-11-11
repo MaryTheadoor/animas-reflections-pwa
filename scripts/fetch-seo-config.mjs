@@ -105,7 +105,19 @@ function write(config) {
 async function main() {
   let config = { pages: {}, keywords: [] };
   try {
-    const res = await fetch(ENDPOINT, { headers: { accept: "application/json" } });
+    // A hung socket must not stall prebuild forever; 15s is generous for a
+    // single Firestore document read, and the fallback below keeps the snapshot.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    let res;
+    try {
+      res = await fetch(ENDPOINT, {
+        headers: { accept: "application/json" },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
     if (res.status === 404) {
       // A 404 is legitimate on a fresh project, but if the committed snapshot
       // has real content then the document was DELETED - and silently writing an
@@ -126,6 +138,24 @@ async function main() {
       throw new Error("HTTP " + res.status);
     } else {
       config = decodeFields((await res.json()).fields);
+      // A 200 carrying an EMPTY document is as destructive as a 404: writing it
+      // would drop every page override and keyword page from the next build. Only
+      // guard when the committed snapshot actually has content, so a genuinely
+      // fresh project still gets its empty config written.
+      const empty =
+        Object.keys(config.pages ?? {}).length === 0 && (config.keywords ?? []).length === 0;
+      if (empty) {
+        const emptyRendered = render({ pages: {}, keywords: [] });
+        const hasContent = existsSync(TARGET) && readFileSync(TARGET, "utf8") !== emptyRendered;
+        if (hasContent) {
+          console.warn(
+            "[seo-config] config/seo came back EMPTY (HTTP 200) but the committed snapshot has content. " +
+              "Keeping the snapshot so the build does not silently drop your keyword pages. " +
+              "If you meant to clear it, do that deliberately rather than through a failed read."
+          );
+          return;
+        }
+      }
     }
   } catch (err) {
     const reason = err && err.message ? err.message : String(err);

@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { useCart } from "@/context/cart-context";
+import { useCart, MAX_LINE_QUANTITY } from "@/context/cart-context";
 import { resolveAddonPrice } from "@/types";
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { cart, removeItem, subtotal, addonsTotal, shipping, total } = useCart();
+  const { cart, removeItem, updateQuantity, subtotal, addonsTotal, shipping, total } = useCart();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Dialog keyboard behavior: Escape to close, Tab focus trap, focus restore
@@ -87,7 +87,6 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                   {item.selected_color && (
                     <p className="text-xs text-foreground/80 capitalize">Color: {item.selected_color}</p>
                   )}
-                  <p className="text-xs text-foreground">Qty: {item.quantity}</p>
                   {item.selectedOptions?.map((o) => (
                     <p key={o.optionId} className="text-xs text-foreground/80">
                       {o.optionName}: {o.value}
@@ -106,6 +105,27 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="font-semibold text-sm">${(item.base_price * item.quantity).toFixed(2)}</span>
+                  <div className="flex items-center gap-1" role="group" aria-label={`Quantity for ${item.name}`}>
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      disabled={item.quantity <= 1}
+                      className="w-7 h-7 rounded-lg bg-white border border-warm-sand text-foreground hover:bg-warm-sand transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      aria-label={`Decrease quantity of ${item.name}`}
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center text-sm tabular-nums" aria-live="polite">
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      disabled={item.quantity >= MAX_LINE_QUANTITY}
+                      className="w-7 h-7 rounded-lg bg-white border border-warm-sand text-foreground hover:bg-warm-sand transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      aria-label={`Increase quantity of ${item.name}`}
+                    >
+                      +
+                    </button>
+                  </div>
                   <button onClick={() => removeItem(item.id)} className="text-xs text-danger hover:opacity-80">
                     Remove
                   </button>

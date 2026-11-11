@@ -51,10 +51,15 @@ service firebase.storage {
 
     // Customer-uploaded designs for orders. Only the uploader may create or
     // view them; admins may view them for fulfillment.
+    // Create is capped server-side too: the browser's 10MB / png-jpeg-webp check
+    // is advisory only, and unbounded customer uploads are a storage cost and an
+    // abuse vector. Owners may delete their own files (right to erasure).
     match /uploads/{userId}/{allPaths=**} {
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(png|jpg|jpeg|webp)');
+      allow delete: if isSignedIn() && request.auth.uid == userId;
     }
 
     // Product images - public read, admin-only write

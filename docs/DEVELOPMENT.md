@@ -34,15 +34,16 @@ The durable fix is `winget install OpenJS.NodeJS.LTS`.
 1. `npm run lint` — 0 errors
 2. `npx tsc --noEmit` — 0 errors (a running `npm run dev` can make this fail on its own generated
    `.next/dev/types/validator.ts`; stop the server first — Known Issue #55)
-3. `npm test` — 286 tests, 20 suites, all passing
+3. `npm test` — 328 tests, 22 suites, all passing
 4. `npm run build` — 25 pages, and the SEO gate (`check-seo`) runs automatically afterwards
 5. `cd functions && npm run build` — must compile clean
 6. `firebase deploy --only firestore:rules,storage` **first** if any rules changed, then
    `firebase deploy --only hosting` (or `firebase deploy` for everything)
 
-**None of steps 1–3 is enforced by a release path.** `.github/workflows/rebuild.yml` (what the admin's Publish
-button dispatches) runs only `npm run build`, and `npm run publish` is build + deploy — so a failing test or
-lint error cannot currently stop a publish. Treat the checklist as a discipline you are applying by hand.
+**Steps 1–3 ARE gated on the Publish path since 2026-10-16** (PROJECT_CONTEXT §15.2): `.github/workflows/rebuild.yml`
+— what the admin's Publish button dispatches — runs `npm run verify` (lint + typecheck + tests) before the build, so
+a red suite or a type error stops a publish. `npm run publish` (local: build + hosting deploy) still runs only the
+build, so run `npm run verify` yourself before using it.
 
 ## Branching & Rollback
 

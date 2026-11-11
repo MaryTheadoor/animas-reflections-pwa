@@ -383,8 +383,14 @@ export interface ProductAttributes {
 
 export type AddonType = "back_print" | "sleeve_print" | "personalization";
 
+/** A cart add-on's type: one of the three legacy `AddonType` values, or the
+ *  admin-defined modifier's own catalog id (e.g. "gift_wrap"). Widened on
+ *  purpose — coercing an unknown id to "back_print" typed and labelled a Gift
+ *  wrap add-on as a Back Print all the way through the cart and Square. */
+export type CartAddonType = AddonType | (string & Record<never, never>);
+
 export interface CartAddon {
-  type: AddonType;
+  type: CartAddonType;
   label: string;
   /** For fixed pricing: dollar amount. For percentage pricing: percent of the
    *  line's base price (e.g. 10 = 10%). Use resolveAddonPrice() to get dollars. */
@@ -397,12 +403,14 @@ export interface CartAddon {
   squareModifierId?: string;
 }
 
-/** Resolve an add-on's price to a dollar amount. Percentage add-ons apply to the
- *  line item's base price; fixed add-ons are returned as-is. */
+/** Resolve an add-on's price to a dollar amount, rounded to whole cents like
+ *  the server's integer-cent pricing. Percentage add-ons apply to the line's base price. */
 export function resolveAddonPrice(addon: CartAddon, basePrice: number): number {
-  return addon.priceType === "percentage"
-    ? basePrice * (addon.price / 100)
-    : addon.price;
+  if (addon.priceType === "percentage") {
+    const baseCents = Math.round(basePrice * 100);
+    return Math.round(baseCents * (addon.price / 100)) / 100;
+  }
+  return Math.round(addon.price * 100) / 100;
 }
 
 export interface CartItem {

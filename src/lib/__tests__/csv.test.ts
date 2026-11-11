@@ -40,6 +40,19 @@ describe("mapCatalogRow", () => {
     const r = mapCatalogRow(["name", "price"], ["", "5"]);
     expect("error" in r).toBe(true);
   });
+  it("preserves negative numeric signs", () => {
+    const r = mapCatalogRow(["name", "price", "inventory"], ["Tee", "-5.25", "-2"]);
+    expect("name" in r && r.price).toBe(-5.25);
+    expect("name" in r && r.inventory).toBe(-2);
+  });
+  it("rejects malformed numeric input", () => {
+    const r = mapCatalogRow(["name", "price", "inventory"], ["Tee", "12pcs", "12.5.3"]);
+    expect("name" in r && r.price).toBeUndefined();
+    expect("name" in r && r.inventory).toBeUndefined();
+    const { errors, products } = csvToProducts("name,price\nTee,12pcs");
+    expect(errors).toHaveLength(1);
+    expect(products[0].variants).toHaveLength(0);
+  });
 });
 
 describe("csvToProducts", () => {
@@ -72,6 +85,23 @@ describe("csvToProducts", () => {
     expect(first.map((p) => p.id)).toEqual(second.map((p) => p.id));
     // and ids are stable slugs of the name, not random uuids
     expect(first.find((p) => p.name === "Tee")!.id).toBe("tee");
+  });
+
+  it("merges names that resolve to the same document id", () => {
+    const colliding = "name,variant,price\nT Shirt,L,20.00\nT-Shirt,M,20.00";
+    const { products, errors } = csvToProducts(colliding);
+    expect(errors).toEqual([]);
+    expect(products).toHaveLength(1);
+    expect(products[0].id).toBe("t-shirt");
+    expect(products[0].variants.map((v) => v.name)).toEqual(["L", "M"]);
+  });
+
+  it("derives deterministic variant ids and suffixes colliding slugs", () => {
+    const variants = "name,variant,price\nTee,Red Blue,20.00\nTee,Red-Blue,21.00";
+    const first = csvToProducts(variants).products[0];
+    const second = csvToProducts(variants).products[0];
+    expect(first.variants.map((v) => v.id)).toEqual(["tee_red-blue", "tee_red-blue_2"]);
+    expect(second.variants.map((v) => v.id)).toEqual(first.variants.map((v) => v.id));
   });
 
   it("resolves sheet categories against existing ones", () => {

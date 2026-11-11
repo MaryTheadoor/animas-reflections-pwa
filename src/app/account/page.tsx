@@ -58,6 +58,7 @@ export default function AccountPage() {
 
   // Address form
   const [editingAddress, setEditingAddress] = useState<AddressData | null>(null);
+  const [addrFormOpen, setAddrFormOpen] = useState(false);
   const [addrForm, setAddrForm] = useState({ label: "", line1: "", line2: "", city: "", state: "", zip: "", isDefault: false });
   const [savingAddr, setSavingAddr] = useState(false);
 
@@ -96,6 +97,7 @@ export default function AccountPage() {
         id: editingAddress?.id,
         ...addrForm,
       });
+      setAddrFormOpen(false);
       setEditingAddress(null);
       resetAddrForm();
       fetchData();
@@ -133,7 +135,21 @@ export default function AccountPage() {
     setAddrForm({ label: "", line1: "", line2: "", city: "", state: "", zip: "", isDefault: false });
   };
 
+  const closeAddrForm = () => {
+    setAddrFormOpen(false);
+    setEditingAddress(null);
+    resetAddrForm();
+  };
+
+  /**
+   * Opening the form is an explicit action, tracked by `addrFormOpen`. The form
+   * used to be gated on `!editingAddress && addrForm.label === ""`, which is
+   * exactly the state editing an address produces — and "+ Add New Address"
+   * reset to it — so the form could never render and no address could be
+   * created. `editingAddress` now only says WHICH address is being edited.
+   */
   const startEditAddress = (addr?: AddressData) => {
+    setAddrFormOpen(true);
     if (addr) {
       setEditingAddress(addr);
       setAddrForm({ label: addr.label, line1: addr.line1, line2: addr.line2 || "", city: addr.city, state: addr.state, zip: addr.zip, isDefault: addr.isDefault });
@@ -305,7 +321,7 @@ export default function AccountPage() {
       {/* Addresses Tab */}
       {tab === "addresses" && (
         <div className="space-y-4">
-          {!editingAddress && addrForm.label === "" ? (
+          {!addrFormOpen ? (
             <>
               {addresses.length === 0 ? (
                 <p className="text-sm text-foreground text-center py-8">No saved addresses.</p>
@@ -427,7 +443,7 @@ export default function AccountPage() {
                   {savingAddr ? "Saving..." : "Save Address"}
                 </button>
                 <button
-                  onClick={() => { setEditingAddress(null); resetAddrForm(); }}
+                  onClick={closeAddrForm}
                   className="px-4 py-2 text-sm text-foreground/80 hover:text-primary transition-colors"
                 >
                   Cancel

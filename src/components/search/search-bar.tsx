@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useCallback, type FormEvent } from "react";
+import { useState, useCallback, useEffect, type FormEvent } from "react";
 import type { SearchFilters, SortMode } from "@/hooks/useSearch";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 interface SearchBarProps {
   categories: { id: string; name: string }[];
+  /** The applied filters. The page owns them so they can live in the URL. */
+  filters: SearchFilters;
+  sort: SortMode;
   onSearch: (filters: SearchFilters, sort: SortMode) => void;
-  initialQuery?: string;
 }
 
 const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
@@ -19,37 +21,44 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
 
 export default function SearchBar({
   categories,
+  filters,
+  sort,
   onSearch,
-  initialQuery = "",
 }: SearchBarProps) {
   const siteConfig = useSiteConfig();
-  const [query, setQuery] = useState(initialQuery);
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [sort, setSort] = useState<SortMode>("relevance");
+  // The box keeps a draft so typing does not fire a search per keystroke, but
+  // it FOLLOWS the applied query: /search?q=a → ?q=b used to keep showing "a"
+  // because the old initialQuery prop was read exactly once.
+  const [query, setQuery] = useState(filters.query);
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- follow an applied query that changed underneath (deep link, back button, submitted search)
+    setQuery(filters.query);
+  }, [filters.query]);
+
+  const apply = useCallback(
+    (next: Partial<SearchFilters>, nextSort: SortMode = sort) => {
+      onSearch({ ...filters, ...next }, nextSort);
+    },
+    [filters, sort, onSearch]
+  );
 
   const handleSubmit = useCallback(
     (e?: FormEvent) => {
       e?.preventDefault();
-      onSearch(
-        {
-          query,
-          categoryId,
-          colors: selectedColors,
-          minPrice: null,
-          maxPrice: null,
-        },
-        sort
-      );
+      apply({ query });
     },
-    [query, categoryId, selectedColors, sort, onSearch]
+    [apply, query]
   );
 
+  // Filter and sort changes apply immediately. Setting local state and waiting
+  // for the Search button made every one of these controls look dead.
   const toggleColor = (color: string) => {
-    setSelectedColors((prev) =>
-      prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color]
-    );
+    const colors = filters.colors.includes(color)
+      ? filters.colors.filter((c) => c !== color)
+      : [...filters.colors, color];
+    apply({ query, colors });
   };
 
   return (
@@ -93,10 +102,7 @@ export default function SearchBar({
 
         <select
           value={sort}
-          onChange={(e) => {
-            const newSort = e.target.value as SortMode;
-            setSort(newSort);
-          }}
+          onChange={(e) => apply({ query }, e.target.value as SortMode)}
           aria-label="Sort results"
           className="px-3 py-1.5 rounded-full border border-primary/20 bg-white text-xs text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
         >
@@ -113,9 +119,9 @@ export default function SearchBar({
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
-                onClick={() => setCategoryId(null)}
+                onClick={() => apply({ query, categoryId: null })}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  !categoryId ? "bg-gold-deep text-white" : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
+                  !filters.categoryId ? "bg-gold-deep text-white" : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                 }`}
               >
                 All
@@ -124,9 +130,11 @@ export default function SearchBar({
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => setCategoryId(cat.id === categoryId ? null : cat.id)}
+                  onClick={() =>
+                    apply({ query, categoryId: filters.categoryId === cat.id ? null : cat.id })
+                  }
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                    categoryId === cat.id
+                    filters.categoryId === cat.id
                       ? "bg-primary text-white"
                       : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                   }`}
@@ -140,7 +148,7 @@ export default function SearchBar({
           <div>
             <span className="block text-xs font-medium text-primary mb-2">
               Colors
-              {selectedColors.length > 0 && ` (${selectedColors.length} selected)`}
+              {filters.colors.length > 0 && ` (${filters.colors.length} selected)`}
             </span>
             <div className="flex flex-wrap gap-1.5">
               {(siteConfig.catalog_options?.colors ?? []).map((color) => (
@@ -149,7 +157,7 @@ export default function SearchBar({
                   type="button"
                   onClick={() => toggleColor(color.name.toLowerCase())}
                   className={`px-3 py-1 rounded-full text-xs font-medium capitalize transition-colors ${
-                    selectedColors.includes(color.name.toLowerCase())
+                    filters.colors.includes(color.name.toLowerCase())
                       ? "bg-primary text-white"
                       : "bg-warm-sand/50 text-foreground hover:bg-warm-sand"
                   }`}

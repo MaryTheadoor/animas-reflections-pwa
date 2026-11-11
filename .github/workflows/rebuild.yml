@@ -125,6 +125,15 @@ jobs:
       - name: Verify (lint, typecheck, tests)
         run: npm run verify
 
+      # functions/ has its own tsconfig and is EXCLUDED from the root one, so the
+      # root typecheck above never looks at it. The payment and admin callables
+      # only get compiled here — do not drop this step.
+      - name: Verify the Cloud Functions compile
+        working-directory: functions
+        run: |
+          npm ci
+          npm run build
+
       # next/font fetches Google Fonts over the network at build time. Keep
       # normal egress here: no NEXT_FONT_* offline flags, no network sandboxing,
       # no "npm ci --ignore-scripts". A build without font access fails or ships

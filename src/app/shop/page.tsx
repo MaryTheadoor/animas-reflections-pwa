@@ -10,6 +10,7 @@ import { PRODUCT_TYPE_LABELS } from "@/types";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { stripTags } from "@/lib/html-utils";
 import DensityPicker, { DENSITY_CLASSES, type Density } from "@/components/product/density-picker";
+import { compareByPrice } from "@/hooks/useSearch";
 
 type SortMode = "default" | "price-asc" | "price-desc" | "name-asc";
 type BrowseMode = "design" | "type";
@@ -21,6 +22,9 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "name-asc", label: "Name: A to Z" },
 ];
 
+/** Query-string keys this page owns; anything else is carried through. */
+const SYNCED_PARAMS = ["mode", "category", "type", "q", "sort", "density"];
+
 function ShopContent() {
   const { products, categories, loading, error, refresh } = useCatalog();
   const siteConfig = useSiteConfig();
@@ -29,21 +33,36 @@ function ShopContent() {
 
   // Filter state is initialized from the URL so deep links (e.g. a shared
   // filtered view) restore, and synced back so filtered views are shareable.
+  //
+  // The browse MODE has to be derived from whichever filter param arrived, not
+  // defaulted to "design": `/shop?type=sticker` used to seed activeType while
+  // the mode filter ignored it, and the URL sync then rewrote the URL to bare
+  // `/shop` — silently discarding the deep link.
   const densityParam = Number(searchParams.get("density"));
+  const modeParam = searchParams.get("mode");
   const [activeCategory, setActiveCategory] = useState<string>(searchParams.get("category") ?? "All");
   const [activeType, setActiveType] = useState<string>(searchParams.get("type") ?? "All");
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [sortMode, setSortMode] = useState<SortMode>((searchParams.get("sort") as SortMode) || "default");
-  const [browseMode, setBrowseMode] = useState<BrowseMode>(searchParams.get("mode") === "type" ? "type" : "design");
+  const [browseMode, setBrowseMode] = useState<BrowseMode>(
+    modeParam === "type" || modeParam === "design"
+      ? (modeParam as BrowseMode)
+      : searchParams.get("type")
+        ? "type"
+        : "design",
+  );
   const [density, setDensity] = useState<Density>(
     densityParam >= 2 && densityParam <= 5 ? (densityParam as Density) : 3,
   );
 
   // Keep the URL in sync with the filter state (debounced so typing doesn't
-  // spam history entries). The UI updates immediately from state.
+  // spam history entries). The UI updates immediately from state. The existing
+  // query string is MUTATED rather than replaced, so params this page does not
+  // own (utm_*, ref, …) survive the sync instead of being dropped.
   useEffect(() => {
     const t = setTimeout(() => {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams(window.location.search);
+      for (const key of SYNCED_PARAMS) params.delete(key);
       if (browseMode !== "design") params.set("mode", browseMode);
       if (browseMode === "design" && activeCategory !== "All") params.set("category", activeCategory);
       if (browseMode === "type" && activeType !== "All") params.set("type", activeType);
@@ -51,6 +70,9 @@ function ShopContent() {
       if (sortMode !== "default") params.set("sort", sortMode);
       if (density !== 3) params.set("density", String(density));
       const qs = params.toString();
+      // Router.replace triggers a re-render; skip the call when the URL already
+      // says this, which is what keeps the effect from looping.
+      if (qs === window.location.search.replace(/^\?/, "")) return;
       router.replace(qs ? `/shop?${qs}` : "/shop", { scroll: false });
     }, 200);
     return () => clearTimeout(t);
@@ -84,17 +106,12 @@ function ShopContent() {
       );
     }
     if (sortMode === "price-asc") {
-      result = [...result].sort((a, b) => {
-        const pricesA = (a.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pa = pricesA.length > 0 ? Math.min(...pricesA) : Number.MAX_VALUE;
-        const pricesB = (b.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pb = pricesB.length > 0 ? Math.min(...pricesB) : Number.MAX_VALUE;
-        return pa - pb;
-      });
+      // Shared with the search page (hooks/useSearch) so the same sort mode
+      // cannot order the catalog two different ways; products with no price
+      // configured sort last in both directions.
+      result = [...result].sort((a, b) => compareByPrice(a, b, "asc"));
     } else if (sortMode === "price-desc") {
-      result = [...result].sort((a, b) => {
-        const pricesA = (a.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pa = pricesA.length > 0 ? Math.min(...pricesA) : 0;
-        const pricesB = (b.variants ?? []).map((v) => v.price ?? 0).filter((p) => p > 0); const pb = pricesB.length > 0 ? Math.min(...pricesB) : 0;
-        return pb - pa;
-      });
+      result = [...result].sort((a, b) => compareByPrice(a, b, "desc"));
     } else if (sortMode === "name-asc") {
       result = [...result].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
     }

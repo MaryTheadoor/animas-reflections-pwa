@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   collection,
   getDocs,
+  getDoc,
+  getDocFromServer,
+  getDocsFromServer,
   doc,
   setDoc,
   deleteDoc,
@@ -16,6 +19,7 @@ import VariantMatrixEditor from "./variant-matrix-editor";
 import PrintZoneEditor from "./print-zone-editor";
 import { db, storage, functions } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
+import { productSaveIssueMessage, saveConfirmedByServer } from "@/lib/product-save";
 import { useSiteConfig, useSiteConfigRefresh } from "@/hooks/useSiteConfig";
 import { ADDON_PRICE, DEFAULT_COLOR_TINTS } from "@/lib/constants";
 import type { ManagedProduct, ManagedCategory, ProductType, DesignAsset, ProductAddon } from "@/types";
@@ -89,6 +93,9 @@ export default function ProductManager({ categories }: Props) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Set only after the SERVER confirms the write — the operator's proof that the
+  // change exists outside this tab.
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [newTag, setNewTag] = useState("");
   const [newColor, setNewColor] = useState("");
   const [newHex, setNewHex] = useState("#1E4D4F");
@@ -100,6 +107,25 @@ export default function ProductManager({ categories }: Props) {
   const [localCategories, setLocalCategories] = useState<ManagedCategory[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
+
+  /* The category dropdowns merge the dashboard's list with inline-created ones.
+     An inline creation lands in BOTH — the dashboard reloads it into
+     `categories` — so dedupe by id: a duplicate would render the same option
+     (and the same React key) twice. */
+  const categoryOptions = useMemo(() => {
+    const known = new Set(categories.map((c) => c.id));
+    return [...categories, ...localCategories.filter((c) => !known.has(c.id))];
+  }, [categories, localCategories]);
+
+  /** Slugs must be unique — routing and SEO depend on them. Same rule as the
+   *  one CategoryManager applies to its own create form. */
+  const uniqueCategorySlug = (base: string): string => {
+    const taken = new Set(categoryOptions.map((c) => c.slug));
+    if (!taken.has(base)) return base;
+    let i = 2;
+    while (taken.has(`${base}-${i}`)) i++;
+    return `${base}-${i}`;
+  };
 
   // Square push state (optional POS linkage — Square is payment-only otherwise)
   const [pushingToSquare, setPushingToSquare] = useState<string | null>(null); // productId being pushed
@@ -447,7 +473,7 @@ export default function ProductManager({ categories }: Props) {
   }, [allDesigns, designSort]);
 
   const autoPinForCategory = (categoryId: string) => {
-    const category = [...categories, ...localCategories].find((c) => c.id === categoryId);
+    const category = categoryOptions.find((c) => c.id === categoryId);
     if (!category) return;
     const matching = designsForCategory(allDesigns, category);
     const result = autoFillDesignsForCategory({
@@ -503,7 +529,7 @@ export default function ProductManager({ categories }: Props) {
     setDesignNote(`Refreshed ${updatedIds.length} pinned design${updatedIds.length === 1 ? "" : "s"} from the library.`);
   };
 
-  const categoryForAutoPin = [...categories, ...localCategories].find((c) => c.id === form.categoryId);
+  const categoryForAutoPin = categoryOptions.find((c) => c.id === form.categoryId);
 
   /* ── Cindy's product-page epic (2026-10-16) ──────────────────────────────
      Three requests, all about doing less by hand:
@@ -565,7 +591,7 @@ export default function ProductManager({ categories }: Props) {
    * design label no category covers, so nothing in the library is unreachable.
    */
   const designGroups = useMemo(() => {
-    const allCategories = [...categories, ...localCategories];
+    const allCategories = categoryOptions;
     const groups = allCategories.map((cat) => ({
       label: cat.name,
       category: cat as ManagedCategory,
@@ -583,7 +609,7 @@ export default function ProductManager({ categories }: Props) {
       groups.push({ label, category: { id: "", name: label, slug: label } as ManagedCategory, count });
     }
     return groups.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-  }, [allDesigns, categories, localCategories]);
+  }, [allDesigns, categoryOptions]);
 
   /** The selection one group would produce, applied through the tested rules. */
   const applyDesignGroup = (label: string) => {
@@ -613,10 +639,10 @@ export default function ProductManager({ categories }: Props) {
   /** "Design Your Own" products take customer artwork, not library designs. */
   const designYourOwnCategory = useMemo(
     () =>
-      [...categories, ...localCategories].find(
+      categoryOptions.find(
         (category) => category.name.trim().toLowerCase() === "design your own",
       ),
-    [categories, localCategories],
+    [categoryOptions],
   );
   const takesCustomerArtwork = Boolean(
     designYourOwnCategory && form.categoryId === designYourOwnCategory.id,
@@ -858,7 +884,12 @@ export default function ProductManager({ categories }: Props) {
 
   const loadProducts = useCallback(async () => {
     try {
-      const snap = await getDocs(collection(db, "products"));
+      // Read from the SERVER, not the local cache: a list served from cache can
+      // show a save that never reached Firestore. Offline, fall back to cache so
+      // the list still renders.
+      const snap = await getDocsFromServer(collection(db, "products")).catch(() =>
+        getDocs(collection(db, "products")),
+      );
       const items: ManagedProduct[] = [];
       snap.forEach((d) => {
         const data = d.data() as ManagedProduct;
@@ -897,6 +928,40 @@ export default function ProductManager({ categories }: Props) {
     }).catch(() => {});
   }, [loadProducts]);
 
+  /* ── Keep an open draft in step with the Images tab ──────────────────────
+     The Images tab writes products/{id} directly, while this editor holds a
+     snapshot loaded once — so saving a draft used to write the old image list
+     back and silently drop a fresh upload. On the broadcast, re-read that one
+     document and merge ONLY the image-owned fields, leaving the operator's
+     other unsaved edits alone. */
+  const editingIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const onProductsChanged = async (event: Event) => {
+      const productId = (event as CustomEvent<{ productId?: string }>).detail?.productId;
+      if (!productId || editingIdRef.current !== productId) return;
+      try {
+        const snap = await getDoc(doc(db, "products", productId));
+        if (!snap.exists()) return;
+        // The draft may have been closed while the read was in flight.
+        if (editingIdRef.current !== productId) return;
+        const saved = snap.data() as ManagedProduct;
+        const imageFields = {
+          images: Array.isArray(saved.images) ? saved.images : [],
+          mockupImages: saved.mockupImages,
+          mockupImagesByColor: saved.mockupImagesByColor,
+          mockupImagesByModifier: saved.mockupImagesByModifier,
+        };
+        setForm((prev) => ({ ...prev, ...imageFields }));
+        setEditing((prev) => (prev && prev.id === productId ? { ...prev, ...imageFields } : prev));
+        setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, ...imageFields } : p)));
+      } catch (err) {
+        console.warn("Product image refresh failed", err);
+      }
+    };
+    window.addEventListener("admin-products-changed", onProductsChanged);
+    return () => window.removeEventListener("admin-products-changed", onProductsChanged);
+  }, []);
+
   // Sync contentEditable div ← form.description only when the user isn't
   // actively editing (preserves cursor position). ContentEditable grows
   // naturally — no explicit height management needed.
@@ -909,6 +974,7 @@ export default function ProductManager({ categories }: Props) {
   }, [form.description]);
 
   const resetForm = () => {
+    editingIdRef.current = null;
     setForm(EMPTY_PRODUCT);
     setEditing(null);
     setNewTag("");
@@ -919,8 +985,11 @@ export default function ProductManager({ categories }: Props) {
   };
 
   const startEdit = (p: ManagedProduct) => {
+    editingIdRef.current = p.id;
     setForm({ ...p });
     setEditing(p);
+    setLastSavedAt(null);
+    setSaveError(null);
   };
 
   const updateField = (field: keyof ManagedProduct, value: unknown) => {
@@ -1098,7 +1167,14 @@ export default function ProductManager({ categories }: Props) {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.categoryId || form.variants.length === 0) return;
+    // Explain a refusal instead of returning silently: a missing category used
+    // to disable the button, leaving 120 active products uneditable with no
+    // message, and a missing name/variant did nothing at all.
+    const issue = productSaveIssueMessage(form);
+    if (issue) {
+      setSaveError(issue);
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -1115,6 +1191,9 @@ export default function ProductManager({ categories }: Props) {
         id: docId,
         name: form.name.trim(),
         description: form.description.trim(),
+        // SEO copy is typed raw (a space must be typable) and trimmed once, here.
+        seoTitle: form.seoTitle?.trim() || undefined,
+        seoDescription: form.seoDescription?.trim() || undefined,
         // For a brand-new product editing.createdAt is "" (empty string, not
         // null), so use || rather than ?? to fall back to the current timestamp.
         createdAt: editing?.createdAt || now,
@@ -1129,9 +1208,25 @@ export default function ProductManager({ categories }: Props) {
         setDoc(doc(db, "products", docId), stripUndefined(product)),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Save timed out. Check your connection and try again.")), 15000)),
       ]);
+      // A write RESOLVES FROM THE LOCAL CACHE when the SDK believes it is
+      // offline, queueing it for a later flush — or never. That is the "saved in
+      // this tab, missing in a new session" bug: the editor shows the change
+      // while the server still holds the old document. Confirm against the
+      // server before claiming success, and keep the form open if it did not land.
+      const confirmed = await getDocFromServer(doc(db, "products", docId));
+      if (!confirmed.exists() || !saveConfirmedByServer(confirmed.data()?.updatedAt, now)) {
+        throw new Error(
+          "The server has not confirmed this save. Check your connection, then save again — nothing has changed online yet.",
+        );
+      }
       setSaving(false);
       setSaveError(null);
+      setLastSavedAt(new Date());
       resetForm();
+      // The Images tab holds a snapshot of this product; let it reload.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("admin-products-changed", { detail: { productId: docId } }));
+      }
       loadProducts();
     } catch (err) {
       setSaving(false);
@@ -1145,9 +1240,12 @@ export default function ProductManager({ categories }: Props) {
     setAddingCategory(true);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const newCat: ManagedCategory = { id, name, slug, order: categories.length + localCategories.length, createdAt: now, updatedAt: now };
+    // The slug must be unique or the new category collides in routing.
+    const slug = uniqueCategorySlug(name.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+    const newCat: ManagedCategory = { id, name, slug, order: categoryOptions.length, createdAt: now, updatedAt: now };
     await setDoc(doc(db, "categories", id), newCat);
+    // Kept locally so the select shows it before the dashboard's reload lands —
+    // categoryOptions drops it again once the reload delivers the same id.
     setLocalCategories((prev) => [...prev, newCat]);
     setForm((prev) => ({ ...prev, categoryId: id }));
     setNewCategoryName("");
@@ -1159,7 +1257,7 @@ export default function ProductManager({ categories }: Props) {
   };
 
   // Collect every Storage URL a product references (gallery, mockups,
-  // per-color photos, thumbnails) for cleanup/ownership checks.
+  // per-color photos, per-modifier photos) for cleanup/ownership checks.
   const collectProductUrls = (p: ManagedProduct): string[] => {
     const urls = [...(p.images ?? [])];
     if (p.mockupImages) {
@@ -1167,6 +1265,13 @@ export default function ProductManager({ categories }: Props) {
     }
     if (p.mockupImagesByColor) {
       for (const views of Object.values(p.mockupImagesByColor)) {
+        if (views) urls.push(...(Object.values(views).filter(Boolean) as string[]));
+      }
+    }
+    // Per-modifier images are written by the product editor's modifier controls;
+    // omitting them here let cleanup orphan or wrongly delete those files.
+    if (p.mockupImagesByModifier) {
+      for (const views of Object.values(p.mockupImagesByModifier)) {
         if (views) urls.push(...(Object.values(views).filter(Boolean) as string[]));
       }
     }
@@ -1420,7 +1525,7 @@ export default function ProductManager({ categories }: Props) {
                   className="px-3 py-2 rounded-lg border border-primary/20 bg-white text-xs"
                 >
                   <option value="">Any category</option>
-                  {[...categories, ...localCategories].map((c) => (
+                  {categoryOptions.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -1753,6 +1858,13 @@ export default function ProductManager({ categories }: Props) {
         </div>
       )}
 
+      {lastSavedAt && !editing && (
+        <p className="text-xs text-foreground/80">
+          Saved and confirmed by the server at{" "}
+          {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}.
+        </p>
+      )}
+
       {products.length > 0 && !editing && (
         <div className="space-y-1">
           {sortedProducts.map((p) => (
@@ -1843,7 +1955,7 @@ export default function ProductManager({ categories }: Props) {
 
 
       {/* ── Edit Form ── */}
-      {editing !== undefined && (
+      {editing !== null && (
         <div className="bg-white border border-warm-sand rounded-2xl p-6 space-y-5">
           <div className="flex items-center justify-between">
             <h3 className="font-bold font-display">
@@ -1866,7 +1978,7 @@ export default function ProductManager({ categories }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-primary mb-1">Category *</label>
+              <label className="block text-xs font-medium text-primary mb-1">Category</label>
               <select
                 value={form.categoryId}
                 onChange={(e) => {
@@ -1878,11 +1990,21 @@ export default function ProductManager({ categories }: Props) {
                 }}
                 className="w-full px-3 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
               >
-                <option value="">Select...</option>
-                {[...categories, ...localCategories].map((c) => (
+                <option value="">Uncategorised</option>
+                {categoryOptions.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+              {form.categoryId && !categoryOptions.some((c) => c.id === form.categoryId) && (
+                <p className="mt-1 text-xs text-danger">
+                  This category no longer exists. Pick another, or set Uncategorised.
+                </p>
+              )}
+              {!form.categoryId && (
+                <p className="mt-1 text-xs text-foreground/70">
+                  Optional — the product saves fine without one and shows under &ldquo;All&rdquo; in the shop.
+                </p>
+              )}
               {!addingCategory ? (
                 <button
                   onClick={() => setAddingCategory(true)}
@@ -2020,7 +2142,7 @@ export default function ProductManager({ categories }: Props) {
               <input
                 type="text"
                 value={form.seoTitle ?? ""}
-                onChange={(e) => updateField("seoTitle", e.target.value.trim() || undefined)}
+                onChange={(e) => updateField("seoTitle", e.target.value)}
                 placeholder="Defaults to product name"
                 className="w-full px-3 py-1.5 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm"
               />
@@ -2030,7 +2152,7 @@ export default function ProductManager({ categories }: Props) {
               <input
                 type="text"
                 value={form.seoDescription ?? ""}
-                onChange={(e) => updateField("seoDescription", e.target.value.trim() || undefined)}
+                onChange={(e) => updateField("seoDescription", e.target.value)}
                 placeholder="Defaults to description"
                 className="w-full px-3 py-1.5 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm"
               />
@@ -3406,7 +3528,7 @@ export default function ProductManager({ categories }: Props) {
             <div className="flex gap-3">
               <button
                 onClick={handleSave}
-                disabled={saving || !form.name.trim() || !form.categoryId || form.variants.length === 0}
+                disabled={saving}
                 className="px-6 py-2.5 bg-gold text-on-gold rounded-xl font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
               >
                 {saving ? "Saving..." : editing?.id ? "Update Product" : "Create Product"}

@@ -6,7 +6,7 @@ import { deleteDoc, doc, setDoc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
-import { useProductPhotos } from "@/hooks/useProductPhotos";
+import { notifyProductPhotosChanged, useProductPhotos } from "@/hooks/useProductPhotos";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useCatalog } from "@/hooks/useCatalog";
 import {
@@ -167,6 +167,8 @@ export default function ProductPhotoManager() {
             created_at: new Date().toISOString(),
           }) as unknown as ProductPhoto,
         );
+        // The product editor's "apply a saved blank" picker reads this library.
+        notifyProductPhotosChanged();
         done += 1;
       }
       setStatus(`Added ${done} photo${done === 1 ? "" : "s"} to “${cleanName}”.`);
@@ -203,6 +205,8 @@ export default function ProductPhotoManager() {
         stripUndefined({ ...payload(), view, ...(image_url ? { image_url } : {}) }),
         { merge: true },
       );
+      // The product editor's "apply a saved blank" picker reads this library.
+      notifyProductPhotosChanged();
       setStatus("Saved.");
       resetForm();
       await refresh();

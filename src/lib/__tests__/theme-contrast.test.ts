@@ -31,7 +31,14 @@ describe("contrastRatio", () => {
   });
 
   it("expands 3-digit shorthand", () => {
-    expect(relativeLuminance("#fff")).toBeCloseTo(relativeLuminance("#ffffff"), 10);
+    expect(relativeLuminance("#fff")).toBeCloseTo(relativeLuminance("#ffffff")!, 10);
+  });
+
+  it("returns null for non-hex and malformed colours", () => {
+    expect(relativeLuminance("rgb(255, 255, 255)")).toBeNull();
+    expect(relativeLuminance("white")).toBeNull();
+    expect(relativeLuminance("#12.5")).toBeNull();
+    expect(relativeLuminance("#12345")).toBeNull();
   });
 });
 
@@ -73,6 +80,40 @@ describe("enforceContrast", () => {
     const { palette, fixes } = enforceContrast(broken, { ...LIGHT_THEME, goldDeep: "#000000" }, "light");
     expect(palette.goldDeep).toBe("#000000");
     expect(fixes).toEqual([]);
+  });
+
+  it("replaces an unparseable colour with the shipped default", () => {
+    const { palette, fixes } = enforceContrast(
+      { ...LIGHT_THEME, danger: "rgb(220, 38, 38)" },
+      LIGHT_THEME,
+      "light",
+    );
+    expect(palette.danger).toBe(LIGHT_THEME.danger);
+    expect(fixes.map((f) => f.token)).toContain("danger");
+  });
+
+  it("re-verifies guarded pairs until later fallbacks stabilise", () => {
+    const twoPass = {
+      ...LIGHT_THEME,
+      goldDeep: "#111827",
+      danger: "#FFFFFF",
+      white: "#000000",
+    };
+    const { palette, fixes } = enforceContrast(twoPass, LIGHT_THEME, "light");
+    expect(fixes.map((f) => f.token)).toEqual(["white", "danger"]);
+
+    const guardedRatios = [
+      contrastRatio(palette.goldDeep, palette.cream),
+      contrastRatio(palette.goldDeep, palette.white),
+      contrastRatio(palette.goldInk, blend(palette.gold, 0.2, palette.cream)),
+      contrastRatio(palette.danger, palette.white),
+      contrastRatio(palette.onGold, palette.gold),
+      contrastRatio(palette.white, palette.goldDeep),
+      contrastRatio(palette.plumInk, blend(palette.plum, 0.2, palette.cream)),
+      contrastRatio(palette.onPlum, palette.plum),
+      contrastRatio(palette.onPlum, palette.plumLight),
+    ];
+    for (const ratio of guardedRatios) expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
   it("does not move tokens that are not part of a guarded pair", () => {

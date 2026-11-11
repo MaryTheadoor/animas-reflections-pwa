@@ -50,7 +50,7 @@ const DIAMETER_PATTERN = /(\d+(?:\.\d+)?)\s*["\u201D]/;
 const COLOR_PATTERNS: [RegExp, string][] = [
   [/\bBlack\b/i, "black"],
   [/\bWhite\b/i, "white"],
-  [/\bGray|Grey\b/i, "gray"],
+  [/\b(?:Gray|Grey)\b/i, "gray"],
   [/\bNavy\b/i, "navy"],
   [/\bBlue\b/i, "blue"],
   [/\bRed\b/i, "red"],
@@ -93,20 +93,20 @@ const BRAND_PATTERNS: [RegExp, string][] = [
   [/\bwomen in aviation\b/i, "Women In Aviation"],
   [/\bfly high\b/i, "Fly High AA"],
   [/\bcustom slap\b/i, "Custom Slaps"],
-  [/\bwood sign|chromaluxe wood\b/i, "Wood Signs"],
+  [/\b(?:wood sign|chromaluxe wood)\b/i, "Wood Signs"],
   [/\bpet scarf\b/i, "Pet Scarves"],
   [/\bornament\b/i, "Ornaments"],
   [/\bglass cutting board\b/i, "Glass Cutting Boards"],
-  [/\bdrink hugger|neoprene\b/i, "Drink Huggers"],
+  [/\b(?:drink hugger|neoprene)\b/i, "Drink Huggers"],
   [/\bhat\b/i, "Hats"],
 ];
 
 const TYPE_PATTERNS: [RegExp, ProductType][] = [
-  [/\bsticker|slap|decal\b/i, "sticker"],
-  [/\bsign|wood|plaque\b/i, "sign"],
-  [/\bjewelry|pendant|necklace|bracelet|earring\b/i, "jewelry"],
-  [/\bhat|bag|tote|scarf|drink|koozie|hugger|can cooler|ornament|coaster|cutting board|pet\b/i, "accessory"],
-  [/\btee|t-shirt|t shirt|shirt|hoodie|hooded|sweat|tank|apparel|long.?sleeve|crewneck\b/i, "apparel"],
+  [/\b(?:sticker|slap|decal)\b/i, "sticker"],
+  [/\b(?:sign|wood|plaque)\b/i, "sign"],
+  [/\b(?:jewelry|pendant|necklace|bracelet|earring)\b/i, "jewelry"],
+  [/\b(?:hat|bag|tote|scarf|drink|koozie|hugger|can cooler|ornament|coaster|cutting board|pet)\b/i, "accessory"],
+  [/\b(?:tee|t-shirt|t shirt|shirt|hoodie|hooded|sweat|tank|apparel|long.?sleeve|crewneck)\b/i, "apparel"],
 ];
 
 /** Colour names found in a label, canonicalised and de-duplicated. */

@@ -21,7 +21,12 @@ export default function PageLayout({
         Skip to main content
       </a>
       <HeaderBar />
-      <div id="main-content" className="flex flex-col flex-1">
+      {/* tabIndex={-1} so the skip link actually MOVES focus here; a plain
+          wrapper div is not a focus target and the browser would only scroll.
+          Stays a div, not <main>: every view rendered inside it supplies its own
+          <main> landmark (faq-view.tsx, about-view.tsx, …) and nesting two
+          would be invalid HTML. */}
+      <div id="main-content" tabIndex={-1} className="flex flex-col flex-1">
         {children}
       </div>
     </div>

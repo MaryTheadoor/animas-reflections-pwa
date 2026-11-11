@@ -2221,3 +2221,177 @@ present in the live admin chunk.
       admin login, and a localhost origin has no session) — see Known Issue #51 for why a
       rendered pixel check matters more than a computed-style one
 
+---
+
+## Session 38 — 2026-11-04 | Debugging pass: what a full read-through found
+
+Brief: "read the whole repo and docs, then debug." The baseline gate was **green** (lint 0,
+`tsc` 0, 291 tests / 20 suites), so there was no red test to chase. Every defect below was
+behavioural and invisible to the suite: a security hole in two callables, a pricing fallback
+that trusted the client, editors that destroyed unsaved work, and a set of controls that did
+nothing when clicked.
+
+### Method
+
+Four read-throughs in parallel (storefront · admin CMS · backend+rules+CI · lib+scripts+tests),
+each reporting file:line evidence. The six highest-severity claims were then re-read by hand
+before anything was edited, because a read-through agent is a witness, not a verdict.
+
+### Slice 1 — security and money (Known Issues #56–#58)
+
+- `fetchCustomerOrders` identified the caller from `users/{uid}.email`, a document any
+  signed-in user can write. Point it at a victim's address and their orders — shipping address
+  included — came back through the Admin SDK. Identity now comes from the token email.
+- `requireAdmin` never checked `email_verified`, although `syncMyAdminClaim` did and said why.
+  Registering a listed-but-unregistered admin address inherited every admin callable,
+  `saveAdminEmails` included, which made the escalation permanent. `applyAdminClaims` also
+  refuses to mint the Storage-trusted claim for unverified users now, and pages `listUsers`
+  instead of trusting its silent 1000-user cap.
+- `deriveOrder` charged the **client's** price when a variant's catalog price was 0/blank. It
+  now rejects the line; the storefront shows "not orderable online" and the product JSON-LD
+  omits `offers` rather than advertising `0.00`.
+- Shipping was added to the payment amount only. The Square order carried line items alone, so
+  Square's total (and the admin's mirrored order) understated the charge, and a payment
+  attached to an order can be rejected for not matching its total. Shipping is now a
+  `serviceCharges` entry, `chargeCents` is Square's total, and a catalog-path total above the
+  approved total blocks instead of warning.
+- The customer callables threw plain `Error` for auth failures; they now throw `HttpsError`.
+
+### Slice 2 — admin data loss (Known Issue #59)
+
+- Settings, Admins, Designs, Images, Product Photos and Content/Theme unmounted on tab switch,
+  taking unsaved drafts and file queues with them. All six are keep-mounted, hidden by CSS,
+  like Products/Categories/SEO already were.
+- `editing !== undefined` was always true (the state is `ManagedProduct | null`), so the
+  product list and an empty "New Product" form rendered at the same time.
+- SEO Title/Description trimmed on every keystroke, which made typing a space impossible.
+  Trimming moved to save.
+- Inline category create minted colliding slugs and rendered a duplicate `<option>`.
+- The Images tab writes `products/{id}` directly while the product editor held a snapshot
+  loaded once, so a product save wrote the old image list back and dropped a fresh upload.
+  Both sides now broadcast `admin-products-changed` and the draft merges only image fields.
+  `notifyProductPhotosChanged()` had no callers at all, so the blank-photo picker never
+  refreshed within a session.
+- Storage deletes now skip URLs still used as mockups, and `collectProductUrls` includes
+  `mockupImagesByModifier`, which it had been omitting.
+
+### Slice 3 — storefront
+
+- `/account`: "+ Add New Address" could never open — the form's gate was exactly the state the
+  handler set. Address create and edit both work now.
+- `/shop`: `?type=` deep links were rewritten away by the URL sync, and unknown params
+  (`utm_*`, `ref`) were dropped. The browse mode is derived from the param, and the sync
+  mutates the existing query string.
+- `/product`: an unpriced variant still offered "Add to Cart — $0.00"; it now says "Not
+  Available Online" and explains why.
+- `/search`: filters/sort/density now live in the URL; the category filter was an OR against
+  the text score, so it returned products outside the category; unpriced products sort last on
+  both shop and search through one shared comparator.
+- Cart had no quantity control at all. A `− / qty / +` stepper drives `updateQuantity`, clamped
+  1..99 in the reducer so the drawer and the checkout payload cannot disagree.
+- Customizer: switching products carried the previous product's paid add-ons and uploaded
+  artwork; every modifier was coerced to `back_print`; labels hardcoded "+$5" against the
+  configurable price; the `$20` fallback is gone.
+- Dark mode: `text-white` on the teal/red badges became `text-on-plum` (5.47:1 / 4.83:1;
+  `--color-white` remaps to slate-800 under `html.dark`). The skip link now moves focus, home
+  has a `<main>`, the cart toast is announced, and the FAQ JSON-LD follows the CMS copy.
+
+### Verification
+
+- `npm run lint` 0/0 · `tsc --noEmit` 0 · **303 tests / 20 suites** (was 291; new cases cover
+  the pricing rejection, the category-AND filter, missing-price sort, cart quantity clamping
+  and percentage add-ons)
+- `npm run build` → 25 pages, `check-seo: OK — 25 pages, 16 sitemap URLs`
+- `cd functions && npm run build` clean
+- Note: `npm run verify` stalled once in its `tsc` step for 9+ minutes and was killed; running
+  lint, tsc and jest directly was clean every time, so that was the wrapper, not the types.
+
+### Decisions worth keeping
+
+- A zero-priced variant is **unsellable**, not client-priced. The catalog is the only price
+  authority; a product with no price is a data problem to fix in Admin, never a checkout to
+  guess at.
+- Shipping belongs on the Square order. One total, visible to the admin mirror, no
+  amount-vs-order mismatch to debug at the counter.
+- Orders and Users stayed conditional tabs on purpose: they are read-only, and refresh-on-open
+  is worth more than draft preservation.
+
+### Follow-up, same day — "product changes not saving in admin"
+
+Reported as: an edit sticks in the tab it was made in, then is missing in a new session.
+
+Two separate defects sat behind that one sentence:
+
+1. **A write can resolve from the local cache.** Firestore's Web SDK resolves `setDoc` from
+   the in-memory cache when it believes the client is offline, queueing the write for a later
+   flush — or never. The editor then showed the change, `loadProducts()` (same tab, same cache)
+   confirmed it, and the server still held the old document. Nothing in the UI could tell the
+   difference. Fixed by (a) reading the admin list with `getDocsFromServer`, (b) re-reading the
+   single document with `getDocFromServer` after the write and comparing the echoed
+   `updatedAt`, and (c) keeping the draft open with a plain-language error when the server has
+   not confirmed it. A green "Saved and confirmed by the server at HH:MM:SS" line is the
+   operator's proof that the change exists outside that tab.
+2. **The Save button could be disabled with no explanation.** `Category` was mandatory in the
+   guard *and* in the button's disabled condition. Measured against the live collection:
+   **254 of 377 products have no `categoryId` (120 of them active)**, so those products could
+   not be edited at all — click the greyed button and nothing happens, which reads as "saving
+   is broken". Category is now optional (the shop already renders uncategorised products under
+   "All"), a missing name or variant produces a named error, and the button is never dead. Six
+   products pointed at a category that no longer exists; the editor now says so next to the
+   select.
+
+The rules moved into `src/lib/product-save.ts` with tests — `productSaveIssueMessage()` decides
+what a save requires, `saveConfirmedByServer()` decides whether the echo proves durability.
+Gate after this follow-up: tsc 0 · lint 0 · **310 tests / 21 suites** · build 25 pages, SEO OK.
+
+### Pending / Next
+
+- The open items this pass found but did not fix are listed in **PROJECT_CONTEXT §15.5**
+- No live click-through yet: address add/edit, the cart stepper and checkout need a signed-in
+  session (G2 remains the highest-value verification outstanding)
+- The save path's durability check is only provable with a signed-in admin session: save a
+  product, then confirm the same document in a fresh session (or from the public REST read)
+- Nothing was deployed this session — the change set exists on `development` only. Deploy order
+  when it goes out: **functions before hosting**, because the pricing and auth behaviour both
+  changed server-side.
+
+### Second pass — working the open list (same day)
+
+The `PROJECT_CONTEXT §15.5` items, taken in value order. What landed:
+
+- **Durability, everywhere it matters.** `src/lib/server-write.ts` adds `writeMatchesServer()` (a
+  subset deep-compare, delete-sentinel aware) and `confirmServerWrite()`, applied after every
+  direct Firestore write in the Images tab, category manager, design save/delete and Admin → SEO.
+  Theme and Content deliberately untouched: they call `saveSiteConfig`, and a callable only
+  returns after the server wrote.
+- **CSV identity.** Rows now group by the document id they will actually be written to, so
+  "T Shirt" and "T-Shirt" merge into one product instead of the second silently overwriting the
+  first; variant ids are deterministic (`productId_variantSlug`) instead of random per import;
+  `toNum` keeps a minus sign and rejects malformed numbers rather than stripping characters.
+- **Heuristics.** Every alternation in `catalog-heuristics.ts` is grouped, so word boundaries
+  apply to each alternative: "Grayson" is no longer grey, "Slapstick" no longer a sticker.
+- **Contrast floor.** Re-verifies the guarded pairs until stable (max 3 passes) and treats an
+  unparseable colour as FAIL — `relativeLuminance` returning 0 used to make any malformed value
+  pass as black.
+- **Money.** `resolveAddonPrice` rounds to whole cents; the cart sums per-line base and add-on
+  amounts in integer cents and converts once, so the displayed lines add up and `expectedTotal`
+  cannot drift away from the server's derivation.
+- **Checkout callable.** 50-line cap per call; inventory decremented **in a transaction after a
+  successful payment** (best-effort — a stock write must never fail a paid order); the Square
+  environment is compared case-insensitively (`Production` used to mean sandbox).
+- **Storage rules.** `uploads/{uid}/**` now requires < 10 MB and an image content type on create,
+  and the owner may delete their own file. Needs a rules deploy and the usual two-sided check
+  (customer upload succeeds, unauthenticated fails).
+- **CI.** `rebuild.yml` compiles `functions/` — the root tsconfig excludes it, so before this no
+  release path ever typechecked the payment code.
+- **SEO fetch.** 15-second abort; an HTTP 200 carrying an empty `config/seo` no longer overwrites
+  a snapshot that has content.
+
+Still open, with reasons, in §15.5: App Check (console change), `defineSecret` for the Square
+token (needs the token present before deploying), Square order cancel on a declined payment,
+four dead controls, the catalog category data pass, and the `onPlum` editability note.
+
+Gate: tsc 0 · lint 0 · **328 tests / 22 suites** · build 25 pages, SEO gate OK ·
+`cd functions && npm run build` clean · `npm run seo:fetch` reports "unchanged" and leaves the
+tree clean.
+

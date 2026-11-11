@@ -10,7 +10,7 @@ export default function FaqView() {
   const c = useSiteContent();
   return (
     <PageLayout>
-      <FaqJsonLd />
+      <FaqJsonLd items={c.faq.items} />
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 pb-16 sm:pb-20">
         <div className="text-center pt-8 sm:pt-12 mb-12">
           <h1 className="text-4xl font-bold font-display mb-3">{c.faq.heading}</h1>

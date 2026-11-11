@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
+import { confirmServerWrite, SERVER_WRITE_NOT_CONFIRMED } from "@/lib/server-write";
 import type { ManagedCategory } from "@/types";
 
 /** Collect every descendant of `id` (children, grandchildren, ...). */
@@ -90,23 +91,29 @@ export default function CategoryManager() {
     setError(null);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    const categoryRef = doc(db, "categories", id);
+    const payload = {
+      id,
+      name,
+      slug: uniqueSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), null),
+      order: categories.length,
+      parentId: newParentId || null,
+      createdAt: now,
+      updatedAt: now,
+    };
     try {
-      await setDoc(doc(db, "categories", id), {
-        id,
-        name,
-        slug: uniqueSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), null),
-        order: categories.length,
-        parentId: newParentId || null,
-        createdAt: now,
-        updatedAt: now,
-      });
+      await setDoc(categoryRef, payload);
+      const confirmed = await confirmServerWrite(categoryRef, payload).catch(() => false);
+      if (!confirmed) throw new Error(SERVER_WRITE_NOT_CONFIRMED);
       setNewName("");
       setNewParentId("");
       notifyCategoriesChanged();
       loadCategories();
     } catch (err) {
       console.error("Category save failed", err);
-      setError("Failed to save category");
+      setError(err instanceof Error && err.message === SERVER_WRITE_NOT_CONFIRMED
+        ? SERVER_WRITE_NOT_CONFIRMED
+        : "Failed to save category");
     }
   };
 
@@ -122,20 +129,26 @@ export default function CategoryManager() {
     setError(null);
     const existing = categories.find((c) => c.id === editingId);
     if (!existing) return;
+    const categoryRef = doc(db, "categories", editingId);
+    const payload = stripUndefined({
+      ...existing,
+      name: editName.trim(),
+      slug: uniqueSlug(editName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"), editingId),
+      parentId: editParentId || null,
+      updatedAt: new Date().toISOString(),
+    });
     try {
-      await setDoc(doc(db, "categories", editingId), stripUndefined({
-        ...existing,
-        name: editName.trim(),
-        slug: uniqueSlug(editName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"), editingId),
-        parentId: editParentId || null,
-        updatedAt: new Date().toISOString(),
-      }), { merge: true });
+      await setDoc(categoryRef, payload, { merge: true });
+      const confirmed = await confirmServerWrite(categoryRef, payload).catch(() => false);
+      if (!confirmed) throw new Error(SERVER_WRITE_NOT_CONFIRMED);
       setEditingId(null);
       notifyCategoriesChanged();
       loadCategories();
     } catch (err) {
       console.error("Category edit failed", err);
-      setError("Failed to save category");
+      setError(err instanceof Error && err.message === SERVER_WRITE_NOT_CONFIRMED
+        ? SERVER_WRITE_NOT_CONFIRMED
+        : "Failed to save category");
     }
   };
 
@@ -183,18 +196,29 @@ export default function CategoryManager() {
     setError(null);
     const a = categories[index];
     const b = categories[other];
+    const aRef = doc(db, "categories", a.id);
+    const bRef = doc(db, "categories", b.id);
+    const aPayload = stripUndefined({ ...a, order: other });
+    const bPayload = stripUndefined({ ...b, order: index });
     try {
       const batch = writeBatch(db);
       // stripUndefined is critical here: top-level categories carry
       // parentId: undefined in memory, which the Firestore SDK rejects.
-      batch.set(doc(db, "categories", a.id), stripUndefined({ ...a, order: other }), { merge: true });
-      batch.set(doc(db, "categories", b.id), stripUndefined({ ...b, order: index }), { merge: true });
+      batch.set(aRef, aPayload, { merge: true });
+      batch.set(bRef, bPayload, { merge: true });
       await batch.commit();
+      const confirmed = await Promise.all([
+        confirmServerWrite(aRef, aPayload).catch(() => false),
+        confirmServerWrite(bRef, bPayload).catch(() => false),
+      ]);
+      if (confirmed.some((result) => !result)) throw new Error(SERVER_WRITE_NOT_CONFIRMED);
       notifyCategoriesChanged();
       loadCategories();
     } catch (err) {
       console.error("Category reorder failed", err);
-      setError("Failed to reorder categories");
+      setError(err instanceof Error && err.message === SERVER_WRITE_NOT_CONFIRMED
+        ? SERVER_WRITE_NOT_CONFIRMED
+        : "Failed to reorder categories");
     }
   };
 

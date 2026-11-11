@@ -26,7 +26,10 @@ export default function Home() {
       </a>
       <HeaderBar />
 
-      <div id="main-content" className="flex flex-col flex-1">
+      {/* <main> landmark + tabIndex={-1} so the skip link lands here. This page
+          renders HeaderBar itself instead of going through PageLayout, so it has
+          to supply both the landmark and the focus target. */}
+      <main id="main-content" tabIndex={-1} className="flex flex-col flex-1">
         {/* Hero */}
       <section className="relative overflow-hidden min-h-[70vh] sm:min-h-[85vh] flex items-center">
         <Image
@@ -109,7 +112,7 @@ export default function Home() {
 
       {/* FAQ Teaser */}
       <FaqTeaser />
-      </div>
+      </main>
 
       {/* Footer */}
       <footer className="bg-white border-t border-warm-sand py-12 px-6 mt-auto">

@@ -60,8 +60,12 @@ export default function HeaderBar() {
 
   return (
     <div ref={ref} className="fixed top-0 left-0 right-0 z-50">
+      {/* Red face keeps its value in both themes, so its label must too:
+          `text-on-plum` is the one token that stays #FFFFFF under html.dark
+          (`text-white` remaps to slate-800, 3.0:1 here). The gold banner below
+          keeps `text-white` because gold-deep REMAPS to a light gold. */}
       {offline && (
-        <div className="bg-red-600 text-white text-center text-xs py-1.5 px-4 font-medium">
+        <div className="bg-red-600 text-on-plum text-center text-xs py-1.5 px-4 font-medium">
           You&apos;re offline — cached pages still available
         </div>
       )}

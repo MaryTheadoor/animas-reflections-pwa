@@ -7,7 +7,7 @@ import {
 } from "firebase-functions/v2/https";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
+import { getAuth, type UserRecord } from "firebase-admin/auth";
 import { SquareClient, SquareEnvironment, SquareError, type Square } from "square";
 import { defineString } from "firebase-functions/params";
 import {
@@ -27,7 +27,7 @@ function getSquareClient(): SquareClient {
   return new SquareClient({
     token: squareAccessToken.value(),
     environment:
-      squareEnvironment.value() === "production"
+      squareEnvironment.value().trim().toLowerCase() === "production"
         ? SquareEnvironment.Production
         : SquareEnvironment.Sandbox,
   });
@@ -70,6 +70,16 @@ async function requireAdmin(request: CallableRequest): Promise<void> {
     (await getAdminEmails()).includes(lowered);
   if (!allowed) {
     logger.warn("Admin call denied", { uid: request.auth.uid, email });
+    // An unverified address proves nothing: email/password signup is public, so
+    // an attacker can register a listed admin address before its owner does and
+    // inherit every admin callable (syncMyAdminClaim already refuses this).
+    if (request.auth.token.email_verified !== true) {
+      logger.warn("Admin call denied — email not verified", { uid: request.auth.uid, email });
+      throw new HttpsError(
+        "permission-denied",
+        "Verify your email address before using the admin tools",
+      );
+    }
     throw new HttpsError("permission-denied", "Admin access required");
   }
 }
@@ -95,11 +105,13 @@ async function applyAdminClaims(): Promise<{
   granted: string[];
   revoked: string[];
   missing: string[];
+  unverified: string[];
 }> {
   const auth = getAuth();
   const granted: string[] = [];
   const revoked: string[] = [];
   const missing: string[] = [];
+  const unverified: string[] = [];
 
   const targets = new Set<string>(await getAdminEmails());
   const bootstrap = bootstrapAdminEmail.value().toLowerCase().trim();
@@ -108,6 +120,13 @@ async function applyAdminClaims(): Promise<{
   for (const email of targets) {
     try {
       const user = await auth.getUserByEmail(email);
+      // Never mint a claim for an unverified address: email/password signup is
+      // public, so the account could belong to an impostor. storage.rules trusts
+      // this claim, so report the address instead of granting it.
+      if (!user.emailVerified) {
+        unverified.push(email);
+        continue;
+      }
       await auth.setCustomUserClaims(user.uid, { ...(user.customClaims ?? {}), admin: true });
       granted.push(email);
     } catch {
@@ -118,8 +137,16 @@ async function applyAdminClaims(): Promise<{
   }
 
   // Revoke from known users who are no longer admins.
-  const listed = await auth.listUsers(1000);
-  for (const user of listed.users) {
+  // Paged: an unpaged listUsers(1000) stops at the first 1000 accounts, so a
+  // removed admin beyond that page would keep the claim forever.
+  const allUsers: UserRecord[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await auth.listUsers(1000, pageToken);
+    allUsers.push(...page.users);
+    pageToken = page.pageToken;
+  } while (pageToken);
+  for (const user of allUsers) {
     const email = (user.email ?? "").toLowerCase().trim();
     if (!email) continue;
     if (targets.has(email) || isAlwaysAdmin(email)) continue;
@@ -135,8 +162,9 @@ async function applyAdminClaims(): Promise<{
     granted: granted.length,
     revoked: revoked.length,
     missing: missing.length,
+    unverified: unverified.length,
   });
-  return { granted, revoked, missing };
+  return { granted, revoked, missing, unverified };
 }
 
 // ─── Create Square Order & Process Payment ─────────────────────────
@@ -174,6 +202,12 @@ export const createSquareOrderAndPay = onCall(
 
     if (!Array.isArray(data.lineItems) || !data.lineItems.length) {
       throw new HttpsError("invalid-argument", "Order must contain at least one line item");
+    }
+    // Bound the work per call: this endpoint is unauthenticated and each line
+    // costs a Firestore read plus a Square order line. A customer cart never
+    // approaches this many lines.
+    if (data.lineItems.length > 50) {
+      throw new HttpsError("invalid-argument", "Too many line items in one order (50 max)");
     }
     if (!data.sourceId) {
       throw new HttpsError("invalid-argument", "Payment source ID is required");
@@ -265,6 +299,20 @@ export const createSquareOrderAndPay = onCall(
         lineItems: squareLineItems as never,
       };
 
+      // Shipping is part of what the customer owes, so it must live on the
+      // Square order too. Without it Square's order total (and the mirrored
+      // order the admin reads) understates the charge, and a payment attached
+      // to an order can be rejected when its amount does not match the total.
+      if (totals.shippingCents > 0) {
+        orderData.serviceCharges = [
+          {
+            name: "Shipping",
+            amountMoney: { amount: BigInt(totals.shippingCents), currency: "USD" },
+            calculationPhase: "SUBTOTAL_PHASE",
+          },
+        ];
+      }
+
       if (data.customer) {
         const c = data.customer;
         const addr = c.address;
@@ -320,29 +368,55 @@ export const createSquareOrderAndPay = onCall(
 
       const totalMoney = order.totalMoney as { amount?: bigint } | undefined;
       const squareOrderCents = Number(totalMoney?.amount ?? BigInt(0));
-      const itemsCents = totals.subtotalCents + totals.addonsCents;
+      // Sales tax is the one amount we do NOT derive — Square applies the
+      // location's configured taxes to the order. Compare on the PRE-TAX total
+      // and charge Square's total (which includes tax).
+      const taxCents = Number(
+        (order.totalTaxMoney as { amount?: bigint } | undefined)?.amount ?? BigInt(0),
+      );
+      const squarePreTaxCents = squareOrderCents - taxCents;
+      // Square's total includes the shipping service charge added above, so the
+      // full amount the customer approved is the derived grand total.
+      const approvedCents = totals.totalCents;
 
       // For fully ad-hoc orders Square's computed total must equal ours exactly
       // (every price came from this server). Catalog-path orders may drift from
-      // Firestore prices after a manual edit — warn instead of blocking.
-      if (allAdHoc && Math.abs(squareOrderCents - itemsCents) > 2) {
+      // Firestore prices after a manual edit — never charge more than approved.
+      if (allAdHoc && Math.abs(squarePreTaxCents - approvedCents) > 2) {
         logger.error("Square order total diverged from server derivation", {
           squareOrderCents,
-          itemsCents,
+          approvedCents,
         });
         throw new Error("Order total verification failed");
       }
-      if (!allAdHoc && Math.abs(squareOrderCents - itemsCents) > 2) {
+      // Catalog-path lines are priced by Square's own catalog, which can lag the
+      // Firestore price. Never charge more than the customer approved; a lower
+      // charge is logged and allowed.
+      if (!allAdHoc && squarePreTaxCents - approvedCents > 2) {
+        logger.error("Square catalog price exceeds the approved total", {
+          squareOrderCents,
+          approvedCents,
+        });
+        throw new Error("Order total verification failed — catalog price is out of date");
+      }
+      if (!allAdHoc && Math.abs(squarePreTaxCents - approvedCents) > 2) {
         logger.warn("Square catalog prices differ from Firestore prices", {
           squareOrderCents,
-          itemsCents,
+          approvedCents,
         });
       }
 
-      const chargeCents = squareOrderCents + totals.shippingCents;
+      // Shipping rides on the Square order as a service charge, so Square's total
+      // is already the full amount — adding shipping again would double-bill.
+      const chargeCents = squareOrderCents;
 
       const paymentResponse = await client.payments.create({
         sourceId: data.sourceId,
+        // Ask Square to email the receipt. It only sends when receipts are
+        // enabled on the location, so this is a no-op there — but it means the
+        // customer's proof of purchase does not depend on us running an email
+        // service on day one.
+        buyerEmailAddress: data.customer?.email?.trim() || undefined,
         idempotencyKey: `${data.idempotencyKey}-payment`,
         amountMoney: { amount: BigInt(chargeCents), currency: "USD" },
         orderId: order.id as string,
@@ -357,6 +431,38 @@ export const createSquareOrderAndPay = onCall(
         paymentId: payment?.id,
         status: payment?.status,
       });
+
+      // Decrement inventory only AFTER a successful payment, inside a transaction,
+      // so two buyers cannot both take the last unit. Untracked variants (no
+      // inventory field) are left alone. Best-effort: never fail a customer's
+      // completed payment over a stock bookkeeping write.
+      try {
+        const byProduct = new Map<string, Map<string, number>>();
+        for (const line of totals.lines) {
+          const variants = byProduct.get(line.productId) ?? new Map<string, number>();
+          variants.set(line.variantId, (variants.get(line.variantId) ?? 0) + line.quantity);
+          byProduct.set(line.productId, variants);
+        }
+        for (const [productId, quantities] of byProduct) {
+          const productRef = db.collection("products").doc(productId);
+          await db.runTransaction(async (tx) => {
+            const snap = await tx.get(productRef);
+            if (!snap.exists) return;
+            const product = snap.data() as PricingProduct;
+            if (!Array.isArray(product.variants)) return;
+            let changed = false;
+            const variants = product.variants.map((variant) => {
+              const sold = quantities.get(variant.id);
+              if (!sold || typeof variant.inventory !== "number") return variant;
+              changed = true;
+              return { ...variant, inventory: Math.max(0, variant.inventory - sold) };
+            });
+            if (changed) tx.update(productRef, { variants });
+          });
+        }
+      } catch (stockErr) {
+        logger.error("Failed to decrement inventory after payment", stockErr);
+      }
 
       // Mirror the order to Firestore so customers see it in /account and the
       // admin Orders tab. Uses the server-derived figures (real subtotal, add-on
@@ -403,7 +509,7 @@ export const createSquareOrderAndPay = onCall(
           totals: {
             subtotal: totals.subtotalCents / 100,
             shipping: totals.shippingCents / 100,
-            tax: 0,
+            tax: taxCents / 100,
             grandTotal: chargeCents / 100,
           },
           createdAt: new Date().toISOString(),
@@ -831,18 +937,25 @@ export const fetchCustomerOrders = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
     const auth = request.auth;
-    if (!auth?.uid) throw new Error("Authentication required");
+    if (!auth?.uid) throw new HttpsError("permission-denied", "Authentication required");
 
     const db = getFirestore();
-    const userDoc = await db.collection("users").doc(auth.uid).get();
-    const userEmail = ((userDoc.data()?.email as string) || "").toLowerCase().trim();
+    // The token email is the only trustworthy identity here: users/{uid} is
+    // client-writable (firestore.rules), so trusting its `email` field let any
+    // account read another customer's orders through the Admin SDK.
+    const tokenEmail = (auth.token.email ?? "").trim();
+    if (!tokenEmail) {
+      throw new HttpsError("permission-denied", "Your account has no email address");
+    }
+    const userEmail = tokenEmail.toLowerCase();
+    const legacyEmail = tokenEmail;
 
     // Match on the normalized key (post-batch-1 orders) AND on the legacy
     // exact-case field so older orders don't disappear. Merged by doc id and
     // sorted client-side (where-only queries avoid extra composite indexes).
     const [lowerSnap, legacySnap] = await Promise.all([
       db.collection("orders").where("customerEmailLower", "==", userEmail).limit(50).get(),
-      db.collection("orders").where("customerEmail", "==", userEmail).limit(50).get(),
+      db.collection("orders").where("customerEmail", "==", legacyEmail).limit(50).get(),
     ]);
 
     const byId = new Map<string, Record<string, unknown>>();
@@ -865,7 +978,7 @@ export const getCustomerAddresses = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
     const auth = request.auth;
-    if (!auth?.uid) throw new Error("Authentication required");
+    if (!auth?.uid) throw new HttpsError("permission-denied", "Authentication required");
 
     const db = getFirestore();
     const snap = await db
@@ -887,7 +1000,7 @@ export const saveCustomerAddress = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
     const auth = request.auth;
-    if (!auth?.uid) throw new Error("Authentication required");
+    if (!auth?.uid) throw new HttpsError("permission-denied", "Authentication required");
 
     const data = request.data as {
       id?: string;
@@ -942,7 +1055,7 @@ export const deleteCustomerAddress = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
     const auth = request.auth;
-    if (!auth?.uid) throw new Error("Authentication required");
+    if (!auth?.uid) throw new HttpsError("permission-denied", "Authentication required");
 
     const { addressId } = request.data as { addressId: string };
     if (!addressId) throw new Error("addressId is required");
@@ -965,7 +1078,7 @@ export const getCustomerProfile = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
     const auth = request.auth;
-    if (!auth?.uid) throw new Error("Authentication required");
+    if (!auth?.uid) throw new HttpsError("permission-denied", "Authentication required");
 
     const db = getFirestore();
     const snap = await db.collection("customers").doc(auth.uid).get();
@@ -980,7 +1093,7 @@ export const saveCustomerProfile = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
     const auth = request.auth;
-    if (!auth?.uid) throw new Error("Authentication required");
+    if (!auth?.uid) throw new HttpsError("permission-denied", "Authentication required");
 
     const data = request.data as {
       firstName: string;

@@ -59,8 +59,8 @@ export interface ClientLineItem {
   variant_id: string;
   squareVariationId?: string;
   quantity?: number;
-  /** Client-declared base price (dollars). Only used as a fallback for
-   *  variants whose catalog price is unconfigured — never charged directly. */
+  /** Client-declared base price (dollars), shown to the customer only. IGNORED
+   *  by the server: a variant without a catalog price is rejected outright. */
   price?: number;
   /** Fulfillment note built client-side (design/text/color/options). */
   note?: string;
@@ -224,13 +224,17 @@ export function deriveOrder(
       };
     }
 
-    // A zero/negative catalog price means the product has no price configured.
-    // The storefront displays a $20 fallback for exactly this case, so accept
-    // the client price here to avoid breaking those orders (nothing is gained
-    // by tampering: the catalog price is zero either way).
-    const fallbackPrice = typeof raw.price === "number" && raw.price > 0 ? raw.price : 0;
-    const baseCents =
-      variant.price > 0 ? toCents(variant.price) : toCents(fallbackPrice);
+    // A zero/negative catalog price means the product has no price configured,
+    // so it is NOT sellable. Never fall back to the client's number: that would
+    // let a crafted request name its own price — including $0.00. Fix the price
+    // in Admin → Products (or hide the product) instead.
+    if (!(variant.price > 0)) {
+      return {
+        ok: false,
+        error: `"${product.name}" has no price configured. Please contact us to order it.`,
+      };
+    }
+    const baseCents = toCents(variant.price);
 
     const resolvedAddons: ResolvedAddon[] = [];
     for (const addon of raw.addons ?? []) {

@@ -2,13 +2,19 @@
  * Tests for the cart reducer — pure state transitions.
  * No React rendering needed.
  */
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect, jest } from "@jest/globals";
 import type { CartItem, AddonType, AddonPriceType } from "@/types";
 import { resolveAddonPrice } from "@/types";
+import { calculateCartTotals } from "@/context/cart-context";
+
+jest.mock("@/hooks/useSiteConfig", () => ({ useSiteConfig: jest.fn() }));
 
 // --- Inline the reducer for pure-function testing ---
 
 type CartState = { items: CartItem[] };
+
+/** Mirrors MAX_LINE_QUANTITY in src/context/cart-context.tsx. */
+const MAX_LINE_QUANTITY = 99;
 
 type CartAction =
   | { type: "ADD_ITEM"; item: CartItem }
@@ -16,6 +22,12 @@ type CartAction =
   | { type: "UPDATE_QUANTITY"; id: string; quantity: number }
   | { type: "TOGGLE_ADDON"; id: string; addonType: AddonType; modifierId?: string; addonPrice: number; addonLabel?: string; priceType?: AddonPriceType }
   | { type: "CLEAR_CART" };
+
+function clampQuantity(quantity: number): number {
+  const rounded = Math.round(quantity);
+  if (!Number.isFinite(rounded)) return 1;
+  return Math.min(MAX_LINE_QUANTITY, Math.max(1, rounded));
+}
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
@@ -27,7 +39,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return {
         ...state,
         items: state.items.map((i) =>
-          i.id === action.id ? { ...i, quantity: Math.max(1, action.quantity) } : i
+          i.id === action.id ? { ...i, quantity: clampQuantity(action.quantity) } : i
         ),
       };
     case "TOGGLE_ADDON": {
@@ -73,6 +85,15 @@ const makeItem = (id: string, price: number, name = "Test Product"): CartItem =>
 
 const emptyCart: CartState = { items: [] };
 
+// Add-ons are per unit and charged once per unit (× quantity); percentage
+// add-ons resolve against the line's BASE price, not the multiplied total.
+const totalsOf = (state: CartState) => calculateCartTotals(state.items, 100, 3, 7.5);
+const subtotalOf = (state: CartState) => totalsOf(state).subtotal;
+const addonsTotalOf = (state: CartState) => totalsOf(state).addonsTotal;
+
+const itemCountOf = (state: CartState) =>
+  state.items.reduce((sum, i) => sum + i.quantity, 0);
+
 describe("cartReducer", () => {
   it("adds an item to empty cart", () => {
     const item = makeItem("1", 25);
@@ -105,6 +126,54 @@ describe("cartReducer", () => {
     let state = cartReducer(emptyCart, { type: "ADD_ITEM", item: makeItem("1", 25) });
     state = cartReducer(state, { type: "UPDATE_QUANTITY", id: "1", quantity: -5 });
     expect(state.items[0].quantity).toBe(1);
+  });
+
+  it("clamps quantity to the 99 maximum", () => {
+    let state = cartReducer(emptyCart, { type: "ADD_ITEM", item: makeItem("1", 25) });
+    state = cartReducer(state, { type: "UPDATE_QUANTITY", id: "1", quantity: 1000 });
+    expect(state.items[0].quantity).toBe(MAX_LINE_QUANTITY);
+  });
+
+  it("prices an updated line at quantity × base price (2 × $25 = $50)", () => {
+    let state = cartReducer(emptyCart, { type: "ADD_ITEM", item: makeItem("1", 25) });
+    state = cartReducer(state, { type: "UPDATE_QUANTITY", id: "1", quantity: 2 });
+    expect(state.items[0].quantity).toBe(2);
+    expect(subtotalOf(state)).toBe(50);
+    expect(itemCountOf(state)).toBe(2);
+  });
+
+  it("merges quantities across lines into one count and subtotal", () => {
+    let state = cartReducer(emptyCart, { type: "ADD_ITEM", item: makeItem("1", 25) });
+    state = cartReducer(state, { type: "ADD_ITEM", item: makeItem("2", 45) });
+    state = cartReducer(state, { type: "UPDATE_QUANTITY", id: "1", quantity: 2 });
+    state = cartReducer(state, { type: "UPDATE_QUANTITY", id: "2", quantity: 3 });
+    expect(itemCountOf(state)).toBe(5);
+    expect(subtotalOf(state)).toBe(2 * 25 + 3 * 45); // $185.00
+  });
+
+  it("leaves other lines untouched when one quantity changes", () => {
+    let state = cartReducer(emptyCart, { type: "ADD_ITEM", item: makeItem("1", 25) });
+    state = cartReducer(state, { type: "ADD_ITEM", item: makeItem("2", 45) });
+    state = cartReducer(state, { type: "UPDATE_QUANTITY", id: "2", quantity: 4 });
+    expect(state.items[0].quantity).toBe(1);
+    expect(state.items[1].quantity).toBe(4);
+  });
+
+  it("charges percentage add-ons per unit against the base price, not the line total", () => {
+    let state = cartReducer(emptyCart, { type: "ADD_ITEM", item: makeItem("1", 40) });
+    state = cartReducer(state, {
+      type: "TOGGLE_ADDON",
+      id: "1",
+      addonType: "back_print",
+      addonPrice: 10,
+      priceType: "percentage",
+    });
+    state = cartReducer(state, { type: "UPDATE_QUANTITY", id: "1", quantity: 2 });
+
+    // 10% of the $40 base price = $4 per unit — NOT 10% of $80.
+    expect(resolveAddonPrice(state.items[0].addons[0], state.items[0].base_price)).toBeCloseTo(4);
+    expect(addonsTotalOf(state)).toBeCloseTo(8); // $4 × 2 units
+    expect(subtotalOf(state) + addonsTotalOf(state)).toBeCloseTo(88);
   });
 
   it("toggles an addon on", () => {
@@ -174,5 +243,35 @@ describe("resolveAddonPrice", () => {
   it("defaults to fixed when priceType is omitted", () => {
     const addon = { type: "back_print" as const, label: "Back Print", price: 7 };
     expect(resolveAddonPrice(addon, 100)).toBe(7);
+  });
+
+  it("rounds a percentage add-on to whole cents", () => {
+    const addon = { type: "back_print" as const, label: "Back Print", price: 10, priceType: "percentage" as const };
+    expect(resolveAddonPrice(addon, 19.99)).toBe(2);
+  });
+});
+
+describe("calculateCartTotals", () => {
+  it("sums the per-line display values exactly to the total", () => {
+    const first = makeItem("1", 19.99);
+    first.addons = [{ type: "back_print", label: "Back Print", price: 10, priceType: "percentage" }];
+    const items = [first, makeItem("2", 0.1), makeItem("3", 0.2)];
+
+    const totals = calculateCartTotals(items, 0, 3, 7.5);
+    const displayedLineCents = items.map((item) => {
+      const baseCents = Math.round(item.base_price * 100) * item.quantity;
+      const addonCents = item.addons.reduce(
+        (sum, addon) => sum + Math.round(resolveAddonPrice(addon, item.base_price) * 100) * item.quantity,
+        0,
+      );
+      return baseCents + addonCents;
+    });
+    const displayedTotal = displayedLineCents.reduce((sum, cents) => sum + cents, 0) / 100;
+
+    expect(totals.subtotal).toBe(20.29);
+    expect(totals.addonsTotal).toBe(2);
+    expect(totals.shipping).toBe(0);
+    expect(totals.total).toBe(22.29);
+    expect(displayedTotal).toBe(totals.total);
   });
 });

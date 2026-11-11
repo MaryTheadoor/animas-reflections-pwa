@@ -15,7 +15,9 @@ export default function CartToast() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <div className="flex-1 min-w-0">
+        {/* Live region, not the whole card: a status role must not wrap the
+            Dismiss button, or screen readers trap the user inside it. */}
+        <div className="flex-1 min-w-0" role="status" aria-live="polite" aria-atomic="true">
           <p className="text-sm font-medium text-primary truncate">
             {lastAdded.name}
           </p>

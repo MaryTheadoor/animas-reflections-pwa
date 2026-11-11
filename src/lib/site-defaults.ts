@@ -199,24 +199,26 @@ export function toThemeConfig(palettes: { light: ThemePalette; dark: ThemePalett
 /** WCAG AA for normal-size text. */
 export const TEXT_MIN_RATIO = 4.5;
 
-/** sRGB relative luminance (WCAG 2.1 definition). */
-export function relativeLuminance(hex: string): number {
+/** sRGB relative luminance (WCAG 2.1 definition), or null for non-hex input. */
+export function relativeLuminance(hex: string): number | null {
   const h = hex.trim().replace(/^#/, "");
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (!/^[0-9a-f]{6}$/i.test(full)) return null;
   const channel = (v: number) => {
     const s = v / 255;
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   };
-  const r = channel(parseInt(full.slice(0, 2), 16) || 0);
-  const g = channel(parseInt(full.slice(2, 4), 16) || 0);
-  const b = channel(parseInt(full.slice(4, 6), 16) || 0);
+  const r = channel(parseInt(full.slice(0, 2), 16));
+  const g = channel(parseInt(full.slice(2, 4), 16));
+  const b = channel(parseInt(full.slice(4, 6), 16));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** WCAG contrast ratio between two hex colours (1–21). */
+/** WCAG contrast ratio between two hex colours (1–21), or NaN when unparseable. */
 export function contrastRatio(a: string, b: string): number {
   const la = relativeLuminance(a);
   const lb = relativeLuminance(b);
+  if (la === null || lb === null) return Number.NaN;
   const [hi, lo] = la >= lb ? [la, lb] : [lb, la];
   return (hi + 0.05) / (lo + 0.05);
 }
@@ -284,7 +286,8 @@ export interface ContrastFix {
  * A token is only replaced when its own value fails AND the shipped default
  * passes — if both fail there is nothing better to offer, so the admin's value
  * is kept and no fix is reported. Substitution is measured on a trial palette
- * so the reported ratio is the one that actually ships.
+ * so the reported ratio is the one that actually ships. Later substitutions can
+ * change another pair's background, so the pairs are re-verified until stable.
  */
 export function enforceContrast(
   palette: ThemePalette,
@@ -293,24 +296,29 @@ export function enforceContrast(
 ): { palette: ThemePalette; fixes: ContrastFix[] } {
   const out = { ...palette };
   const fixes: ContrastFix[] = [];
-  for (const pair of GUARD_PAIRS) {
-    const ratioBefore = contrastRatio(out[pair.fg], pair.bg(out));
-    if (ratioBefore >= TEXT_MIN_RATIO) continue;
-    const target = pair.surface ?? pair.fg;
-    const candidate = shipped[target];
-    const trial = { ...out, [target]: candidate };
-    const ratioAfter = contrastRatio(trial[pair.fg], pair.bg(trial));
-    if (ratioAfter < TEXT_MIN_RATIO) continue;
-    fixes.push({
-      mode,
-      token: target,
-      label: pair.label,
-      attempted: out[target],
-      applied: candidate,
-      ratioBefore: Math.round(ratioBefore * 100) / 100,
-      ratioAfter: Math.round(ratioAfter * 100) / 100,
-    });
-    out[target] = candidate;
+  for (let pass = 0; pass < 3; pass++) {
+    let changed = false;
+    for (const pair of GUARD_PAIRS) {
+      const ratioBefore = contrastRatio(out[pair.fg], pair.bg(out));
+      if (Number.isFinite(ratioBefore) && ratioBefore >= TEXT_MIN_RATIO) continue;
+      const target = pair.surface ?? pair.fg;
+      const candidate = shipped[target];
+      const trial = { ...out, [target]: candidate };
+      const ratioAfter = contrastRatio(trial[pair.fg], pair.bg(trial));
+      if (!Number.isFinite(ratioAfter) || ratioAfter < TEXT_MIN_RATIO) continue;
+      fixes.push({
+        mode,
+        token: target,
+        label: pair.label,
+        attempted: out[target],
+        applied: candidate,
+        ratioBefore: Math.round(ratioBefore * 100) / 100,
+        ratioAfter: Math.round(ratioAfter * 100) / 100,
+      });
+      out[target] = candidate;
+      changed = true;
+    }
+    if (!changed) break;
   }
   return { palette: out, fixes };
 }

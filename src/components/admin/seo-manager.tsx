@@ -7,6 +7,7 @@ import { db, functions } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
 import { useSeoConfigRefresh } from "@/context/seo-context";
 import { stripUndefined } from "@/lib/firestore-utils";
+import { confirmServerWrite, SERVER_WRITE_NOT_CONFIRMED } from "@/lib/server-write";
 import { PAGE_SEO, SITE_URL, clip, pageTitle } from "@/lib/seo";
 import {
   DESCRIPTION_MAX,
@@ -476,7 +477,10 @@ export default function SeoManager() {
         payload.pages[path] = entry;
       }
 
-      await setDoc(doc(db, "config", SEO_CONFIG_DOC), payload, { merge: true });
+      const seoRef = doc(db, "config", SEO_CONFIG_DOC);
+      await setDoc(seoRef, payload, { merge: true });
+      const confirmed = await confirmServerWrite(seoRef, payload).catch(() => false);
+      if (!confirmed) throw new Error(SERVER_WRITE_NOT_CONFIRMED);
 
       // Re-read so the form shows exactly what the server stored, and push the
       // new tags to this tab so the change is visible before any rebuild.
@@ -492,7 +496,9 @@ export default function SeoManager() {
       setSaving(false);
       setSaveMessage({
         kind: "error",
-        text: "Save failed: " + (err instanceof Error ? err.message : "unknown error"),
+        text: err instanceof Error && err.message === SERVER_WRITE_NOT_CONFIRMED
+          ? SERVER_WRITE_NOT_CONFIRMED
+          : "Save failed: " + (err instanceof Error ? err.message : "unknown error"),
       });
     }
   };

@@ -1,6 +1,5 @@
 "use client";
 
-import { FAQ } from "@/lib/content";
 import { SITE_URL, siteGraph } from "@/lib/seo";
 
 interface JsonLdProps {
@@ -45,14 +44,17 @@ export function SiteJsonLd() {
   return <GraphJsonLd graph={siteGraph()} />;
 }
 
-// FAQPage schema is rich-result eligible in Google Search. Built from the same
-// FAQ items the /faq page renders so the two never drift.
-export function FaqJsonLd() {
+// FAQPage schema is rich-result eligible in Google Search. The items are passed
+// in by /faq so the markup is built from the CMS copy the page actually renders
+// (c.faq.items), not the static defaults — the two used to drift the moment the
+// copy was edited in the admin.
+export function FaqJsonLd({ items }: { items: { q: string; a: string }[] }) {
+  if (items.length === 0) return null;
   return (
     <JsonLd
       type="FAQPage"
       data={{
-        mainEntity: FAQ.items.map((item) => ({
+        mainEntity: items.map((item) => ({
           "@type": "Question",
           name: item.q,
           acceptedAnswer: { "@type": "Answer", text: item.a },

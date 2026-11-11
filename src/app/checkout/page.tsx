@@ -11,7 +11,7 @@ import { SITE } from "@/lib/content";
 import { SQUARE_APP_ID, SQUARE_LOCATION_ID } from "@/lib/constants";
 import { resolveAddonPrice } from "@/types";
 import type { CustomerField } from "@/types";
-import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { useSiteConfig, useSiteConfigLoading } from "@/hooks/useSiteConfig";
 
 // Square SDK is loaded once per page lifecycle. The module-level flag prevents
 // re-initialization on React re-renders, but the useEffect cleanup resets it on
@@ -46,6 +46,11 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { cart, subtotal, addonsTotal, shipping, total, clearCart } = useCart();
   const siteConfig = useSiteConfig();
+  // Paying before config/site resolves would price shipping from the FALLBACK
+  // rates (e.g. $3 stickers where the live rate is $1), so expectedTotal would
+  // differ from the server's derivation and the order would be refused. Block
+  // the button until the real settings are in.
+  const siteConfigLoading = useSiteConfigLoading();
   // Customer fields come from site config (admin-managed); fall back to the
   // standard shipping form when config has none.
   const customerFields: CustomerField[] =
@@ -321,6 +326,9 @@ export default function CheckoutPage() {
             {addonsTotal > 0 && <div className="flex justify-between text-foreground"><span>Add-ons</span><span>${addonsTotal.toFixed(2)}</span></div>}
             <div className="flex justify-between text-foreground"><span>Shipping</span><span>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span></div>
             <div className="flex justify-between font-bold text-lg pt-2 border-t border-warm-sand"><span>Total</span><span className="text-gold-deep">${total.toFixed(2)}</span></div>
+            <p className="text-xs text-foreground/70">
+              Sales tax is calculated by Square and added to the final charge.
+            </p>
           </div>
         </div>
 
@@ -335,7 +343,7 @@ export default function CheckoutPage() {
 
         <button
           onClick={handlePayment}
-          disabled={processing || !cardReady || !customerValid}
+          disabled={processing || !cardReady || !customerValid || siteConfigLoading}
           className="w-full py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors btn-tactile btn-gold-tactile disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {processing ? "Processing..." : `Pay $${total.toFixed(2)}`}

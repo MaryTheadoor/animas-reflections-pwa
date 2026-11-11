@@ -43,19 +43,25 @@ export default function ProductCard({ product }: ProductCardProps) {
           </span>
         )}
         {/* Stock indicator — must live inside the relative image container so
-            the absolute positioning overlays the image, not the page. */}
+            the absolute positioning overlays the image, not the page.
+            Label colour is `text-on-plum`, the one label token that stays
+            #FFFFFF in both themes (globals.css / site-defaults.ts LIGHT+DARK
+            both #FFF) — `text-white` remaps to slate-800 under html.dark and
+            measured 3.0:1 on the red face and 2.7:1 on the teal face. The gold
+            badge keeps `text-white`: gold-deep REMAPS to a light gold in dark
+            mode, so that label has to flip with it. */}
         {(() => {
           const totalStock = product.variants?.reduce((sum, v) => sum + (v.inventory ?? 0), 0) ?? 0;
           const hasInventory = product.variants?.some((v) => v.inventory !== undefined);
           if (!hasInventory) return null;
           if (totalStock === 0) return (
-            <span className="absolute top-3 right-3 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Out of stock</span>
+            <span className="absolute top-3 right-3 bg-red-600 text-on-plum text-xs px-2 py-0.5 rounded-full shadow-sm">Out of stock</span>
           );
           if (totalStock <= 3) return (
             <span className="absolute top-3 right-3 bg-gold-deep text-white text-xs px-2 py-0.5 rounded-full shadow-sm">Only {totalStock} left</span>
           );
           if (totalStock <= 10) return (
-            <span className="absolute top-3 right-3 bg-teal-700 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">{totalStock} in stock</span>
+            <span className="absolute top-3 right-3 bg-teal-700 text-on-plum text-xs px-2 py-0.5 rounded-full shadow-sm">{totalStock} in stock</span>
           );
           return null;
         })()}
