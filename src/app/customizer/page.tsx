@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,6 +13,8 @@ import FileUpload from "@/components/customizer/file-upload";
 import ProductPicker from "@/components/customizer/product-picker";
 import CustomizerCartButton from "@/components/customizer/customizer-cart-button";
 import { designAssetLabel, filterDesignAssets } from "@/lib/design-assets";
+import { buildDesignIndex, modifierThumbnail } from "@/lib/modifier-design-match";
+import ModifierThumb from "@/components/ui/modifier-thumb";
 import { SITE_NAME } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import type { AddonType, DesignAsset, ManagedProduct, ManagedVariant, ModifierInput, PrintZone, PrintZoneTemplate, ProductAddon, ProductModifier } from "@/types";
@@ -199,6 +201,8 @@ function CustomizerContent() {
       ? `+${mod.price}%`
       : `+$${mod.price.toFixed(2)}`;
   const [designLibrary, setDesignLibrary] = useState<DesignAsset[]>([]);
+  // Modifier options that name a design show its artwork (PROJECT_CONTEXT §15.6 S1).
+  const designIndex = useMemo(() => buildDesignIndex(designLibrary), [designLibrary]);
   const [libraryOpen, setLibraryOpen] = useState(false);
   // 98 thumbnails in one scroll column is unnavigable, and 97 of them used to
   // share one label — a plain text filter is what makes the list usable.
@@ -751,6 +755,13 @@ function CustomizerContent() {
                                     checked={selectedAddons.has(mod.id)}
                                     onChange={() => handleToggleAddon(mod.id)}
                                     className="accent-gold w-4 h-4"
+                                  />
+                                  <ModifierThumb
+                                    src={modifierThumbnail(
+                                      mod,
+                                      designIndex,
+                                      selectedProduct?.mockupImagesByModifier,
+                                    )}
                                   />
                                   <span className="text-sm text-primary">{mod.name}</span>
                                   <span className="ml-auto text-sm text-gold-deep font-medium">

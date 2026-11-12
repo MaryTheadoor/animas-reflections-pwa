@@ -453,6 +453,11 @@ END OF CONTEXT FILE
      design label (normalised), show that design as a **thumbnail in the picker** and as
      the preview when selected. Solves the 52 options with zero data entry. Matching is by
      name, so duplicates must be shown in an admin preview before anything is pinned.
+   **Measured 2026-11-11 (S1 live):** of 1,698 options in design/logo modifier groups, only
+   **312 (18%) match a design label exactly and 385 (23%) with a contains-match** — the rest
+   ("Area 51", "LS Space Battle", "Yellow Daisy") name designs that are not in the library, or
+   use older names. So S1 is a real but partial win: it needs no data entry where names align, and
+   **S2 is the actual fix for the 52-option sets** — a mapping UI, not just a bulk button.
    - **S2 — explicit override + bulk fill.** A two-column picker (option ↔ design) with
      preview→apply, writing `mockupImagesByModifier[name].front`, for options whose names
      do not match. Same preview-then-apply discipline as bulk apply (Known Issue #54).

@@ -1,12 +1,15 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import PlaceholderImage from "@/components/ui/placeholder-image";
+import ModifierThumb from "@/components/ui/modifier-thumb";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { useDesignLibrary } from "@/hooks/useDesignLibrary";
+import { buildDesignIndex, modifierThumbnail } from "@/lib/modifier-design-match";
 import { sanitizeHTML, stripTags } from "@/lib/html-utils";
 import { useCart } from "@/context/cart-context";
 import type { CartAddon, DesignAsset } from "@/types";
@@ -98,6 +101,10 @@ function ProductContent() {
   // placeholders — see usesModifierGroups below.
   const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>([]);
   const [modifierInputs, setModifierInputs] = useState<Record<string, string>>({});
+  // Design thumbnails beside modifier options (PROJECT_CONTEXT §15.6 S1). Read-only:
+  // the library is matched by option name, nothing is written.
+  const { designs: libraryDesigns } = useDesignLibrary();
+  const designIndex = useMemo(() => buildDesignIndex(libraryDesigns), [libraryDesigns]);
 
   // /product?id=A → /product?id=B keeps the same component instance, so all
   // per-product selection state must reset when the product changes. Without
@@ -399,6 +406,13 @@ function ProductContent() {
                       {group.modifiers.map((mod) => {
                         const active = selectedModifierIdsInUse.includes(mod.id);
                         const delta = formatModifierDelta(mod);
+                        // Explicit admin assignment wins; otherwise the design whose
+                        // label matches this option's name.
+                        const thumbnail = modifierThumbnail(
+                          mod,
+                          designIndex,
+                          product?.mockupImagesByModifier,
+                        );
                         return (
                           <button
                             key={mod.id}
@@ -411,6 +425,7 @@ function ProductContent() {
                                 : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                             }`}
                           >
+                            {thumbnail && <ModifierThumb src={thumbnail} />}
                             <span
                               aria-hidden="true"
                               className={`flex items-center justify-center w-3.5 h-3.5 rounded border shrink-0 ${
