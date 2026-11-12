@@ -441,3 +441,29 @@ listed in the DEVLOG entry.
 ---
 
 END OF CONTEXT FILE
+
+### 15.6 Planned — client requests from Cindy (2026-11-11)
+
+1. **Design-linked modifier images (the "52 options" problem).** Modifier sets like
+   *Please Select Design For Front (52)* need a picture per option; today that is one
+   upload per option per view, keyed by the modifier's NAME (`mockupImagesByModifier`).
+   Plan, in shippable slices:
+   - **S1 — render-time match (no writes).** Build an index of the design library
+     (`designAssetLabel` → `image_url`) and, when a modifier option's name matches a
+     design label (normalised), show that design as a **thumbnail in the picker** and as
+     the preview when selected. Solves the 52 options with zero data entry. Matching is by
+     name, so duplicates must be shown in an admin preview before anything is pinned.
+   - **S2 — explicit override + bulk fill.** A two-column picker (option ↔ design) with
+     preview→apply, writing `mockupImagesByModifier[name].front`, for options whose names
+     do not match. Same preview-then-apply discipline as bulk apply (Known Issue #54).
+   - **S3 — stable links.** Optional `modifierDesignIds?: Record<string, string>` on the
+     product so a design rename/replace updates the image instead of silently breaking it
+     (the Known Issue #53 problem, one level down).
+   - **S4 — other views** (back/sleeve) and per-set defaults.
+2. **New-listing failure (hat).** Cindy reported "troubles" creating a new product listing;
+   the exact step and message are unknown. Needs a repro before any change — check the
+   new-product path (name → category optional → variants → photo → save, plus modifier
+   sets) with her on a call.
+3. **Per-variant photos.** Not supported: `ManagedVariant` has no image field. Photos are
+   per colour (`mockupImagesByColor`) and per modifier (`mockupImagesByModifier`).
+   Only worth building if she needs a specific size × colour image.
