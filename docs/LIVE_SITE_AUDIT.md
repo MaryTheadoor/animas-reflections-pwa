@@ -305,3 +305,49 @@ so this is a labelling bug, not a money bug.
 
 The post-purchase path is untested end to end — no order can be created while AR-01 stands, so
 order-confirmation, tracking, and the admin Orders tab have never seen real data.
+
+---
+
+## Systematic sweep — 2026-11-14 (build after `b258444`)
+
+**Method:** headless Chromium (installed build) against the live site. 24 routes at 1440×900 and
+390×844, capturing console errors, failed responses, page errors, headings, alt text, JSON-LD,
+horizontal overflow, dock height; internal-link crawl from `/`, `/shop/`, `/services/`, `/about/`,
+`/faq/`; and the full purchase path with a real form fill (no charge).
+
+### Results
+
+| Check | Result |
+| --- | --- |
+| Routes returning 200 | **24 / 24** |
+| Unknown URL | **404** (no soft 200) |
+| Internal links | 17 checked, **0 broken** |
+| Console / page errors | **0** after the prefetch fix below |
+| Images without `alt` | **0** on every route |
+| JSON-LD | 1–2 valid blocks per route |
+| Mobile 390 px | no horizontal overflow; dock **44.5px** (one row) |
+| `<h1>` | present on every route after the customizer fix |
+| Purchase path | modifier selection → add to cart → `/checkout/`: **Subtotal $40.00 + Shipping $7.50 = Total $47.50**, card iframe attached, **Pay enabled** once the form is filled |
+
+### Fixed in this sweep
+
+1. **RSC prefetch 404s (10 per page).** Every route logged 404s for
+   `/<route>/__next.<route>.__PAGE__.txt`; the export writes
+   `out/<route>/__next.<route>/__PAGE__.txt`. Navigation still worked (Next falls back to
+   `__next._tree.txt`), so this was wasted prefetch plus console noise, not a broken link.
+   `scripts/fix-rsc-paths.mjs` (postbuild) mirrors all 24 payloads to the requested path; verified
+   live: `/shop/__next.shop.__PAGE__.txt` → **200 `text/plain`**.
+2. **`/customizer/` had no `<h1>`** (panels started at `h2`). Added a visually hidden
+   "Customize your apparel" heading.
+
+### Data defect confirmed (client action)
+
+`Zip Up Hoodie (1)` carries size modifiers **XXL +$17.00 / XXXL +$25.00** while the sibling
+`Grey Zip Up Hoodie` carries **+$3.00 / +$3.00 / +$5.00** for the same sizes. It is the only active
+product with a size surcharge over $10 (full-catalog check). A customer would pay $82 for an XXL.
+
+### Still open (unchanged by this sweep)
+
+Real-card canary (the sweep proves the form initialises and Pay enables, not that a charge
+succeeds); 9 active products with no price; 10 tracked variants at zero; S2 (option↔design mapping);
+U-09–U-16 content and policy items.

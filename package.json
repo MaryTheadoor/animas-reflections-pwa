@@ -13,7 +13,7 @@
     "publish": "npm run build && firebase deploy --only hosting",
     "build": "next build",
     "check:seo": "node scripts/check-seo.mjs",
-    "postbuild": "node scripts/check-seo.mjs",
+    "postbuild": "node scripts/check-seo.mjs && node scripts/fix-rsc-paths.mjs",
     "build:all": "npm run build && cd functions && npm run build",
     "start": "next start",
     "lint": "eslint",

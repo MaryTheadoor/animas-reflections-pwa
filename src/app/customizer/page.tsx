@@ -437,6 +437,10 @@ function CustomizerContent() {
 
   return (
     <div className="flex flex-col flex-1">
+      {/* The customizer had no h1 at all — its panels start at h2, so assistive
+          tech and crawlers had no page heading. Visually hidden to keep the
+          uncluttered header design. */}
+      <h1 className="sr-only">Customize your apparel</h1>
       {/* Header */}
       <header className="sticky top-0 z-50 bg-cream/95 backdrop-blur-sm border-b border-warm-sand">
         <nav className="flex items-center justify-between px-6 py-3 max-w-6xl mx-auto w-full">
