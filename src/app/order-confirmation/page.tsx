@@ -8,7 +8,11 @@ import PageLayout from "@/components/layout/page-layout";
 function ConfirmationContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId") || "";
-  const paymentStatus = searchParams.get("status") || "COMPLETED";
+  // Never assume success. The checkout passes the real payment status; a bare or
+  // hand-edited URL carries none, and this page used to default to "COMPLETED",
+  // so /order-confirmation/ on its own announced a confirmed order to anyone.
+  const paymentStatus = searchParams.get("status") || "";
+  const confirmed = paymentStatus === "COMPLETED" && orderId.length > 0;
   // "0" means the charge succeeded but the Firestore mirror write failed —
   // surface a warning instead of a silently missing order history.
   const mirrorFailed = searchParams.get("mirrored") === "0";
@@ -16,22 +20,35 @@ function ConfirmationContent() {
   return (
     <PageLayout>
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 pt-12 sm:pt-20 pb-16 text-center">
-        {/* Success Icon */}
-        <div className="mx-auto w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
-          <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-green-600">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-          </svg>
-        </div>
+        {confirmed ? (
+          <>
+            {/* Success Icon */}
+            <div className="mx-auto w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-green-600">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+            </div>
 
-        <h1 className="text-3xl sm:text-4xl font-bold font-display mb-4">
-          Order Confirmed!
-        </h1>
-        <p className="text-foreground mb-8 max-w-md mx-auto leading-relaxed">
-          Thank you for your order! We&apos;ve received it and will begin processing
-          right away. Please keep your order reference below — we&apos;ll be in touch at
-          the email address you gave us. If a Square receipt is enabled for our shop,
-          it arrives separately from Square.
-        </p>
+            <h1 className="text-3xl sm:text-4xl font-bold font-display mb-4">
+              Order Confirmed!
+            </h1>
+            <p className="text-foreground mb-8 max-w-md mx-auto leading-relaxed">
+              Thank you for your order! We&apos;ve received it and will begin processing
+              right away. Please keep your order reference below — we&apos;ll be in touch at
+              the email address you gave us. If a Square receipt is enabled for our shop,
+              it arrives separately from Square.
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl sm:text-4xl font-bold font-display mb-4">Order Status</h1>
+            <p className="text-foreground mb-8 max-w-md mx-auto leading-relaxed">
+              We can&apos;t confirm an order from this page. If you have just paid, check your
+              email for the Square receipt, or send us your order reference and we&apos;ll look
+              it up.
+            </p>
+          </>
+        )}
 
         {mirrorFailed && (
           <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-6 text-sm text-left max-w-md mx-auto">

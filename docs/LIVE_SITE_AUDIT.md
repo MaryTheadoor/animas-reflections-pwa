@@ -340,6 +340,17 @@ horizontal overflow, dock height; internal-link crawl from `/`, `/shop/`, `/serv
 2. **`/customizer/` had no `<h1>`** (panels started at `h2`). Added a visually hidden
    "Customize your apparel" heading.
 
+3. **`/order-confirmation/` defaulted to "COMPLETED".** A bare URL (no params) announced "Order Confirmed!" to anyone. It now defaults to no status and renders a neutral "Order Status" panel; only `orderId` + `status=COMPLETED` shows the success state. A hand-edited URL with those params still shows it — the page cannot verify a payment without an authenticated read, and a stranger only fools themselves.
+
+### Also verified in the sweep
+
+| Check | Result |
+| --- | --- |
+| Search (`/search/?q=hoodie`) | "Search Products", 82 product links |
+| `/account/` signed out | "My Account" with a sign-in prompt, no crash |
+| `/admin/` signed out | "Access Denied · Admin Login" |
+| Free-shipping threshold | 3 × $40 → Subtotal $120, **Shipping Free**, Total $120 |
+| Order confirmation, bare URL | neutral "Order Status" after the fix |
 ### Data defect confirmed (client action)
 
 `Zip Up Hoodie (1)` carries size modifiers **XXL +$17.00 / XXXL +$25.00** while the sibling
