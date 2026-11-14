@@ -24,7 +24,7 @@ export const SQUARE_ENV: "sandbox" | "production" =
 
 // Square sandbox defaults — overridden by env vars for production. These are the
 // public (publishable) credentials; the secret access token lives in functions/.env.
-export const SQUARE_APP_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID || "sq0idp-QAzYzFHiOcHrBmGfmdfGTQ";
+export const SQUARE_APP_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID || "sq0idp-QAzYFzHiOcHrBmGfmdfGTQ";
 export const SQUARE_LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || "L6VCX130RHYQR";
 
 // All Cloud Functions are deployed to us-central1. Must match firebase.json region.

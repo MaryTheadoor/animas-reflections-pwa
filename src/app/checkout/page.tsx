@@ -63,7 +63,6 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ orderId: string; paymentId: string; paymentStatus: string; mirrored?: boolean } | null>(null);
   const [cardReady, setCardReady] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
   const squareCardRef = useRef<unknown>(null);
   // Held for the lifetime of a single purchase intent. Retrying after an ambiguous
   // failure (e.g. a network timeout where the server may already have charged the
@@ -74,7 +73,7 @@ export default function CheckoutPage() {
   const idempotencyRef = useRef<{ key: string; signature: string } | null>(null);
 
   const initSquare = useCallback(async () => {
-    if (squareInitialized || !cardRef.current) return;
+    if (squareInitialized) return;
     try {
       const scriptId = "square-web-payments-sdk";
       if (!document.getElementById(scriptId)) {
@@ -92,6 +91,15 @@ export default function CheckoutPage() {
       };
       const instance = await SquareSDK.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
       const card = await instance.card();
+      // The container renders only once the cart has a line, and the cart now
+      // hydrates from localStorage after first paint. Wait for the node itself
+      // rather than relying on a ref that is null at that moment.
+      for (let i = 0; i < 60 && !document.getElementById("card-container"); i++) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      if (!document.getElementById("card-container")) {
+        throw new Error("The payment form could not be placed — please refresh the page.");
+      }
       await card.attach("#card-container");
       squareCardRef.current = card;
       squareInitialized = true;
@@ -112,9 +120,12 @@ export default function CheckoutPage() {
     }
   }, []);
 
+  // Initialise once on mount. `initSquare` waits for the card container itself,
+  // because the container only renders when the cart has a line and the cart
+  // hydrates from localStorage after first paint.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initSquare calls setCardReady internally
-    if (!squareInitialized) initSquare();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initSquare sets cardReady after its awaits
+    initSquare();
     return () => {
       if (squareCardRef.current) (squareCardRef.current as { destroy?: () => void }).destroy?.();
       squareCardRef.current = null;
@@ -349,7 +360,7 @@ export default function CheckoutPage() {
         {/* Payment */}
         <div className="bg-white rounded-2xl shadow-card border border-warm-sand p-6 mb-6">
           <h2 className="font-bold mb-4">Payment</h2>
-          <div id="card-container" ref={cardRef} className="min-h-[100px] rounded-xl border border-primary/20 p-4 bg-warm-sand/30" />
+          <div id="card-container" className="min-h-[100px] rounded-xl border border-primary/20 p-4 bg-warm-sand/30" />
           {!cardReady && !error && <p className="text-sm text-foreground mt-2">Loading payment form...</p>}
         </div>
 

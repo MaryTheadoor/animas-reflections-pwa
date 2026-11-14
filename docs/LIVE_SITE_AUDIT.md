@@ -17,7 +17,7 @@ Earlier observations were first made against `e6850d9`; **every item below was r
 
 ## P0 — revenue blocking
 
-### AR-01 · Checkout: the Square card form never initializes · `OPEN` (under re-test)
+### AR-01 · Checkout: the Square card form never initializes · `FIXED` (2026-11-11: transposed Application ID)
 
 Reproduced on `502de0c` in a clean headless Chrome. The payment box is empty, a red
 "An unexpected error occurred while initializing the payment method." appears, and the Pay button
@@ -34,6 +34,22 @@ stays disabled — **no order can be completed**.
 > application id, so "401 for our app id" proves nothing on its own. And headless Chrome blocks
 > the third-party cookies Square's PCI iframe needs, which is a known cause of exactly this
 > symptom. **A real-browser canary is the only valid test** — see the release plan, step 3.
+
+**Root cause (2026-11-11, proven in a real browser):** the Application ID in the repo and the CI
+fallback was **transposed** — `sq0idp-QAzY**zF**HiOcHrBmGfmdfGTQ` where the credentials on disk (the
+same document that carries the location id) say `sq0idp-QAzY**Fz**HiOcHrBmGfmdfGTQ`. A probe against
+the live HTTPS origin initialising all three candidate ids settled it: the transposed one fails with
+"An unexpected error occurred while initializing the payment method", the correct one and the other
+desktop app both initialise.
+
+Fixed: `src/lib/constants.ts` and the `.github/workflows/rebuild.yml` fallback now carry the correct
+id. Verified after deploy on `/checkout/?cb=…` in a real Chrome: the SDK script loads, `#card-container`
+holds one iframe, and Pay is enabled once the customer form is filled (it is disabled before that by
+design).
+
+Two follow-ups for the operator: **`.env.local` still holds the transposed id** (a local `npm run build`
+will inline it unless the file is corrected), and if a repository *Variable*
+`NEXT_PUBLIC_SQUARE_APP_ID` exists in GitHub it overrides the workflow fallback — check it too.
 
 Evidence:
 
