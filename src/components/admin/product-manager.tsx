@@ -16,6 +16,7 @@ import { ref, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } 
 import { httpsCallable } from "firebase/functions";
 import Image from "next/image";
 import VariantMatrixEditor from "./variant-matrix-editor";
+import ReadinessPanel from "./readiness-panel";
 import PrintZoneEditor from "./print-zone-editor";
 import { db, storage, functions } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
@@ -1837,6 +1838,17 @@ export default function ProductManager({ categories }: Props) {
           <span>{pushError}</span>
           <button onClick={() => setPushError(null)} className="text-danger hover:text-danger ml-2">&times;</button>
         </div>
+      )}
+
+      {/* Launch readiness — preview and unlist products that are not fully
+          configured, using the shared rule in src/lib/product-readiness.ts. */}
+      {!editing && (
+        <ReadinessPanel
+          products={products}
+          onChanged={() => {
+            void loadProducts();
+          }}
+        />
       )}
 
       {/* Bulk Action Bar */}

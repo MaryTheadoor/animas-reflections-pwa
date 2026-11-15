@@ -1,0 +1,378 @@
+id,name,listed,ready_strict,ready_blocking,blockers,warnings,max_price,has_image,desc_len,category_id,variants,in_stock,size_surcharge_max
+00be1d76-02f8-4195-8647-b23b22f155b1,"Lanyard With Break Away Clip",true,false,true,"no-image thin-description","no-category",2,false,0,,1,true,0
+03d5a650-f534-467b-9b28-0360e2b693ef,"Coffee Cup 15 oz",true,true,true,"","",20,true,199,cat_little-stranger,1,true,0
+053013d1-f8b7-48c2-b541-8164f18ba3fe,"The Yupoong 6089M Wool Blend Snapback With Patch",true,true,true,"","",35,true,571,cat_little-stranger,4,true,0
+07db885e-799f-4899-bb65-f1f7b5a74bb0,"Bella + Canvas Unisex Jersey T-Shirt",true,true,true,"","",40,true,1099,cat_little-stranger,5,true,5
+087b4d40-1822-4179-a67a-1592f2d64af1,"Silver Level In Kind Sponsorship",false,false,true,"no-image thin-description","no-category",1000,false,0,,1,true,0
+0baaf03b-6cb6-472f-a239-5038f4192c62,"Full One Side One Color Up to 8.5 x 14 HTV & PRESS 1 - 25",false,false,true,"no-image thin-description","no-category",10,false,0,,1,true,0
+0c54fdc9-5f0d-46ea-80da-82b5d7e19186,"Crest/Sleeve Sized Up to 4"" Screen Print 1-25 Unit Price",false,false,true,"no-image thin-description","no-category",8.5,false,0,,1,true,0
+0e0d2183-219c-45d6-b300-a9e89392e356,"2' x 4' Banner With Groomets",false,false,true,"no-image thin-description","no-category",15,false,0,,1,true,0
+104bd431-40be-4ce6-b87a-c69cb56d3f96,"Quarter Zip Pullover Style",true,false,false,"no-price no-image","no-category",0,false,346,,1,true,5
+12942b01-8048-46b0-abc4-53c93d75363f,"Full 1 Side Full Color Screen Print 50 - 100 Unit Price",true,false,true,"no-image thin-description","no-category",9.75,false,0,,1,true,0
+157ecb52-ed13-44d1-a2a4-d33fdd542f1b,"Custom 2 Side Crest & Full Back No Feel Print Plus $2 For Logo Tag Wholesale Price",false,false,true,"no-image thin-description","no-category",20,false,0,,1,true,5
+16oz-4-in-1-can-cooler-tumbler-with-dual-lids,"16oz 4 in 1 Can Cooler Tumbler With Dual Lids",false,false,true,"no-image","no-category",8,false,118,,1,true,0
+180acee6-06f8-432f-9838-410396dfe862,"BBall Jersey",true,true,true,"","",80,true,317,cat_little-stranger,1,true,5
+1839189e-5866-414f-82c6-7c22d2cea76a,"Red Short Sleeve Unisex",false,false,true,"no-image","no-category",35,false,665,,2,true,5
+2-inch-slaps,"2 Inch Slaps",false,true,true,"","",2,true,88,cbfece77-ee62-4ec0-b081-456c3073dbca,1,true,0
+23163a00-5fef-46d1-ac7f-7acb30d3ebb2,"3.5 Crest Print & Press",false,false,true,"no-image thin-description","no-category",3,false,0,,1,true,0
+291119ee-532b-4e31-806d-9bbb1e5a93d8,"Acrylic Circle Ornament With LED Light",false,true,true,"","",15,true,116,cat_ornaments,5,true,0
+2b3a2b4d-78ca-4e07-a755-a9f56b95414d,"Project Consultant Fee",false,false,true,"no-image thin-description","no-category",6000,false,0,,1,true,0
+2b5a7ca5-e00c-4f97-8e46-d0389280ca32,"Catalog Updates 10 Hours Included",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+2cefd72b-9972-4ed7-9d4b-11c59325efcf,"Cosmo Strap Cami Dress",true,false,true,"no-image","no-category",30,false,339,,1,true,0
+2d21a98d-409d-4b33-994d-35a079fa8ccc,"Card Style Bottle Opener",false,false,true,"no-image","no-category",10,false,720,,4,true,0
+2d7c2494-3228-4311-9bf9-5d9cdf1e49c8,"Business Cards, 3 1/2"" x 2"", Matte/Gloss, White, One-sided, Box Of 100",true,false,true,"no-image thin-description","no-category",35,false,0,,1,true,0
+2f2696bb-0fed-43a1-80c8-8b1c206eb759,"Hardboard 3 x 2"" Rectangle Magnet",false,false,true,"no-image","no-category",3,false,218,,1,true,0
+3-dunphy-stock-fam-slap,"3"" Dunphy Stock FAM Slap",true,false,false,"no-price no-image thin-description","",0,false,0,cat_dunphy-stock-fam,1,true,0
+3-flower-and-1-aspen-leaf-with-fire-opals-resin-pendants-on-silver-necklace,"3 Flower And 1 Aspen Leaf With Fire Opals Resin Pendants On Silver Necklace",false,false,false,"no-image thin-description out-of-stock","",100,false,0,cat_animas-reflections,1,false,0
+3-inch-slaps,"3 Inch Slaps",true,false,true,"no-image","",6,false,159,cat_jordan-branch-music,3,true,0
+3-round-lace-ceramic-ornament,"3"" Round Lace Ceramic Ornament",false,false,true,"no-image","",15,false,642,cat_ornaments,2,true,0
+3-slap-fundraising-price,"3"" Slap Fundraising Price",false,false,false,"no-image thin-description design-record-price","no-category",0.69,false,0,,1,true,0
+3-slaps-fundraising-price,"3"" Slaps Fundraising Price",false,false,false,"no-image thin-description design-record-price","no-category",0.69,false,0,,2,true,0
+3-slaps-with-qrcode-on-back,"3"" Slaps With QRCode on back",false,false,false,"no-image thin-description design-record-price","no-category",0.87,false,0,,1,true,0
+3-team-slaps,"3""  Team SLAPS",false,false,true,"no-image thin-description","no-category",4,false,0,,1,true,0
+305b0533-99fa-4cca-ba04-e0aac02b3ea3,"Adult Lightweight Hooded Sun Shirt UPF 44+",true,true,true,"","",40,true,821,cat_little-stranger,4,true,5
+31cd6055-26ac-4a8d-bec5-54f231350890,"T",false,false,true,"no-image thin-description","no-category",17,false,0,,1,true,5
+34d1898b-e838-4aed-87ae-8ad683050778,"Full 1 Side Up To 11 X 17” Full Color Screen Print 101- 250 Unit Price",false,false,true,"no-image thin-description","no-category",8.5,false,0,,1,true,0
+365ba667-b99a-4478-b0b5-8333fefc6c6b,"Custom Lighter",true,false,true,"no-image thin-description","no-category",5,false,0,,1,true,0
+3695ddec-2693-4975-9616-8e4a9326ca89,"Full 1 Side Full Color Screen Print Transfer Up to 11 x17",false,false,true,"no-image thin-description","no-category",8.5,false,0,,1,true,0
+38cca9d7-ff60-49ac-ae9a-31f33296e596,"Service Fee For  Processing Project Consultant",false,false,true,"no-image thin-description","no-category",100,false,0,,1,true,0
+392365c3-4c4e-4c00-9665-a983694d1a3c,"Dog Collars",false,false,true,"no-image thin-description","no-category",7,false,0,,1,true,0
+392e4099-fbcd-4c18-b1b7-cfc8aab41385,"Deluxe 2 Sided Car Flag With Pole",true,false,true,"no-image","no-category",25,false,545,,1,true,0
+39d0d005-08d2-4179-8283-1c21179da152,"Crest Sized Up To 4” Or  Sleeve 8 x 2.5” Full Color Screen Print 101- 250 Unit Price",false,false,true,"no-image thin-description","no-category",7,false,0,,1,true,0
+3c1e87f3-15b0-4268-8bc3-bb6d7f93cb5b,"Full Back Side & Front Crest Full Color No Feel Print & Press",false,false,true,"no-image thin-description","no-category",15,false,0,,1,true,0
+3c7a2357-6b18-434c-bf66-2da127561c50,"Can Coozies Band Price",false,false,true,"no-image thin-description","no-category",1.9,false,0,,1,true,0
+3f69b4c2-054e-4cdf-ab63-3456e3d80393,"Wrislet Key Chain",false,false,true,"no-image thin-description","no-category",2.5,false,0,,1,true,0
+3f945e9c-8b80-41fa-ad33-05b1df578036,"Grey Youth Short Sleeve (1)",true,false,false,"no-price no-image duplicate-name","no-category",0,false,663,,1,true,0
+3x2-slap-advertising-price,"3x2 Slap Advertising Price",false,false,false,"no-image thin-description design-record-price","no-category",0.41,false,0,,1,true,0
+4-5-stickers-full-color-waterproof-water-resistant-unit-price-51-100,"4-5"" Stickers Full Color Waterproof & Water Resistant Unit Price 51-100",false,false,true,"no-image thin-description","no-category",2.5,false,0,,1,true,0
+4-ceramic-coaster,"4"" Ceramic Coaster",false,false,false,"no-price no-image","no-category",0,false,1314,,1,true,0
+4-in-1-bluetooth-speaker-can-cooler,"4 in 1 Bluetooth Speaker Can Cooler",true,false,true,"no-image","no-category",45,false,1224,,2,true,0
+4-inch-slaps,"4 Inch Slaps",true,true,true,"","",6,true,163,26395fb7-2be6-44bb-8a7c-9e2b23cdf2bf,12,true,0
+4526d818-af86-4363-a58f-c18f4c5d2954,"3 x 5 Custom Banner",false,false,true,"no-image thin-description","no-category",25,false,0,,1,true,0
+47d5c0c5-58a4-4b2c-809e-f9569d942941,"Adult Lightweight Hooded Sun Shirt UPF 44+",true,true,true,"","",48,true,768,cat_little-stranger,7,true,0
+4a1d452e-4736-48b5-8be8-2dba823b4f98,"Hardboard 2 1/4 x 2 1/4 "" Square Magnet",false,false,true,"no-image","no-category",3,false,182,,1,true,0
+4bcbabc0-3415-4115-95ae-2008501af96c,"Custom Neckerchiefs",false,false,true,"no-image thin-description","no-category",5,false,0,,1,true,0
+4c1d47b2-7faa-49b3-98a2-16937a411ad4,"Black DLC Logo",true,false,false,"no-price no-image thin-description","no-category",0,false,14,,1,true,5
+4dfd8fe1-7d57-41e7-b1e4-ac724caf92d6,"Custom One Side No Feel Print Plus $2 For Logo Tag Wholesale Price",false,false,true,"no-image thin-description","no-category",17,false,0,,1,true,5
+4efb8caf-12ea-450b-8eda-abd131c779e2,"3.5 Size Crest Full Color Print and Press ( Unit Price  51-75)",false,false,true,"no-image thin-description","no-category",3.5,false,0,,1,true,0
+5-7-inch-slaps,"5-7 Inch Slaps",true,false,true,"no-image","",10,false,204,cat_dunphy-stock-fam,12,true,0
+50240fb3-4b56-4449-9125-91843688d3b5,"Bic Lighter",false,false,true,"no-image","no-category",2.5,false,426,,2,true,0
+50d5d345-a94c-4d68-91b7-550708773999,"Full 2 Sided Full Color Sublimation Upto 13 x 19 1- 25 Unit Price",false,false,true,"no-image thin-description","no-category",17,false,0,,1,true,0
+5131ab45-a7e3-4ab5-a0f2-4e36c4fb205d,"Crest/Sleeve Sized Up to 4"" Sublimation 26-50 Unit Price",false,false,true,"no-image thin-description","no-category",7.5,false,0,,1,true,0
+53f60d9e-ebe8-4adb-b15e-65327ee57401,"Sof-Stretch Pullover",true,false,true,"no-image","no-category",60,false,493,,1,true,5
+5451b4d0-f999-461e-9a82-dadb75082595,"Clear 16oz Pint Glass with White Wrap",false,false,true,"no-image","no-category",8,false,107,,1,true,0
+55095762-d5cf-4f02-9ef6-e343d4c37661,"3"" Round Lace Ceramic Ornament",true,true,true,"","",15,true,556,cat_little-stranger,1,true,0
+55b2e867-f7ea-4dfe-8cc1-f1b873d655e6,"Flag 4 x 6'",false,false,true,"no-image","no-category",10,false,95,,1,true,0
+5722dce2-a834-4fac-b9ef-e55a03b91206,"15 oz Coffee Mug",true,true,true,"","",20,true,182,cat_jordan-branch-music,3,true,0
+58093a1b-269c-4568-811b-e23eec7b2d89,"Key Chain Stainless Steel 1.5"" x 2"" Bottle Opener",false,false,true,"no-image","no-category",3,false,64,,1,true,0
+5b1781d3-f905-49db-a98d-50861da1d2cc,"Add Crest On Front Lauffer Stranger To Front",false,false,true,"no-image thin-description","no-category",5,false,0,,1,true,0
+5b49a065-8b2e-47af-b93d-fd154bc311f8,"Round Photo Slate",true,false,true,"no-image","no-category",30,false,375,,1,true,0
+5d0e22ad-2d56-4978-821f-fc893b27cd7e,"Logo & Brand Design  (Approximately 15 hours)",false,false,true,"no-image thin-description","no-category",500,false,0,,1,true,0
+5deabd67-b7e7-4045-8b64-51873a35096b,"Back Order",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+5e8cd8e7-5342-4db1-a04a-fa2854f992cd,"Full One side 8.5 x 14 Full Color Print and Press (Unit price 51-75)",false,false,true,"no-image thin-description","no-category",7.5,false,0,,1,true,0
+5e9b5d57-07b0-42bf-b3ef-a4aefeb158bd,"Custom Guitar Picks",true,false,false,"no-image thin-description design-record-price","no-category",0.5,false,0,,1,true,0
+5f1b1621-aee4-4440-9c8a-cbff39aa10a6,"Discounted Full 1 Side Full Color Screen Print",false,false,true,"no-image thin-description","no-category",7.5,false,0,,1,true,0
+5fc42dcd-6dce-4b65-b82a-5a1c982c9578,"Custom Team Puck Buckets",false,false,true,"no-image thin-description","no-category",20,false,0,,1,true,0
+6132b3e6-c6ef-4b08-b2e2-6999b9d7c18e,"6 x 2' Custom Banner 4 Groomets",false,false,true,"no-image thin-description","no-category",30,false,0,,1,true,0
+62ad5547-8aae-4e39-8c87-b0c0da000df3,"Hardboard 3 x 2"" Rectangle Magnet 1-25 Unit Price",false,false,true,"no-image thin-description","no-category",4.5,false,0,,1,true,0
+6512efea-44e0-46ed-94b5-e5d81d61121c,"Key Chain",false,false,true,"no-image thin-description","no-category",5,false,0,,1,true,0
+6624efb0-9d4e-49e4-9c61-ed02250e8c54,"Flag 2 x 3'",false,false,true,"no-image","no-category",6,false,95,,1,true,0
+688c6961-2006-474e-a93b-84c313563833,"Red/Black/White Power Plus Jersey",false,false,true,"no-image","no-category",30,false,148,,2,true,5
+69117d33-6e37-4d7f-adb8-dec616327385,"Flag 3 x 5'",false,false,true,"no-image","no-category",8,false,95,,1,true,0
+6bd11279-0dc1-44be-a7af-743e0aad4090,"Custom Flag",true,true,true,"","",20,true,309,cbfece77-ee62-4ec0-b081-456c3073dbca,1,true,0
+6c451d9d-f114-4136-8882-9f1ce4402278,"50 Bucks Of Swag For Vegas Baby",false,false,true,"no-image thin-description","no-category",50,false,0,,2,true,0
+6de81482-39d7-4d5c-be64-923cc9f653d7,"Full 1 Side Up to 8.5 x 14"" Sublimation 1-25 Unit Price",false,false,true,"no-image thin-description","no-category",10,false,0,,1,true,0
+6eb92059-0d11-42f4-970f-3f82b8ae84cd,"Full One Side & Front Crest 101 - 250 Unit Price",false,false,true,"no-image thin-description","no-category",14,false,0,,1,true,0
+7147caa6-793a-4a41-a350-b3571e6957a0,"Slaps AKA Stickers",true,true,true,"","",10,true,177,cat_little-stranger,3,true,0
+7748b619-e6b8-4ff1-8273-75c21cd761ea,"32 Page 8.5 x 11"" Catalog Including Front & Back Cover ( Approximately 70 Hours)",false,false,true,"no-image thin-description","no-category",3000,false,0,,1,true,0
+7a81bf23-b2eb-40ea-8374-700de5b7f11d,"Slightly Stoopid Jersey",false,false,true,"no-image thin-description","no-category",80,false,0,,1,true,0
+7aedde52-6642-4bbd-a37c-dbe1979ac753,"Grey Youth Short Sleeve",true,false,true,"no-image","no-category",35,false,283,,1,true,5
+7d030022-2e9d-40c3-ab36-6264d5fa8d8b,"Flag 5 x 8",false,false,true,"no-image","no-category",15,false,95,,1,true,0
+82be6395-5614-4192-85c8-eb65f647e1a6,"Water Bottles 17 oz Metal",false,false,true,"no-image thin-description","no-category",11,false,0,,1,true,0
+8afce05e-9daa-48f2-88fd-022071c029f8,"Coffee Mugs 15 oz",false,false,true,"no-image thin-description","no-category",7,false,0,,1,true,0
+8c669d6f-aca3-4004-9be8-580faca31021,"6' Tablecloth Maroon",false,false,true,"no-image thin-description","no-category",25,false,0,,1,true,0
+9183bb47-55f7-4f6d-83e4-7b908b53ce76,"4"" Round Slate",false,false,true,"no-image thin-description","no-category",14,false,0,,1,true,0
+920db12a-c623-44a9-9863-f9b8d6e16dd8,"Custom One Side No Feel Plus $2 For Logo Tag W",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+925612ba-54dd-4fe6-89dd-95b6c4457f78,"Sponsors Names On Back",true,false,true,"no-image thin-description","no-category",3,false,0,,1,true,0
+926609d5-3935-4d5e-b389-8f693c20f4fc,"Full 1 Side 1 Color Up To 12 x 12"" HTV ( 1-25 Unit Price)",false,false,true,"no-image thin-description","no-category",10.5,false,0,,1,true,0
+9512b6d4-8ef8-4991-8d08-90f88a8060a4,"4 x 6 Custom Banner",false,false,true,"no-image thin-description","no-category",35,false,0,,1,true,0
+9512cc95-6297-4b09-8de7-675d50c63edd,"Onesie",true,false,true,"no-image thin-description","no-category",15,false,0,,1,true,0
+9576921b-00ce-43e3-b444-70ec7c984eee,"VIP Laminate",true,false,true,"no-image thin-description","no-category",4.2,false,0,,1,true,0
+9c9c7c70-ee78-4155-85a0-1b155c5c276a,"Small Hand Towel Waffle",false,false,true,"no-image thin-description","no-category",4,false,0,,1,true,0
+9cccd188-7251-48e7-b8dc-690d3f05b2a2,"Custom One Side No Feel Plus $2 For Logo Tag Wholesale Price",false,false,true,"no-image thin-description","no-category",18,false,0,,1,true,5
+9d667608-a3ed-45ad-8e90-0494348a57e5,"Herb Grinder",true,false,true,"no-image","no-category",30,false,574,,1,true,0
+9f0c9b0e-7133-4fb4-9583-19cc4a3515d0,"4 in 1 Bluetooth Speaker Can Cooler",true,true,true,"","",35,true,1120,cat_little-stranger,1,true,0
+a2bc5a7e-6055-4e7f-8042-2ebc25baf41e,"120 Piece Puzzle",true,true,true,"","",10,true,573,cat_little-stranger,1,true,0
+a50a1f13-f60f-4855-b7b5-f790f6d63437,"Small Hand Towel Velour",false,false,true,"no-image thin-description","no-category",4,false,0,,1,true,0
+a541ae41-c036-4b54-92ee-d4f2d0c0aa0c,"Shipping TBD",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+a5fc0e53-4e63-42d7-ade1-7c92c5b21ceb,"Silkscreen Feel Fullside",true,false,true,"no-image thin-description","no-category",9,false,0,,1,true,0
+a8549c0a-d7e2-4995-8dd6-35a1537ce33d,"Full Color Screenprint Transfer One Side Print & Press 51-75 Unit Price",true,false,true,"no-image thin-description","no-category",19,false,0,,1,true,5
+a87eb28c-6554-46dd-b33a-d538dda28f26,"Linen Bib With Pocket",false,false,true,"no-image thin-description","no-category",9,false,0,,1,true,0
+aae7490d-f95b-4c5e-b0a3-8541dadd1c2a,"Adult 9 oz. Supercotton Pullover Hood",true,true,true,"","",60,true,996,cat_little-stranger,6,true,5
+ad7f240b-1efd-4bbe-b20b-e629f349c73a,"Hardboard 2.5 x 2.5"" Square Magnet 1-25 Unit Price",false,false,true,"no-image thin-description","no-category",4.25,false,0,,1,true,0
+adult-12-oz-supercotton-pullover-hood,"Adult 12 oz. Supercotton Pullover Hood",true,false,true,"no-image","",60,false,811,cat_dunphy-stock-fam,1,true,5
+adult-dryblend-adult-9-oz-50-50-hoodie,"Adult DryBlend® Adult 9 oz., 50-50 Hoodie",false,false,true,"no-image","no-category",30,false,612,,1,true,5
+adult-heavy-blend-adult-8-oz-50-50-open-bottom-sweatpants,"Adult Heavy Blend Adult 8 oz., 50-50 Open-Bottom Sweatpants",true,false,true,"no-image","no-category",40,false,416,,1,true,5
+adult-hoodie-dark-colors,"Adult Hoodie Dark Colors",true,false,true,"no-image","",60,false,725,cat_durango-hockey,1,true,5
+adult-lightweight-hooded-sun-shirt-upf-44,"Adult Lightweight Hooded Sun Shirt UPF 44+",true,false,true,"no-image","no-category",40,false,821,,4,true,0
+ae6ec104-b563-4a7e-bd5f-86f09d859b85,"Summer Sample Pack",false,false,true,"no-image thin-description","no-category",65,false,0,,1,true,0
+aeb7c61e-c1e3-40d2-89ec-d5c7089e59d0,"Shrooming Stranger 50 x 60"" Woven Blanket",true,false,true,"no-image","no-category",100,false,555,,1,true,0
+aim-for-the-stars,"Aim For The Stars",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+american-basin-alpine-loop-colorado-2-sided-natural-wood-lightweight-earrings-1-6-x-1-2-inch,"American Basin Alpine Loop Colorado 2 Sided Natural Wood Lightweight Earrings 1.6 X 1.2 inch",true,false,true,"no-image","",15,false,269,cat_animas-reflections,1,true,0
+angry-biscuit,"Angry Biscuit",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+artic-cuff-insulated-cuff-knit-beanie-with-patch,"Artic Cuff Insulated Cuff Knit Beanie With Patch",true,false,true,"no-image","no-category",25,false,1249,,1,true,0
+aspen-leaf-in-resin-on-a-silver-necklace,"Aspen Leaf In Resin On a Silver Necklace",true,false,true,"no-image thin-description","",25,false,0,cat_animas-reflections,1,true,0
+aspen-leaf-in-resin-on-silver-necklace,"Aspen Leaf In Resin On Silver Necklace",true,false,false,"no-image out-of-stock","",25,false,58,cat_animas-reflections,1,false,0
+aspen-leaf-lapis-shugnite-sandalwood-and-lava-beaded-necklace,"Aspen Leaf, Lapis, Shugnite, Sandalwood And Lava Beaded Necklace",true,false,true,"no-image thin-description","",30,false,0,cat_animas-reflections,1,true,0
+b18e1bdb-ce45-45f7-b150-3ca11b14315c,"2' x 6' Custom Banner",false,false,true,"no-image thin-description","no-category",20,false,0,,1,true,0
+b7af2c37-efd5-4cac-8448-6dbb24d00314,"Silkscreen Crest & Full Side Back Print & Press",false,false,true,"no-image thin-description","no-category",15,false,0,,1,true,0
+be-still-to-see,"Be Still To See",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+be-the-light,"Be The Light",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+bella-canvas-flowy-racerback-tank,"Bella + Canvas Flowy Racerback Tank",false,false,true,"no-image","no-category",12,false,254,,1,true,5
+bella-canvas-short-sleeve-t-shirt,"Bella + Canvas Short Sleeve T-Shirt",false,false,true,"no-image","no-category",11,false,1080,,1,true,0
+bella-canvas-unisex-jersey-t-shirt,"Bella + Canvas Unisex Jersey T-Shirt",true,false,true,"no-image","no-category",40,false,1099,,5,true,0
+bella-canvas-women-s-flowy-racerback-tank,"Bella+Canvas Women's Flowy Racerback Tank",true,false,true,"no-image","",30,false,491,cat_durango-roller-girls,1,true,5
+bella-canvas-women-s-flowy-racerback-tank-no-feel-logo,"Bella+Canvas Women's Flowy Racerback Tank No Feel Logo",true,false,true,"no-image","",35,false,601,26395fb7-2be6-44bb-8a7c-9e2b23cdf2bf,5,true,5
+bfe3fb95-c227-4662-9825-e7c5b1bd2f99,"License Plate Frame",true,false,true,"no-image","no-category",15,false,473,,1,true,0
+biscuit-apparel-company-co,"Biscuit Apparel Company CO",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+biscuit-crossed-sticks,"Biscuit Crossed Sticks",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+biscuit-explosion,"Biscuit Explosion",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+biscuit-fight-club,"Biscuit Fight Club",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+biscuit-hockey-apparel,"Biscuit Hockey Apparel",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+biscuit-hockey-foward-blue-watercolor,"Biscuit Hockey Foward Blue Watercolor",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+biscuit-pucks,"Biscuit Pucks",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+boy-biscuit-player,"Boy Biscuit Player",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+bring-it,"Bring It",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+bring-on-the-biscuit,"Bring On The Biscuit",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+broken-hearted-little-stranger-yupoong-6089m-wool-blend-snapback,"Broken Hearted Little Stranger Yupoong 6089M Wool Blend Snapback",true,false,true,"no-image","",50,false,573,cat_little-stranger,1,true,0
+bury-the-biscuit,"Bury The Biscuit",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+buy-out-cost-hoodies,"Buy Out Cost Hoodies",false,false,true,"no-image thin-description","no-category",35,false,0,,1,true,5
+buy-out-cost-t-shirt,"Buy Out Cost T-Shirt",false,false,true,"no-image thin-description","no-category",16,false,0,,1,true,0
+buy-out-price-for-full-size-back-plus-crest-front-left-unisex-t-shirt,"Buy Out Price For Full Size Back Plus Crest Front Left Unisex T-shirt",false,false,true,"no-image thin-description","no-category",22,false,0,,1,true,0
+buyout-cost-t-shirt-xxl,"BuyOut Cost T-Shirt XXL",false,false,true,"no-image thin-description","no-category",19,false,0,,1,true,0
+c04f26b6-2115-451f-ad3c-e96d49f13311,"BBall Jersey",true,false,true,"no-image","no-category",80,false,317,,1,true,0
+c1fad2a2-e85d-4835-9409-a265e3360c58,"Custom Child Size Print & Press",false,false,true,"no-image thin-description","no-category",5,false,0,,1,true,0
+c2cf2ad4-2ff4-4edf-8ba3-d4f39cd47cd2,"Step Back Short Black",true,false,true,"no-image","no-category",30,false,522,,1,true,5
+c7e7676d-3e73-4994-8801-c4389417a6a2,"UPS Ground Shipping",false,false,true,"no-image thin-description","no-category",58,false,0,,1,true,0
+c93cefbe-31b9-468e-970b-6ca4f83ad72a,"2x3"" Magnets Hardboard",true,false,true,"no-image thin-description","no-category",8,false,0,,1,true,0
+ca212a34-a4d9-4892-ba07-c4d2ff8f7f5d,"4 x 6",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+camp-life-wood-sign-medium,"Camp Life Wood Sign Medium",false,false,true,"no-image thin-description","",25,false,0,cat_animas-reflections,1,true,0
+can-koozie-fundraising-price,"Can Koozie Fundraising Price",false,false,true,"no-image thin-description","no-category",2.25,false,0,,1,true,0
+canvas-tote-bags-with-logo,"Canvas Tote Bags with Logo",false,false,true,"no-image","no-category",5,false,70,,1,true,0
+cb8ceb8e-a49a-458b-abbd-39e2aad5a41f,"Full One Side Full Color 26-50 Units",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+ccfc4128-6586-4172-b761-dfa9953879df,"Magnet Fridge 2 x 3""",false,false,true,"no-image","no-category",2,false,106,,2,true,0
+charcoal-t-shirt,"Charcoal T-Shirt",true,false,true,"no-image","no-category",35,false,397,,1,true,5
+classic-collapsible-can-cooler,"Classic Collapsible Can Cooler",true,false,true,"no-image","no-category",8,false,1207,,1,true,0
+clear-16oz-pint-glass-with-design-slpa,"Clear 16oz Pint Glass With Design Slpa",false,false,true,"no-image","no-category",3,false,102,,1,true,0
+co-biscuit-puck,"CO Biscuit Puck",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+coffee-bok-choy-a-joint,"Coffee, Bok Choy & A Joint",true,false,true,"no-image","no-category",6,false,265,,1,true,0
+colossal-little-stranger-playing-cards,"Colossal Little Stranger Playing Cards",true,false,true,"no-image","",15,false,1106,cat_little-stranger,1,true,0
+custom-designed-just-about-anything,"Custom Designed Just About Anything",false,false,false,"no-image design-record-price","",1,false,282,cat_animas-reflections,1,true,0
+custom-designed-t-shirt,"Custom Designed T-shirt",true,false,true,"no-image","no-category",20,false,599,,1,true,5
+custom-flat-bill-trucker-hat-with-patch,"Custom Flat Bill Trucker Hat With Patch",true,false,true,"no-image thin-description","",25,false,0,cat_hats,1,true,0
+custom-front-back-sponsors-mite-sweaters-jerseys,"Custom Front & Back Sponsors Mite Sweaters (Jerseys)",false,false,true,"no-image thin-description","no-category",41,false,0,,1,true,0
+custom-front-back-sponsors-rec-sweaters-jerseys,"Custom Front & Back Sponsors Rec Sweaters (Jerseys)",false,false,true,"no-image thin-description","no-category",44,false,0,,1,true,0
+custom-full-front-and-full-back-side-t-shirt,"Custom full front and full back side T-shirt",false,false,true,"no-image thin-description","no-category",25,false,0,,1,true,0
+custom-hat-with-patch,"Custom Hat With Patch",false,false,false,"no-price no-image thin-description","",0,false,0,cat_hats,1,true,0
+custom-name-number-team-4-7-inch-slaps-aka-stickers,"Custom Name & Number Team 4-7 Inch Slaps AKA Stickers",true,false,true,"no-image","",6,false,157,cat_durango-hockey,2,true,0
+custom-t-shirt-full-back-front-crest-1-25-unit-price,"Custom T-shirt Full Back & Front Crest 1-25 Unit Price",true,false,true,"no-image thin-description","no-category",23,false,0,,1,true,5
+custom-t-shirt-full-back-front-crest-101-250-unit-price,"Custom T-shirt Full Back & Front Crest 101 -250 Unit Price",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+custom-team-puck-bags,"Custom Team Puck Bags",false,false,true,"no-image thin-description","no-category",35,false,0,,1,true,0
+d17310a5-507d-46d9-a7aa-79b6afd2ced4,"Full Back Side & Front Crest Full Color Silkscreen Feel Print & Press",false,false,true,"no-image thin-description","no-category",15,false,0,,1,true,0
+d383ab34-56c3-4a25-85bb-8d1b837aea49,"16oz Glass Beer Mug",false,false,true,"no-image","no-category",9,false,60,,1,true,0
+d439e7ec-51ce-4906-a4d3-a37a705354b5,"Journal 5.7 x 4.3"" 200 Pages",false,false,true,"no-image thin-description","no-category",4.5,false,0,,1,true,0
+d5607057-92d5-4cf6-9a4a-3323b65bf326,"Dreaming Of Durango Silk Sleep Mask",false,false,true,"no-image thin-description","no-category",4,false,0,,1,true,0
+d6985909-7211-4f82-8846-22b28520b6f0,"Custom Full Size Print & Press",false,false,true,"no-image thin-description","no-category",10,false,0,,1,true,0
+d8b9140d-661c-4e56-84d7-4f9cd7dbe29c,"Stranger Football Jersey",true,false,true,"no-image","no-category",100,false,831,,1,true,5
+dangle-snipe-celly-blue,"Dangle Snipe Celly Blue",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+dangle-snipe-celly-red,"Dangle Snipe Celly Red",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+dc8bbc97-79ab-4db7-9966-05bcd149f24e,"Custom Patch",false,false,true,"no-image thin-description","no-category",4,false,0,,1,true,0
+drop-the-biscuit,"Drop the Biscuit",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+dunphy-stock-bic-lighter,"Dunphy Stock Bic Lighter",true,false,true,"no-image","",5,false,544,cat_dunphy-stock-fam,1,true,0
+durango-view-from-the-sky-steps,"Durango View From The Sky Steps",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+e3974841-dde1-4390-ac50-ae08c4e36483,"USPS Priority Shipping",false,false,true,"no-image thin-description","no-category",8.35,false,0,,1,true,0
+e5d837ca-3946-4830-b345-56fdfee9393c,"Full 1 Sided Full Color Screen Print Unit Price 1 - 25",true,false,true,"no-image thin-description","no-category",10.5,false,0,,1,true,0
+f048f297-b3f4-474e-ad4c-3abd48a77369,"Full One Side & Front Crest Full Color Sublimation 51-100 Unit Price",false,false,true,"no-image thin-description","no-category",14.5,false,0,,1,true,0
+f097bdcc-54ad-420a-9732-1a2320ee5d1c,"Crest Sized Up to 4 Inch 1-25 Units",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+f1b5a255-527a-4c44-af59-df79ad8b4af5,"Full  One Side 8.5 x 14 Full Color Photographic Print & Press",false,false,true,"no-image thin-description","no-category",7,false,0,,1,true,0
+f2f307ce-186e-46e5-bc0f-f6ebd02c7c6d,"UPS Shipping",false,false,false,"no-price no-image thin-description","no-category",0,false,0,,1,true,0
+f49d229f-78fa-452f-a9c0-a87ded16e424,"Silk Screen Transfer",false,false,true,"no-image thin-description","no-category",9.5,false,0,,1,true,0
+f5f7630b-4afd-492d-8090-485c098d0135,"Full 1 Side Up To 8.5 x 14"" Full Color Sublimation Unit Price 251 +",false,false,true,"no-image thin-description","no-category",7.5,false,0,,1,true,0
+f694957a-adff-41b5-b938-521f018b13d1,"Square Mouse Pad",false,false,true,"no-image thin-description","no-category",5,false,0,,1,true,0
+f7fb12d7-a94a-4286-b4ab-1e87469ccbf8,"Guitar Picks Earings",false,false,true,"no-image thin-description","no-category",3,false,0,,1,true,0
+f97a2a25-2135-4c33-b344-92f043cddcd1,"Step Back Shorts Red",true,false,true,"no-image","no-category",30,false,522,,1,true,5
+f998b848-1fe9-4a54-a7e5-1798104e4aed,"Windshield Sunshade with UV Protection & Cooling 2 Sizes",true,false,true,"no-image","no-category",20,false,56,,2,true,0
+f9db19f2-d3d4-4c11-a357-2d81183e4668,"8' Tablecloth Maroon",true,false,true,"no-image thin-description","no-category",25,false,0,,1,true,0
+fa7b2d91-eac1-43b5-90f4-9796ec2e76b6,"Silkscreen Feel Crest",false,false,true,"no-image thin-description","no-category",6,false,0,,1,true,0
+family-rules-large-wood-sign,"Family Rules Large Wood Sign",false,false,true,"no-image","",35,false,30,cat_wood-signs,2,true,0
+fishing-life-wood-sign-medium,"Fishing Life Wood Sign Medium",true,false,true,"no-image thin-description","",25,false,0,cat_animas-reflections,1,true,0
+flag,"Flag",true,false,true,"no-image","",25,false,160,cat_jordan-branch-music,4,true,0
+flower-in-resin-on-silver-chain,"Flower In Resin On Silver Chain",true,false,true,"no-image thin-description","",25,false,0,cat_animas-reflections,1,true,0
+flower-in-resin-on-silver-necklace,"Flower In Resin On Silver Necklace",true,false,false,"no-image thin-description out-of-stock","",25,false,0,cat_animas-reflections,1,false,0
+flower-in-resin-with-amethyst-shugnite-sandalwood-and-lava-beaded-necklace,"Flower In Resin With Amethyst, Shugnite, Sandalwood And Lava Beaded Necklace",true,false,false,"no-image thin-description out-of-stock","",30,false,0,cat_animas-reflections,1,false,0
+flower-in-resin-with-lapis-shugnite-sandalwood-and-lava-beaded-necklace,"Flower In Resin With Lapis, Shugnite, Sandalwood And Lava Beaded Necklace",true,false,true,"no-image thin-description","",30,false,0,cat_animas-reflections,1,true,0
+flower-in-resin-with-malachite-shugnite-lapis-amethyst-and-glass-beaded-necklace,"Flower In Resin With Malachite, Shugnite, Lapis, Amethyst And Glass Beaded Necklace",true,false,false,"no-image thin-description out-of-stock","",30,false,0,cat_animas-reflections,1,false,0
+flowers-in-resin-pendant-on-silver-necklace,"Flowers In Resin Pendant On Silver Necklace",true,false,false,"no-image thin-description out-of-stock","",25,false,0,cat_animas-reflections,1,false,0
+focus-on-the-brighter-side,"Focus On The Brighter Side",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+foldable-frisbee-fan-with-pouch,"Foldable Frisbee/Fan With Pouch",true,false,true,"no-image","no-category",10,false,57,,4,true,0
+forward-biscuit-co,"Forward Biscuit CO",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+forward-biscuit-hockey,"Forward Biscuit Hockey",true,false,false,"no-image design-record-price","",1,false,2977,cat_animas-reflections,1,true,5
+forward-biscuit-hockey-sweatshirt-or-t-shirt,"Forward Biscuit Hockey Sweatshirt or T-shirt",false,false,true,"no-image","no-category",40,false,455,,6,true,0
+glass-3-ornament,"Glass 3"" Ornament",true,false,true,"no-image thin-description","",11.5,false,0,cat_ornaments,1,true,0
+glass-christmas-ornament-4-tall,"Glass Christmas Ornament 4"" Tall",true,false,true,"no-image","",15,false,62,cat_animas-reflections,1,true,0
+glass-circle-on-leather-bracelet,"Glass Circle On Leather Bracelet",true,false,true,"no-image thin-description","",10,false,0,cat_animas-reflections,1,true,0
+glass-ornament-4-tall,"Glass Ornament 4"" Tall",true,false,false,"no-price no-image","",0,false,148,cat_ornaments,1,true,0
+go-with-the-flow,"Go With The Flow",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+go-your-way,"Go Your Way",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+goalie-watercolor-biscuit-hockey,"Goalie Watercolor Biscuit Hockey",true,false,false,"no-image design-record-price","no-category",1,false,2977,,1,true,5
+gpk-trading-cards-only-40-available,"GPK Trading Cards Only 40 Available",true,false,true,"no-image","no-category",15,false,387,,1,true,0
+green-buddah-adult-9-oz-supercotton-pullover-hood,"GREEN BUDDAH Adult 9 oz. Supercotton Pullover Hood",true,false,true,"no-image","no-category",50,false,954,,1,true,5
+green-buddah-performance-5-oz-t-shirt,"GREEN BUDDAH Performance 5 oz. T-Shirt",true,false,true,"no-image","no-category",30,false,567,,1,true,5
+green-buddah-women-s-ideal-racerback-tank-black,"GREEN BUDDAH Women's Ideal Racerback Tank Black",true,false,true,"no-image","no-category",25,false,279,,1,true,5
+grey-hoodie-full-back-front-crest,"Grey Hoodie Full Back & Front Crest",true,false,true,"no-image","no-category",55,false,500,,1,true,5
+grey-hoodie-full-one-side-unisex,"Grey Hoodie Full One Side Unisex",true,false,true,"no-image","no-category",50,false,482,,1,true,5
+grey-long-sleeve-unisex,"Grey Long Sleeve Unisex",true,false,true,"no-image","no-category",40,false,695,,2,true,5
+grey-shirts,"Grey Shirts",false,false,true,"no-image thin-description","no-category",8,false,0,,1,true,0
+grey-youth-hoodie,"Grey Youth Hoodie",true,false,true,"no-image","no-category",40,false,331,,1,true,5
+grey-zip-up-hoodie,"Grey Zip Up Hoodie",true,false,false,"no-price no-image","no-category",0,false,377,,1,true,5
+grey-zip-up-hoodie-full-back-front-crest,"Grey Zip Up Hoodie Full Back & Front Crest",true,false,true,"no-image","no-category",55,false,452,,1,true,5
+guitar-pick-necklace,"Guitar Pick Necklace",false,false,true,"no-image thin-description","no-category",4,false,0,,1,true,0
+hockey-girl,"Hockey Girl",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+hockey-sweaters,"Hockey Sweaters",false,false,true,"no-image thin-description","no-category",45,false,0,,1,true,5
+holiday-mystery-box-limited-edition-sorry-sold-out,"Holiday Mystery Box – Limited Edition SORRY SOLD OUT",true,false,true,"no-image","no-category",25,false,944,,1,true,0
+holiday-slap-pack-3-inch-slaps,"Holiday Slap Pack 3 Inch Slaps",true,false,true,"no-image","no-category",15,false,271,,1,true,0
+hoodie,"hoodie",false,false,true,"no-image thin-description","no-category",55,false,0,,1,true,5
+hoodie-full-color-silkscreen-transfer-full-front-back,"Hoodie Full Color Silkscreen Transfer Full Front & Back",true,false,true,"no-image thin-description","no-category",50,false,0,,1,true,5
+hoodie-grey-unisex-no-feel-print,"Hoodie Grey Unisex  No Feel Print",true,false,true,"no-image","no-category",60,false,803,,5,true,5
+hoodie-unisex,"Hoodie Unisex",true,false,false,"no-price no-image","no-category",0,false,423,,1,true,5
+hoodie-unisex-dunphy-stock,"Hoodie Unisex  Dunphy Stock",true,false,true,"no-image","",60,false,882,cat_dunphy-stock-fam,1,true,5
+hoodie-unisex-grey-durango-roller-girls,"Hoodie Unisex Grey Durango Roller Girls",true,false,false,"no-price no-image","",0,false,766,cat_durango-roller-girls,1,true,5
+i-m-vaccinated-hug-me-already,"I'm Vaccinated Hug Me Already!",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+if-the-darkness-falls-around-me-i-m-never-giving-up,"If The Darkness Falls Around Me I'm Never Giving Up",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+iron-on-patches,"Iron-on Patches",true,false,true,"no-image","no-category",8,false,1193,,1,true,0
+it-s-a-hockey-thing,"It's A Hockey Thing",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+jason-biscuit,"Jason Biscuit",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+jordan-branch-music-bic-lighter,"Jordan Branch Music Bic Lighter",true,false,true,"no-image","",5,false,506,cat_jordan-branch-music,1,true,0
+kevin-fundraiser-4-inch-slaps,"Kevin Fundraiser 4 Inch Slaps",true,false,true,"no-image","no-category",6,false,177,,1,true,0
+kevin-fundraiser-bella-canvas-unisex-jersey-t-shirt,"Kevin Fundraiser Bella + Canvas Unisex Jersey T-Shirt",true,false,true,"no-image","no-category",40,false,1144,,1,true,5
+kevin-fundraiser-bella-canvas-women-s-flowy-racerback-tank-no-feel-logo,"KEVIN FUNDRAISER Bella+Canvas Women's Flowy Racerback Tank No Feel Logo",true,false,true,"no-image","no-category",35,false,594,,1,true,5
+lanyard-ls-sport-limited-edition-only-15-available,"Lanyard LS Sport Limited Edition Only 15 Available",true,false,false,"no-image out-of-stock","no-category",15,false,237,,1,false,0
+lanyard-red-rover-limited-edition-only-15-available,"Lanyard Red Rover Limited Edition Only 15 Available",true,false,false,"no-image out-of-stock","no-category",15,false,237,,1,false,0
+lanyard-red-rover-limited-edition-only-15-available-1,"Lanyard Red Rover Limited Edition Only 15 Available (1)",false,false,false,"no-image duplicate-name out-of-stock","no-category",3,false,124,,1,false,0
+large-rif-duffle-bag,"Large Rif Duffle Bag",false,false,true,"no-image","no-category",55,false,576,,2,true,0
+life-is-beautiful,"Life Is Beautiful",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+life-is-beautiful-co,"Life Is Beautiful CO",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+little-stranger-bic-lighter,"Little Stranger Bic Lighter",true,false,true,"no-image","",5,false,560,cat_little-stranger,1,true,0
+little-stranger-coloring-book,"Little Stranger Coloring Book",true,false,true,"no-image","",25,false,674,cat_little-stranger,1,true,0
+little-stranger-hockey-sweater-aka-jersey,"Little Stranger Hockey Sweater AKA Jersey",true,false,true,"no-image","",100,false,580,cat_little-stranger,1,true,0
+logo-embriodered-hat,"Logo Embriodered Hat",false,false,true,"no-image thin-description","",10,false,0,cat_hats,1,true,0
+long-sleeve-t-shirt,"Long Sleeve T-Shirt",false,false,true,"no-image","no-category",13,false,184,,1,true,5
+long-sleeve-unisex,"Long Sleeve Unisex",true,false,true,"no-image","",40,false,690,cat_jordan-branch-music,3,true,5
+look-up,"Look Up",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+ls-ninja-2-sided-hoodie-grey-unisex-no-feel-print,"LS Ninja 2 Sided Hoodie Grey Unisex  No Feel Print",true,false,true,"no-image","no-category",60,false,803,,1,true,5
+mesh-shooting-shirts,"Mesh Shooting Shirts",true,false,true,"no-image","no-category",30,false,283,,1,true,0
+natural-wood-lightweight-1-4-x-1-4-inch-star-shaped-grateful-dead-earrings-2-sided,"Natural Wood Lightweight 1.4 X 1.4 inch Star Shaped Grateful Dead Earrings 2 Sided",true,false,true,"no-image","",15,false,173,cat_animas-reflections,1,true,0
+neoprene-wrap-can-hugger,"Neoprene Wrap Can Hugger",true,false,true,"no-image","",10,false,416,cat_drink-huggers,1,true,0
+neoprene-wrap-drink-hugger,"Neoprene Wrap Drink Hugger",true,false,true,"no-image","",12,false,397,cat_drink-huggers,7,true,0
+notice,"Notice",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+ogden-theater-slap-pack-3-inch-slaps,"Ogden Theater Slap Pack 3 Inch Slaps",true,false,true,"no-image","no-category",15,false,334,,1,true,0
+pass-the-biscuit,"Pass The Biscuit",true,false,false,"no-image design-record-price","no-category",1,false,3310,,1,true,5
+performance-fleece-performance-sweatshirt,"Performance Fleece Performance Sweatshirt",true,false,true,"no-image","",60,false,267,cat_durango-hockey,1,true,5
+pet-scarf,"Pet Scarf",false,false,true,"no-image","no-category",3,false,178,,1,true,0
+pet-scarfs,"Pet Scarfs",true,false,true,"no-image","no-category",10,false,285,,3,true,0
+pet-scarfs-1-25-unit-price,"Pet Scarfs 1- 25 Unit Price",true,false,true,"no-image thin-description","no-category",7,false,0,,1,true,0
+pet-scarfs-26-50-unit-price,"Pet Scarfs 26-50 Unit Price",false,false,true,"no-image thin-description","no-category",6.5,false,0,,1,true,0
+pink-panther-co-biscuit-hockey,"Pink Panther CO Biscuit Hockey",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+portable-folding-chair,"Portable Folding Chair",true,false,true,"no-image","",40,false,269,cat_jordan-branch-music,3,true,0
+prod_animas_reflections_1783706379770,"Animas Reflections",true,false,true,"no-image thin-description","",6000,false,0,cat_animas_reflections,297,true,0
+prod_drink_huggers_1783706379771,"Drink Huggers",true,true,true,"","",12,true,362,cat_drink-huggers,6,true,0
+prod_dunphy_stock_fam_1783706379772,"Dunphy Stock FAM",true,false,true,"no-image","",60,false,485,cat_dunphy_stock_fam,3,true,0
+prod_durango_hockey_1783706379772,"Durango Hockey",true,false,true,"no-image","",30,false,585,cat_durango_hockey,1,true,0
+prod_durango_roller_girls_1783706379772,"Durango Roller Girls",true,false,true,"no-image","",30,false,599,cat_durango_roller_girls,3,true,0
+prod_hats_1783706379773,"Hats",true,false,true,"thin-description","",25,true,0,cat_hats,2,true,0
+prod_jordan_branch_music_1783706379773,"Jordan Branch Music",true,false,true,"no-image","",5,false,469,cat_jordan_branch_music,1,true,0
+prod_little_stranger_1783706379773,"LITTLE STRANGER",true,true,true,"","",100,true,442,cat_little-stranger,4,true,0
+prod_ornaments_1783706379771,"Ornaments",true,false,true,"no-image","",15,false,62,cat_ornaments,9,true,0
+prod_wood_signs_1783706379771,"Wood Signs",true,false,true,"no-image","",25,false,40,cat_wood_signs,7,true,0
+protect-ya-neck,"Protect Ya Neck",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+real-4-leaf-clover-and-fire-opals-in-resin-with-malachite-shugnite-sandalwood-and-lava-beaded-necklace,"Real 4 Leaf Clover And Fire Opals In Resin With Malachite, Shugnite, Sandalwood And Lava Beaded Necklace",true,false,false,"no-image thin-description out-of-stock","",30,false,0,cat_animas-reflections,1,false,0
+red-blue-watercolor-biscuit-hockey,"Red Blue Watercolor Biscuit Hockey",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+red-long-sleeve-44-spf-sun-hoodie-front-no-feel,"Red Long Sleeve 44+SPF Sun Hoodie Front No Feel",false,false,true,"no-image thin-description","no-category",35,false,0,,1,true,0
+red-long-sleeve-unisex,"Red Long Sleeve Unisex",true,false,true,"no-image","no-category",40,false,781,,1,true,5
+red-yellow-watercolor-biscuit-hockey,"Red Yellow Watercolor Biscuit Hockey",true,false,false,"no-image design-record-price","no-category",1,false,3094,,1,true,5
+reflections-life-is-beautiful,"Reflections Life Is Beautiful",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+reflections-life-is-beautiful-colorado,"Reflections Life Is Beautiful Colorado",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+resin-and-acrylic-pendant-on-silver-necklace,"Resin And Acrylic Pendant On Silver Necklace",true,false,false,"no-image thin-description out-of-stock","",25,false,0,cat_animas-reflections,1,false,0
+rest,"Rest",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+rise-like-the-morning-sun,"Rise Like The Morning Sun",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+see-the-forest-through-the-trees,"See The Forest Through The Trees",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+settle-down-boys,"Settle Down Boys",true,false,true,"no-image","no-category",15,false,3095,,2,true,5
+shooting-shirt,"Shooting Shirt",true,false,true,"no-image","no-category",36,false,776,,8,true,0
+short-sleeve-unisex,"Short Sleeve Unisex",true,false,true,"no-image","no-category",35,false,781,,1,true,5
+short-sleeve-unisex-t-shirt,"Short Sleeve Unisex T-shirt",true,false,false,"no-price no-image","no-category",0,false,663,,1,true,5
+shot-x-2-hugs-kisses,"Shot x 2 = Hugs & Kisses",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+simply-wonderful,"Simply Wonderful",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+skull-pass-the-biscuit,"Skull Pass The Biscuit",true,false,false,"no-image design-record-price","no-category",1,false,3094,,1,true,5
+soar,"Soar",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+soar-colorado,"Soar Colorado",true,false,false,"no-image design-record-price","",1,false,3095,cat_animas-reflections,1,true,5
+soccer-wood-sign-medium,"Soccer Wood Sign Medium",true,false,true,"no-image","",20,false,40,cat_animas-reflections,1,true,0
+splatter-goalie-watercolor-biscuit-hockey,"Splatter Goalie Watercolor Biscuit Hockey",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+sports-water-bottle,"Sports Water Bottle",true,false,true,"no-image","",20,false,219,cat_durango-hockey,1,true,0
+sterling-silver-leaf-with-fire-opals-and-flowers-in-resin-on-sterling-silver-necklace,"Sterling Silver Leaf With Fire Opals And Flowers In Resin On Sterling Silver Necklace",true,false,true,"no-image thin-description","",40,false,0,cat_animas-reflections,1,true,0
+stickers-4-inch,"Stickers 4 Inch",true,false,true,"no-image","no-category",5,false,45,,1,true,0
+stickers-9-5-inch,"Stickers 9.5 Inch",true,false,true,"no-image","no-category",22,false,122,,2,true,0
+stickers-up-3-inch,"Stickers Up 3 inch",true,false,true,"no-image","no-category",3,false,130,,1,true,0
+stone-bear-on-silver-necklace,"Stone Bear On Silver Necklace",true,false,true,"no-image thin-description","",15,false,0,cat_animas-reflections,4,true,0
+stone-heart-on-a-silver-necklace,"Stone Heart On a Silver Necklace",true,false,true,"no-image thin-description","",15,false,0,cat_animas-reflections,1,true,0
+stone-heart-on-silver-necklace,"Stone Heart On Silver Necklace",true,false,true,"no-image thin-description","",15,false,0,cat_animas-reflections,1,true,0
+stone-heart-pendant-on-a-silver-necklace,"Stone Heart Pendant On a Silver Necklace",true,false,true,"no-image thin-description","",15,false,0,cat_animas-reflections,2,true,0
+stone-tear-drop-pendant-on-silver-chain-necklace,"Stone Tear Drop Pendant On Silver Chain Necklace",true,false,true,"no-image thin-description","",15,false,0,cat_animas-reflections,1,true,0
+t-shirt,"T-Shirt",false,false,true,"no-image thin-description","no-category",16,false,0,,2,true,5
+t-shirt-fundraiser-price,"T-Shirt Fundraiser Price",false,false,true,"no-image thin-description","no-category",16,false,0,,1,true,0
+t-shirt-fundraising-price,"T-Shirt Fundraising Price",false,false,true,"no-image thin-description","no-category",16,false,0,,1,true,0
+take-it-in,"Take It In",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+team-4-7-inch-slaps-aka-stickers,"Team 4-7 Inch Slaps AKA Stickers",true,false,true,"no-image","",3,false,146,cat_durango-hockey,1,true,0
+teardrop-silver-drop-earrings,"Teardrop Silver Drop Earrings",true,false,true,"no-image","no-category",15,false,1020,,1,true,0
+the-mountains-are-calling-wood-sign-small,"The Mountains Are Calling Wood Sign Small",true,false,true,"no-image thin-description","",15,false,0,cat_animas-reflections,1,true,0
+this-family-runs-on-baseball-wood-sign-medium,"This Family Runs On Baseball Wood Sign Medium",true,false,true,"no-image thin-description","",25,false,0,cat_animas-reflections,1,true,0
+this-family-runs-on-soccer-wood-sign-medium,"This Family Runs On Soccer Wood Sign Medium",true,false,true,"no-image thin-description","",25,false,0,cat_animas-reflections,1,true,0
+totes-15-4-x-15-white,"Totes 15.4 x 15"" White",false,false,true,"no-image thin-description","no-category",3,false,0,,1,true,0
+turquoise-stone-pendant-with-malachite-shugnite-sandalwood-and-lava-beaded-necklace,"Turquoise Stone Pendant With Malachite, Shugnite, Sandalwood And Lava Beaded Necklace",true,false,false,"no-image thin-description out-of-stock","",30,false,0,cat_animas-reflections,1,false,0
+unisex-7-8-oz-ecosmart-50-50-pullover-hooded-sweatshirt,"Unisex 7.8 oz Ecosmart 50/50 Pullover Hooded Sweatshirt",true,false,true,"no-image","no-category",30,false,480,,1,true,5
+unisex-grey-2-sided-hoodie,"Unisex Grey 2 Sided Hoodie",true,false,true,"no-image thin-description","no-category",40,false,0,,1,true,5
+unisex-jersey-t-shirt,"Unisex Jersey T-Shirt",true,false,true,"no-image","",30,false,831,cat_dunphy-stock-fam,1,true,5
+unisex-jersey-t-shirt-black-durango-roller-girls,"Unisex Jersey T-Shirt Black Durango Roller Girls",true,false,true,"no-image","",30,false,793,cat_durango-roller-girls,1,true,5
+unisex-jersey-tank,"Unisex Jersey Tank",true,false,true,"no-image","no-category",35,false,480,,4,true,5
+unisex-performance-5-oz-t-shirt,"Unisex Performance 5 oz. T-Shirt",true,false,true,"no-image","no-category",35,false,499,,6,true,5
+unisex-performance-5-oz-t-shirt-dunphy-stock-fam,"Unisex Performance 5 oz. T-Shirt Dunphy Stock FAM",true,false,true,"no-image","",30,false,572,cat_dunphy-stock-fam,1,true,5
+unisex-performance-5-oz-t-shirt-durango-roller-girls,"Unisex Performance 5 oz. T-Shirt Durango Roller Girls",true,false,true,"no-image","",30,false,1507,cat_durango-roller-girls,1,true,5
+unisex-sweatband-combo,"Unisex Sweatband Combo",true,false,true,"no-image","no-category",20,false,259,,1,true,0
+vapor-baby-white-one-piece,"Vapor Baby White One-Piece",true,false,true,"no-image","",20,false,503,cat_jordan-branch-music,3,true,0
+water-bottle-33-81oz,"Water Bottle 33.81oz",false,false,true,"no-image","no-category",9,false,813,,1,true,0
+we-are-just-tiny-ants-out-in-space-on-a-giant-ball,"We Are Just Tiny Ants Out In Space On A Giant Ball",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+winter-boredom-mystery-box,"Winter Boredom Mystery Box",true,false,true,"no-image","no-category",35,false,1346,,1,true,0
+women-s-ideal-racerback-tank,"Women's Ideal Racerback Tank",true,false,true,"no-image","",35,false,332,cat_dunphy-stock-fam,2,true,5
+women-s-ideal-racerback-tank-black,"Women's Ideal Racerback Tank Black",true,false,true,"no-image","no-category",35,false,236,,3,true,5
+women-s-ideal-racerback-tank-dayha,"Women's Ideal Racerback Tank DAYHA",true,false,true,"no-image","no-category",30,false,292,,1,true,5
+women-s-t-shirt,"Women's T-Shirt",false,false,true,"no-image","no-category",35,false,618,,6,true,5
+women-s-t-shirt-durango-hockey,"Women's T-Shirt Durango Hockey",true,false,true,"no-image","",30,false,718,cat_durango-hockey,1,true,5
+women-s-t-shirt-durango-roller-girls,"Women's T-Shirt Durango Roller Girls",true,false,true,"no-image","",30,false,681,cat_durango-roller-girls,2,true,5
+wood-3-4-inch-ornaments,"Wood 3 - 4 Inch Ornaments",true,false,true,"no-image","no-category",15,false,533,,1,true,0
+wood-3-5-4-inch-ornaments,"Wood 3.5 - 4 Inch Ornaments",false,false,false,"no-price no-image","no-category",0,false,208,,1,true,0
+wood-3-5-4-inch-ornaments-coasters,"Wood 3.5 - 4 Inch Ornaments/Coasters",false,false,true,"no-image","no-category",3,false,341,,3,true,0
+wood-3-5-4-inch-ornaments-coasters-2-for-12,"Wood 3.5 - 4 Inch Ornaments/Coasters 2 for $12",false,false,false,"no-price no-image","no-category",0,false,341,,1,true,0
+wood-3-5-4-inch-ornaments-coasters-3-for-15,"Wood 3.5 - 4 Inch Ornaments/Coasters 3 for $15",false,false,false,"no-price no-image","no-category",0,false,341,,1,true,0
+wood-3-5-4-ornaments-26-50-unit-price,"Wood 3.5-4"" Ornaments 26-50 Unit Price",true,false,true,"no-image thin-description","no-category",6.5,false,0,,1,true,0
+wood-circle-ornament-or-coaster,"Wood Circle Ornament Or Coaster",true,false,true,"no-image","",12,false,133,cat_durango-hockey,1,true,0
+yellow-goalie-water-color,"Yellow Goalie Water Color",true,false,false,"no-image design-record-price","no-category",1,false,3095,,1,true,5
+you-will-eat-it-you-will-like-it-tin-wood-sign-medium,"You Will Eat It & You Will Like It Tin & Wood Sign Medium",true,false,true,"no-image thin-description","",25,false,0,cat_animas-reflections,1,true,0
+youth-heavy-blend-8-oz-50-50-sweatpants,"Youth Heavy Blend 8 oz., 50/50 Sweatpants",true,false,true,"no-image","no-category",35,false,367,,1,true,0
+youth-hoodie,"Youth Hoodie",true,false,true,"no-image","no-category",55,false,247,,5,true,0
+youth-hoodie-dark-colors,"Youth Hoodie Dark Colors",true,false,true,"no-image","",55,false,400,cat_jordan-branch-music,2,true,0
+youth-lightweight-hooded-sun-shirt-upf-44,"Youth Lightweight Hooded Sun Shirt UPF 44+",true,false,true,"no-image","",40,false,821,cat_jordan-branch-music,3,true,0
+youth-long-sleeve-t-shirt,"Youth Long Sleeve T-Shirt",false,false,true,"no-image thin-description","no-category",15,false,0,,1,true,0
+youth-short-sleeve,"Youth Short Sleeve",true,false,true,"no-image","",35,false,589,cat_jordan-branch-music,3,true,0
+youth-t-shirt,"Youth T-shirt",false,false,true,"no-image thin-description","no-category",15,false,0,,1,true,0
+youth-t-shirt-full-size-front-custom-name-number-full-side-back-sleeve,"Youth T-Shirt Full Size Front, Custom Name & Number Full Side Back,  Sleeve",false,false,true,"no-image thin-description","no-category",25,false,0,,1,true,5
+youth-t-shirts,"Youth T-Shirts",false,false,true,"no-image thin-description","no-category",15,false,0,,1,true,0
+zip-up-hoodie-1,"Zip Up Hoodie (1)",true,false,false,"no-image duplicate-name","price-anomaly",65,false,1142,cat_jordan-branch-music,1,true,25
