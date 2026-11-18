@@ -370,4 +370,4 @@ export const PAYMENT_METHODS = [
 ] as const;
 
 export const RETURN_POLICY =
-  "All sales are final. If you have any trouble with your order, please contact us and we will make it right." as const;
+  "Custom items are made to order. If your order arrives damaged or incorrect, contact us and we will make it right — see the Returns page for the full policy." as const;

@@ -306,3 +306,46 @@ Because the code reads `process.env.NEXT_PUBLIC_SQUARE_APP_ID || fallback`, a **
 `npm run build && firebase deploy --only hosting` would inline the broken ID and kill checkout again.
 CI is safe only if no repository Variable overrides the workflow fallback (not verifiable from here).
 Fix `.env.local` before the next local deploy.
+
+---
+
+## 11. Round 3 verification — 2026-11-18 (`4be4353`, deployed 22:56 UTC)
+
+This round added `/shipping`, `/returns`, customer signup, and shop product filters. Verified against
+the live deploy.
+
+### New and working
+
+- **`/shipping/`** → 200, "Shipping Rates & Timing". It reads the same `config/site` values checkout
+  uses ($1.00 sticker tier, $7.50 everything else, free over $100.00, US only, made-to-order lead
+  time), so the page cannot drift from the charged amount. Footer links it.
+- **`/returns/`** → 200, "Returns & Exchanges". Coherent policy: contact first for authorization,
+  unused / original condition and packaging, custom and personalized items non-returnable except
+  defect or wrong item. This is a real policy page, not a paragraph.
+- **Customer signup** → the "Create an account" link toggles to a name + email + password form
+  ("Create Account") plus Google signup. Works live.
+- **Shop product filters** → a category/type `<select>` and "By Product Type" chips are functional;
+  shop still lists 16 products.
+- **Regressions clean** → checkout card form still initialises (no alerts), cart persists across
+  reload, PDP sizes still render, footer now links Shipping and Returns.
+
+### Residual and new issues
+
+- **Footer still contradicts `/returns/`.** The footer's policy line is unchanged: "All sales are
+  final. If you have any trouble… we will make it right." The new returns page allows authorised
+  returns of unused items. Replace the footer paragraph with a link to `/returns/` so the two stop
+  disagreeing (closes the remaining half of **U-09**).
+- **Second unnamed `<select>` on `/shop`.** The new category filter ("All Products (16)") has no
+  accessible name, so axe now reports **two** `select-name` violations on `/shop` (sort + category).
+  Both are one `aria-label` away.
+- **U-16 unchanged and now slightly larger.** The sitemap grew to **18 URLs** (added `/shipping`,
+  `/returns`) but every URL still points at `www.animasreflections.com`, where they 404. The new
+  pages are live on the PWA host but self-canonicalise to a domain that does not serve them.
+- **`.env.local` still carries the transposed Square Application ID** (verified again this round).
+  Local builds remain a checkout regression risk until it is corrected.
+
+### Not touched this round (still open)
+
+U-11 (street address), U-15 (PDP depth / no shipping-returns line near buy), customizer axe items,
+mobile 30-36px tap targets, and from the fulfilment doc: F-02 order notification, F-05 address-2
+field, F-06 print preview, F-07 guest upload.

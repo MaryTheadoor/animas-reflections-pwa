@@ -13,7 +13,7 @@ const vesperLibre = Vesper_Libre({
 // Production origin for the static export — the canonical host the site is
 // deployed to. Absolute URLs are required in metadata because social scrapers
 // do not resolve relative og:image / twitter:image paths.
-const SITE_URL = "https://www.animasreflections.com";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://animas-reflections-pwa.web.app").replace(/\/+$/, "");
 
 export const viewport: Viewport = {
   themeColor: "#1E4D4F",

@@ -319,7 +319,7 @@ const siteBlock = exportedObject(contentSrc, 'SITE');
 const seoTitle = (layoutSrc.match(/title\s*:\s*\{\s*default\s*:\s*"((?:[^"\\]|\\.)*)"/) || [])[1] || '';
 const origin = (layoutSrc.match(/const SITE_URL = "(https?:\/\/[^"]+)"/) || [])[1]
   || (layoutSrc.match(/url:\s*"(https?:\/\/[^"]+)"/) || [])[1]
-  || 'https://www.animasreflections.com';
+  || 'https://animas-reflections-pwa.web.app';
 
 // Brand tokens, mirroring src/app/globals.css. background (#FAF6F0), primary
 // (#1E4D4F) and ink (#111827) already equal the source script's own defaults;

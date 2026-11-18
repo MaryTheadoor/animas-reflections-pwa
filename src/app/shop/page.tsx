@@ -176,6 +176,7 @@ function ShopContent() {
             />
           </div>
           <select
+            aria-label="Sort products"
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
             className="px-3 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
@@ -217,6 +218,7 @@ function ShopContent() {
             {/* Mobile select — shows design categories or product types per mode */}
             {browseMode === "design" ? (
               <select
+                aria-label="Filter by category"
                 value={activeCategory}
                 onChange={(e) => setActiveCategory(e.target.value)}
                 className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
@@ -228,6 +230,7 @@ function ShopContent() {
               </select>
             ) : (
               <select
+                aria-label="Filter by product type"
                 value={activeType}
                 onChange={(e) => setActiveType(e.target.value)}
                 className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"

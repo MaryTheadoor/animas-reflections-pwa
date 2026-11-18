@@ -24,7 +24,7 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const ORIGIN = "https://www.animasreflections.com";
+const ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL || "https://animas-reflections-pwa.web.app").replace(/\/+$/, "");
 const BRAND = "Animas Reflections";
 const TITLE_MAX = 60;
 const DESCRIPTION_MAX = 155;

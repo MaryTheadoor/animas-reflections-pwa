@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import HeaderBar from "@/components/layout/header-bar";
-import { PAYMENT_METHODS, RETURN_POLICY, SITE } from "@/lib/content";
+import { PAYMENT_METHODS, SITE } from "@/lib/content";
 import { useSiteContent } from "@/hooks/useSiteConfig";
 import type { ReactNode } from "react";
 
@@ -57,7 +57,13 @@ export default function PageLayout({
           </div>
           <div>
             <h4 className="font-bold mb-3">Policies</h4>
-            <p className="text-sm text-foreground leading-relaxed">{RETURN_POLICY}</p>
+            <p className="text-sm text-foreground leading-relaxed">
+              Custom items are made to order — see our{" "}
+              <Link href="/returns" className="underline hover:text-gold-deep">
+                Returns policy
+              </Link>{" "}
+              for what we can accept back.
+            </p>
             <p className="text-xs text-foreground/80 mt-3">
               We accept: {PAYMENT_METHODS.join(", ")}
             </p>

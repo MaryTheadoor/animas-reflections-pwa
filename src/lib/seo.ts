@@ -27,7 +27,7 @@ import { SEO_CONTENT } from "@/lib/seo-content.generated";
  */
 const CMS = normalizeSeoConfig(SEO_CONTENT);
 
-export const SITE_URL = "https://www.animasreflections.com";
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://animas-reflections-pwa.web.app").replace(/\/+$/, "");
 export const SITE_NAME = SITE.name;
 
 /** Google renders roughly these widths; longer text is cut mid-word. */

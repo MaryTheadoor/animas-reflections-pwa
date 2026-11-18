@@ -719,6 +719,12 @@ function ProductContent() {
                 This item is not orderable online — contact us for pricing.
               </p>
             )}
+            <p className="text-[11px] text-foreground/70 mt-3">
+              <Link href="/shipping" className="underline hover:text-gold-deep">Shipping</Link>
+              {" · "}
+              <Link href="/returns" className="underline hover:text-gold-deep">Returns</Link>
+              {" · "}Custom items are made to order.
+            </p>
           </div>
         </div>
       </main>
