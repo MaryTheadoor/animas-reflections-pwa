@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import { deleteDoc, doc, setDoc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
+import AdminTooltip from "@/components/ui/admin-tooltip";
 import { notifyProductPhotosChanged, useProductPhotos } from "@/hooks/useProductPhotos";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useCatalog } from "@/hooks/useCatalog";
@@ -89,6 +90,29 @@ export default function ProductPhotoManager() {
   // could not see. Scroll the editor into view and flash it while it is open.
   const editorRef = useRef<HTMLElement>(null);
   const [flashEditor, setFlashEditor] = useState(false);
+  // First-visit explainer. Read in an effect, not the state initialiser: this
+  // component is prerendered, and localStorage does not exist on the server.
+  const [helpOpen, setHelpOpen] = useState(false);
+  useEffect(() => {
+    // Deferred through setTimeout — the pattern the dashboard config load uses —
+    // so the read does not set state synchronously inside the effect body.
+    const t = setTimeout(() => {
+      try {
+        setHelpOpen(localStorage.getItem("pp-help-dismissed") !== "1");
+      } catch {
+        setHelpOpen(true);
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  const dismissHelp = () => {
+    setHelpOpen(false);
+    try {
+      localStorage.setItem("pp-help-dismissed", "1");
+    } catch {
+      // Private mode: the panel just comes back next visit.
+    }
+  };
 
   const colorOptions = siteConfig.catalog_options?.colors ?? [];
   const typeOptions = siteConfig.catalog_options?.productTypes ?? [];
@@ -313,6 +337,46 @@ export default function ProductPhotoManager() {
         </p>
       </div>
 
+
+      {helpOpen && (
+        <section className="rounded-2xl border border-gold/30 bg-gold/5 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="font-bold font-display text-sm">How the photo library works</h3>
+            <button onClick={dismissHelp} className="text-xs font-medium text-gold-deep hover:underline">
+              Got it
+            </button>
+          </div>
+          <ol className="mt-2 space-y-1.5 text-xs text-foreground/85 list-decimal pl-5">
+            <li>
+              <strong>One blank product = one set.</strong> Photos that share the blank product name
+              (e.g. “Gildan 18500 Hoodie”) are grouped, so a product can take all five mockup views
+              in one action.
+            </li>
+            <li>
+              <strong>Every photo needs a view.</strong> Front, Back, Sleeve, Left Side or Right
+              Side — that is the slot it fills. Leave View on <em>Auto</em> and the filename decides
+              (“hoodie-front.png” → Front).
+            </li>
+            <li>
+              <strong>Colour is optional, and it changes the job.</strong> Leave it blank for the
+              garment&rsquo;s standard views — those fill a product&rsquo;s base mockups. Set a
+              colour only when the photo shows that colour; those fill that colour&rsquo;s slot
+              instead, which is what a customer sees after picking the colour.
+            </li>
+            <li>
+              <strong>Modifier is optional too.</strong> Naming a modifier makes the photo the
+              background when a customer selects that option (a printed logo, for example).
+            </li>
+            <li>
+              <strong>Applying is one click.</strong> In a product&rsquo;s editor, open
+              &ldquo;Apply a saved blank product&rdquo; and click the set. Only the views the set
+              actually has are filled; nothing else on the product changes. Save the product
+              afterwards.
+            </li>
+          </ol>
+        </section>
+      )}
+
       {/* ── Add / edit ── */}
       <section
         ref={editorRef}
@@ -360,6 +424,9 @@ export default function ProductPhotoManager() {
             <label htmlFor="pp-name" className="text-xs font-medium text-primary block mb-1">
               Blank product *
             </label>
+            <AdminTooltip content="Photos that share this name are one set. A product filled from the set receives every mockup view it has in one click.">
+              <span className="sr-only">Help with the blank product name</span>
+            </AdminTooltip>
             <input
               id="pp-name"
               list="pp-name-options"
@@ -398,6 +465,9 @@ export default function ProductPhotoManager() {
             <label htmlFor="pp-color" className="text-xs font-medium text-primary block mb-1">
               Colour (optional)
             </label>
+            <AdminTooltip content="Leave blank for the garment's standard Front/Back/Sleeve photos — that is what fills a product's base mockups. Set a colour only when this photo shows that colour.">
+              <span className="sr-only">Help with colour</span>
+            </AdminTooltip>
             <input
               id="pp-color"
               list="pp-color-options"
@@ -422,6 +492,9 @@ export default function ProductPhotoManager() {
             <label htmlFor="pp-modifier" className="text-xs font-medium text-primary block mb-1">
               Modifier (optional)
             </label>
+            <AdminTooltip content="Optional. Naming a modifier makes this photo the background when a customer selects that option in the customizer or product page.">
+              <span className="sr-only">Help with modifier</span>
+            </AdminTooltip>
             <input
               id="pp-modifier"
               list="pp-modifier-options"

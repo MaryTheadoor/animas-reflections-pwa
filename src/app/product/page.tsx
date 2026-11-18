@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import PlaceholderImage from "@/components/ui/placeholder-image";
 import ModifierThumb from "@/components/ui/modifier-thumb";
+import ModifierPicker from "@/components/product/modifier-picker";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useDesignLibrary } from "@/hooks/useDesignLibrary";
@@ -105,10 +106,6 @@ function ProductContent() {
   // Modifier choices (sizes, colours, add-ons) for products whose variants are
   // placeholders — see usesModifierGroups below.
   const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>([]);
-  // Groups with many design options (a patch background set can have 14, design
-  // sets 50+) made the page several screens long. Cap the visible chips and let
-  // the operator open the rest; a selected option is always shown.
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [modifierInputs, setModifierInputs] = useState<Record<string, string>>({});
   // Design thumbnails beside modifier options (PROJECT_CONTEXT §15.6 S1). Read-only:
   // the library is matched by option name, nothing is written.
@@ -430,72 +427,62 @@ function ProductContent() {
                 {modifierGroups.map((group) => (
                   <fieldset key={group.name} className="mb-4 last:mb-0">
                     <legend className="text-xs font-medium text-primary mb-2">{group.name}</legend>
-                    <div className="flex flex-wrap gap-2">
-                      {group.modifiers
-                        .filter(
-                          (mod, index) =>
-                            index < MODIFIER_GROUP_CAP ||
-                            expandedGroups.includes(group.name) ||
-                            selectedModifierIdsInUse.includes(mod.id),
-                        )
-                        .map((mod) => {
-                        const active = selectedModifierIdsInUse.includes(mod.id);
-                        const delta = formatModifierDelta(mod);
-                        // Explicit admin assignment wins; otherwise the design whose
-                        // label matches this option's name.
-                        const thumbnail = modifierThumbnail(
-                          mod,
-                          designIndex,
-                          product?.mockupImagesByModifier,
-                        );
-                        return (
-                          <button
-                            key={mod.id}
-                            type="button"
-                            aria-pressed={active}
-                            onClick={() => toggleModifier(mod.id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                              active
-                                ? "bg-primary text-white"
-                                : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
-                            }`}
-                          >
-                            {thumbnail && <ModifierThumb src={thumbnail} />}
-                            <span
-                              aria-hidden="true"
-                              className={`flex items-center justify-center w-3.5 h-3.5 rounded border shrink-0 ${
-                                active ? "bg-white border-white" : "border-primary/30"
+                    {group.modifiers.length > MODIFIER_GROUP_CAP ? (
+                      // A design set can hold 50+ options; chips made the page
+                      // several screens long. Big groups collapse to one button
+                      // that opens a searchable, thumbnail picker.
+                      <ModifierPicker
+                        group={group}
+                        selectedIds={selectedModifierIdsInUse}
+                        onToggle={toggleModifier}
+                        thumbnailFor={(mod) =>
+                          modifierThumbnail(mod, designIndex, product?.mockupImagesByModifier)
+                        }
+                      />
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {group.modifiers.map((mod) => {
+                          const active = selectedModifierIdsInUse.includes(mod.id);
+                          const delta = formatModifierDelta(mod);
+                          // Explicit admin assignment wins; otherwise the design whose
+                          // label matches this option's name.
+                          const thumbnail = modifierThumbnail(
+                            mod,
+                            designIndex,
+                            product?.mockupImagesByModifier,
+                          );
+                          return (
+                            <button
+                              key={mod.id}
+                              type="button"
+                              aria-pressed={active}
+                              onClick={() => toggleModifier(mod.id)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                                active
+                                  ? "bg-primary text-white"
+                                  : "bg-warm-sand text-foreground hover:bg-warm-sand/80"
                               }`}
                             >
-                              {active && (
-                                <svg className="w-3 h-3 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </span>
-                            {mod.name}
-                            {delta && <span className={active ? "text-white/80" : "text-gold-deep"}>{delta}</span>}
-                          </button>
-                        );
-                      })}
-                      {group.modifiers.length > MODIFIER_GROUP_CAP && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedGroups((prev) =>
-                              prev.includes(group.name)
-                                ? prev.filter((g) => g !== group.name)
-                                : [...prev, group.name],
-                            )
-                          }
-                          className="self-center px-2.5 py-1.5 rounded-xl text-xs font-medium text-gold-deep border border-gold/30 hover:bg-gold/10 transition-colors"
-                        >
-                          {expandedGroups.includes(group.name)
-                            ? "Show fewer"
-                            : `Show all ${group.modifiers.length}`}
-                        </button>
-                      )}
-                    </div>
+                              {thumbnail && <ModifierThumb src={thumbnail} />}
+                              <span
+                                aria-hidden="true"
+                                className={`flex items-center justify-center w-3.5 h-3.5 rounded border shrink-0 ${
+                                  active ? "bg-white border-white" : "border-primary/30"
+                                }`}
+                              >
+                                {active && (
+                                  <svg className="w-3 h-3 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </span>
+                              {mod.name}
+                              {delta && <span className={active ? "text-white/80" : "text-gold-deep"}>{delta}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                     {/* Text and file modifiers collect their value once selected.
                         Artwork upload stays in the customizer, which owns the
                         storage path — the product page only links to it. */}
