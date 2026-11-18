@@ -2428,3 +2428,37 @@ shipping rates cannot make `expectedTotal` diverge.
 
 **Rollback:** `firebase hosting:rollback`, or redeploy `rc-blackfriday-1` for functions/rules.
 
+
+---
+
+## Session 40 — 2026-11-18 | Product surfaces, launch pages, customer accounts
+
+### Product page
+- One image rule: `getProductImageUrl` prefers the front mockup over the gallery, so cards, the customizer and the
+  product page default agree. 13 active products had two different files (Coffee Cup 15 oz was one).
+- A variant-driven product keeps its picker AND renders modifier groups, minus any group that repeats the variant
+  names. The Yupoong snapback's 17 patch options were invisible before this.
+- The headline image follows the selected VARIANT's colour when a per-colour photo exists.
+- Modifier groups over 8 options collapse to a modal picker (search + thumbnails); no more multi-screen pages.
+
+### Admin
+- Product Photos: blank-set counts are colour-aware (they read 0 of 5 because every photo was colour-tagged), an
+  edit scrolls to and highlights the form, shows the current photo (kept unless replaced), sets views from filenames
+  or a per-photo dropdown, and the tab opens with a 'How the photo library works' panel plus field tooltips.
+- Every mockup view has a Library button (per-slot), alongside Upload.
+- Products list: filters for live/unlisted/needs-work, category and type, with a showing-N-of-M count.
+- Launch readiness panel (previous day) unchanged: 16 strict-ready, 159 under hard blockers.
+
+### Pages + accounts
+- New `/shipping/` (rates read from config/site at runtime, so they cannot drift from checkout) and `/returns/`
+  (plain-language version of Terms §7). Footer links added; both registered in PAGE_SEO and the sitemap.
+- One return-policy voice: the FAQ answer and the footer `RETURN_POLICY` no longer claim 'all sales are final' or an
+  arbitrary 5-day window; both point at the Returns page.
+- Customer accounts: `signup()` (email + password + name, verification email best-effort) and a Create-account mode
+  on `/login/`; Google sign-up/sign-in both offered. Account page already surfaces orders and tracking.
+
+### Verification
+- tsc 0 · lint 0 · 440 tests / 27 suites · 28-page build, `check-seo: OK — 28 pages, 18 sitemap URLs`.
+- Live: `/shipping/` and `/returns/` 200 with correct titles and derived rates; footer links present; /login shows
+  'Create your account' with name field and 'Sign up with Google'; admin shows the filter selects.
+- Not verified live: an actual account creation (writes a real Auth user) and a real-card purchase. Both remain.

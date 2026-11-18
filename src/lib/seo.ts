@@ -148,6 +148,20 @@ export const PAGE_SEO: readonly PageSeo[] = [
     indexable: true,
   },
   {
+    path: "/shipping/",
+    title: "Shipping Rates & Timing",
+    description:
+      "Shipping rates for Animas Reflections orders, the free-shipping threshold, where we ship, production timing and tracking.",
+    indexable: true,
+  },
+  {
+    path: "/returns/",
+    title: "Returns & Exchanges",
+    description:
+      "How returns and exchanges work for custom-printed apparel: authorization, condition, return shipping and refunds.",
+    indexable: true,
+  },
+  {
     path: "/terms/",
     title: "Terms of Sale",
     description:

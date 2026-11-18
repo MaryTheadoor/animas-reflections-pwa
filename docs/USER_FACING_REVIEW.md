@@ -229,3 +229,80 @@ Deployed: hosting at 2026-11-11. Gate: tsc 0 · lint 0 · **380 tests / 25 suite
 Still open: U-03, U-08–U-16 (content, policy and SEO items — U-09's three return policies, U-10's
 missing Shipping/Returns pages, U-11's address, U-12's stale Terms and U-16's canonical pointing at a
 domain that does not serve the site yet are all **client content decisions**, not code).
+
+---
+
+## 10. Fresh verification — 2026-11-18 (build `01764ca`, deployed 22:47 UTC)
+
+Re-ran every check above against the live site. The buy path is now genuinely usable end to end.
+
+### Verified fixed
+
+| Item | Evidence |
+| --- | --- |
+| **U-01 sizes on PDP** | `product/?id=07db885e…` now renders **7 modifier groups**; sizes read `Extra Small · Small · Medium · Large · Extra Large · XXL +$3.00 · XXXL +$3.00 · XXXXL +$5.00`. Upcharges visible and selectable. |
+| **U-04 terms at checkout** | "By placing this order you agree to our Terms of Sale and Privacy Policy. Questions? Contact us." with working `/terms` and `/privacy` links. |
+| **U-05 footer** | `<footer>` present on 12 of 14 crawled routes. Only `/customizer` and `/checkout` (standalone chrome) lack one. |
+| **U-06 home link** | Nav is now `Home → /` first; `homeLinks: 1` on `/shop/`. |
+| **U-07 customer login** | `/login/` — "Sign In", email + password, **Forgot password?**, Google, and a create-account line. `/admin/login` remains staff-only. |
+| **U-08 mobile header** | Dock is a single **45px** row (was two rows ≈200px) with an overflow **More** menu. See the caveat below. |
+| **Customizer H1** | Now `Customize your apparel` (was empty). |
+| **U-02 cart label** | Cart line no longer shows the placeholder variant name. |
+
+### New finding — the shop is now 16 products
+
+`/shop/` reports **"Browse 16 products" / "Showing 16 of 16"**, all 16 with images. Live data:
+**374 documents, 16 `active`, 358 `active: false`**. This is the launch-readiness unlisting, and it
+works, but it is a large merchandising change that needs a deliberate decision rather than drift.
+
+Why the 358 are hidden:
+
+| Reason | Count | Note |
+| --- | --- | --- |
+| **Needs a photo** | **332** | Price, description and category are fine — only photography is missing. |
+| No price (zero) | 23 | Mostly internal SKUs (should stay hidden) plus a few real items needing prices. |
+| Sellable + image + description but hidden | 2 | Worth an admin look — they pass the checks I can compute. |
+| Needs a description | 1 | "Hats". |
+
+So the storefront is **not 16 products deep by nature — it is 332 photographs away from 348.** That
+is a content task, not a code task, and it is the highest-leverage work available for revenue.
+
+Related: hidden products now return **"Product Not Found"** on their PDP. Any previously shared or
+indexed deep link to those 218 products is dead, so the unlisting should be paired with redirects or
+a "no longer available — see similar" state if any of them were ever promoted.
+
+### Still open (all previously reported)
+
+- **U-09** three return policies still disagree (footer "all sales are final… we will make it right",
+  FAQ "5 days", Terms "prior written authorization").
+- **U-10** `/shipping/` and `/returns/` are still **404** — no shopper-facing policy pages.
+- **U-11** no physical street address anywhere.
+- **U-15** PDPs remain thin (170-387 words) with **no production time, shipping estimate, or returns
+  line near the buy button**; descriptions are still supplier spec dumps.
+- **U-16** canonical/sitemap still point at `www.animasreflections.com`, where 14 of 16 sitemap URLs
+  404. Still the single biggest findability blocker.
+
+### Accessibility, re-measured
+
+| Route | Result |
+| --- | --- |
+| home, product, search, faq, about, contact, fundraising, services, privacy, terms | clean |
+| **shop** | `select-name`, critical — the sort/category `<select>` (`.sm\:flex-row > select`) has no accessible name |
+| **customizer** | `select-name`, critical — the size/product `<select>`; `color-contrast` — `.text-amber-500` at **2.14:1** on white (needs 4.5:1 at 12px) |
+
+Both are one-line fixes (`aria-label` on the selects; darken the amber to ~`#b45309`-class).
+
+### Mobile tap targets (U-08 caveat)
+
+The single row is 45px tall, but the visible items measure **30-36px** wide by 36px tall — under the
+44×44 practical minimum (Apple HIG / Material). Icon-only labels that narrow are hard to hit. Either
+widen the targets or move the least-used items into **More** so the survivors get breathing room.
+
+### Operational risk — do not rebuild locally yet
+
+`src/lib/constants.ts` and the CI fallback now carry the **correct** Square Application ID
+(`sq0idp-QAzY**Fz**…`), but **`.env.local` still holds the transposed one** (`sq0idp-QAzY**zF**…`).
+Because the code reads `process.env.NEXT_PUBLIC_SQUARE_APP_ID || fallback`, a **local**
+`npm run build && firebase deploy --only hosting` would inline the broken ID and kill checkout again.
+CI is safe only if no repository Variable overrides the workflow fallback (not verifiable from here).
+Fix `.env.local` before the next local deploy.

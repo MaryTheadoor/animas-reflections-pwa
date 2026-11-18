@@ -34,6 +34,8 @@ export const NAVIGATION = {
     { label: "FAQ", href: "/faq" },
     { label: "Our Story", href: "/about" },
     { label: "Contact", href: "/contact" },
+    { label: "Shipping", href: "/shipping" },
+    { label: "Returns", href: "/returns" },
     { label: "Terms of Sale", href: "/terms" },
     { label: "Privacy Policy", href: "/privacy" },
   ],
@@ -154,7 +156,7 @@ export const FAQ = {
     },
     {
       q: "What is your return policy?",
-      a: "All sales are final. If you have any trouble with your order — wrong size, defect, or damage — please contact us within 5 days of receipt and we will make it right.",
+      a: "Custom items are made to order, so returns are limited to defective or incorrect items — see the Returns page for the full policy. If something is wrong, contact us as soon as it arrives and we will make it right.",
     },
     {
       q: "How do I start a fundraiser?",
@@ -315,7 +317,7 @@ export const PRIVACY_POLICY = {
     },
     {
       title: "Information We Collect",
-      body: `Account information: if you create an account or sign in, we store your name and email address (via Firebase Authentication). Order information: when you place an order, we collect your name, email, phone number, and shipping address so we can fulfill and ship your order. Custom designs: any image files you upload or text you enter in the customizer are stored with your order so we can produce your item.`,
+      body: `Account information: if you create an account or sign in, we store your name and email address (via Firebase Authentication). Order information: when you place an order, we collect your name, email, phone number, and shipping address so we can fulfill and ship your order. Custom designs: any image files you upload or text you enter in the customizer are stored with your order so we can produce your item. Cart: your cart is saved in your browser's local storage under the key animas-cart-v1 so a refresh does not lose it; it stays on your device and is sent to us only when you check out.`,
     },
     {
       title: "How We Use Your Information",

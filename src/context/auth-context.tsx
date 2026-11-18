@@ -4,6 +4,9 @@ import { createContext, useContext, useState, useEffect, useRef, type ReactNode 
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification,
   sendPasswordResetEmail,
   GoogleAuthProvider,
   signOut,
@@ -21,6 +24,8 @@ interface AuthContextValue {
   loading: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Create a customer account (email + password) and set a display name. */
+  signup: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -123,6 +128,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
+  const signup = async (email: string, password: string, name: string) => {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const displayName = name.trim();
+    if (displayName) {
+      try {
+        await updateProfile(cred.user, { displayName });
+      } catch {
+        // A missing display name is cosmetic; the account works without it.
+      }
+    }
+    // Best-effort: a verified address makes order lookups and admin eligibility
+    // unambiguous. Never block account creation on the email being sent.
+    try {
+      await sendEmailVerification(cred.user);
+    } catch {
+      // Ignore; the customer can request another from their account later.
+    }
+  };
+
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -145,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, login, loginWithGoogle, sendPasswordReset, logout }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, login, signup, loginWithGoogle, sendPasswordReset, logout }}>
       {children}
     </AuthContext.Provider>
   );

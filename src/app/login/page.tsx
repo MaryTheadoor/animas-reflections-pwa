@@ -22,6 +22,12 @@ function friendlyError(err: unknown): string {
   if (msg.includes("auth/invalid-email")) {
     return "Please enter a valid email address.";
   }
+  if (msg.includes("auth/email-already-in-use")) {
+    return "An account already exists for that email. Sign in instead, or use Forgot password.";
+  }
+  if (msg.includes("auth/weak-password")) {
+    return "Choose a stronger password — at least 6 characters.";
+  }
   if (msg.includes("auth/popup-closed-by-user") || msg.includes("cancelled")) {
     return "Sign-in was cancelled. Please try again.";
   }
@@ -30,7 +36,9 @@ function friendlyError(err: unknown): string {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, login, loginWithGoogle, sendPasswordReset } = useAuth();
+  const { user, login, signup, loginWithGoogle, sendPasswordReset } = useAuth();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +59,8 @@ export default function LoginPage() {
     setNotice(null);
     setLoading(true);
     try {
-      await login(email, password);
+      if (mode === "signup") await signup(email, password, name);
+      else await login(email, password);
       router.push("/account");
     } catch (err) {
       setError(friendlyError(err));
@@ -103,13 +112,34 @@ export default function LoginPage() {
                 height={60}
                 className="mx-auto mb-4 rounded-xl"
               />
-              <h1 className="text-xl font-bold font-display">Sign In</h1>
+              <h1 className="text-xl font-bold font-display">
+                {mode === "signup" ? "Create your account" : "Sign In"}
+              </h1>
               <p className="text-sm text-foreground mt-1">
-                Sign in to see your orders, addresses and profile.
+                {mode === "signup"
+                  ? "One account for order history, tracking and saved addresses."
+                  : "Sign in to see your orders, addresses and profile."}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === "signup" && (
+                <div>
+                  <label htmlFor="login-name" className="block text-sm font-medium text-primary mb-1">
+                    Name
+                  </label>
+                  <input
+                    id="login-name"
+                    type="text"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 rounded-xl border border-primary/20 bg-white focus:border-gold focus:ring-1 focus:ring-gold outline-none"
+                    placeholder="Your name"
+                  />
+                </div>
+              )}
               <div>
                 <label htmlFor="login-email" className="block text-sm font-medium text-primary mb-1">
                   Email
@@ -132,7 +162,7 @@ export default function LoginPage() {
                 <input
                   id="login-password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -157,9 +187,16 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full py-3 rounded-2xl bg-gold text-on-gold font-semibold hover:bg-gold-light transition-colors disabled:opacity-50 btn-tactile btn-gold-tactile"
               >
-                {loading ? "Signing in..." : "Sign In"}
+                {loading
+                  ? mode === "signup"
+                    ? "Creating account..."
+                    : "Signing in..."
+                  : mode === "signup"
+                    ? "Create Account"
+                    : "Sign In"}
               </button>
 
+              {mode === "signin" && (
               <div className="text-center">
                 <button
                   type="button"
@@ -170,6 +207,7 @@ export default function LoginPage() {
                   {resetLoading ? "Sending reset link..." : "Forgot password?"}
                 </button>
               </div>
+              )}
 
               <div className="relative my-2">
                 <div className="absolute inset-0 flex items-center">
@@ -191,16 +229,35 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Sign In with Google
+                {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
               </button>
             </form>
 
             <p className="mt-6 text-center text-xs text-foreground/80">
-              No account yet?{" "}
-              <Link href="/shop" className="text-primary hover:text-gold-deep transition-colors">
-                Start shopping
-              </Link>{" "}
-              — you can always check out as a guest.
+              {mode === "signup" ? (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => { setMode("signin"); setError(null); setNotice(null); }}
+                    className="text-primary hover:text-gold-deep transition-colors font-medium"
+                  >
+                    Sign in
+                  </button>
+                </>
+              ) : (
+                <>
+                  New here?{" "}
+                  <button
+                    type="button"
+                    onClick={() => { setMode("signup"); setError(null); setNotice(null); }}
+                    className="text-primary hover:text-gold-deep transition-colors font-medium"
+                  >
+                    Create an account
+                  </button>{" "}
+                  — or check out as a guest.
+                </>
+              )}
             </p>
           </div>
 

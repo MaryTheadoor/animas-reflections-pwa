@@ -362,3 +362,43 @@ product with a size surcharge over $10 (full-catalog check). A customer would pa
 Real-card canary (the sweep proves the form initialises and Pay enables, not that a charge
 succeeds); 9 active products with no price; 10 tracked variants at zero; S2 (option↔design mapping);
 U-09–U-16 content and policy items.
+
+---
+
+## Fresh check — 2026-11-18 (`01764ca`, deployed 22:47 UTC)
+
+Re-verified the live site rather than the commit messages. Fourteen commits landed since the first
+pass; the payment blocker is genuinely gone.
+
+| Item | Status now | Evidence |
+| --- | --- | --- |
+| **AR-01** card form | **Fixed, confirmed live** | `/checkout/` initialises: `pci-connect/payments/hydrate` → **200**, `single-card-element-iframe.html` loads, `#card-container` has content, no error alert. |
+| **AR-14** RSC prefetch 404s | **Fixed** | `/shop/__next.shop.__PAGE__.txt` and the customizer equivalent now return **200** (were 404). |
+| Customizer `<h1>` | **Fixed** | Renders "Customize your apparel". |
+| **AR-03** images | **Mitigated, not fixed** | Shop now lists **16 products, 16 with images** (was 234 / 17). The 217 imageless products are unlisted, not photographed. |
+| **AR-04** $1.00 design records | **Mitigated** | Zero $1.00 records remain `active`; the documents still exist in Firestore. |
+| **AR-05** internal SKUs | **Mitigated** | Hidden from the shop by the readiness unlisting. |
+| **AR-07** duplicates / placeholder variants / 297-variant product | **Mitigated** | Hidden from the shop; data unchanged. |
+| **AR-11** price before product chosen | Fixed per `d8dde39`. |
+| Shop `select-name` (axe) | **Open** — `.sm\:flex-row > select` still has no accessible name. |
+| Customizer `select-name` + contrast | **Open** — one unnamed `<select>`; `.text-amber-500` at 2.14:1 on white. |
+
+Current catalog state (Firestore REST, live): **374 documents · 16 active · 358 inactive**. Of the 358,
+**332 have a price and description and are hidden only for missing photography**.
+
+### Regression risk — `.env.local` still carries the transposed Square Application ID
+
+Confirmed just now:
+
+```
+.env.local                     NEXT_PUBLIC_SQUARE_APP_ID=sq0idp-QAzYzFHiOcHrBmGfmdfGTQ   ← transposed, broken
+src/lib/constants.ts           sq0idp-QAzYFzHiOcHrBmGfmdfGTQ                              ← correct
+.github/workflows/rebuild.yml  sq0idp-QAzYFzHiOcHrBmGfmdfGTQ                              ← correct
+```
+
+`NEXT_PUBLIC_*` values are inlined at build time and `.env.local` wins over the constant, so a local
+`npm run build && firebase deploy --only hosting` re-ships the broken ID and takes checkout down
+again. CI is only safe if no repository Variable `NEXT_PUBLIC_SQUARE_APP_ID` overrides the workflow
+fallback — that could not be checked from this machine (`gh` unauthenticated).
+
+Action: correct `.env.local`, and confirm the GitHub variable is unset or also correct.

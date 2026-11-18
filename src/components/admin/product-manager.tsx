@@ -40,6 +40,7 @@ import {
 } from "@/lib/product-photos";
 import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS, type ProductPhotoView } from "@/types";
 import { designAssetLabel } from "@/lib/design-assets";
+import { assessProduct } from "@/lib/product-readiness";
 import { designMatchesCategory } from "@/lib/design-category";
 import {
   describeBlankPlan,
@@ -82,6 +83,11 @@ interface Props {
 export default function ProductManager({ categories }: Props) {
   const [products, setProducts] = useState<ManagedProduct[]>([]);
   const [productSort, setProductSort] = useState<"name-asc" | "name-desc" | "newest" | "oldest">("name-asc");
+  // Narrows the list to what is being worked on. "Needs work" uses the same
+  // readiness rule as the Launch readiness panel, so the two agree.
+  const [statusFilter, setStatusFilter] = useState<"all" | "live" | "unlisted" | "needs-work">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   /** The Products list, sorted for browsing — selection and bulk ops are unaffected. */
   const sortedProducts = useMemo(() => {
@@ -93,6 +99,23 @@ export default function ProductManager({ categories }: Props) {
     else copy.sort((x, y) => (x.createdAt ?? "").localeCompare(y.createdAt ?? ""));
     return copy;
   }, [products, productSort]);
+
+  const filteredProducts = useMemo(
+    () =>
+      sortedProducts.filter((p) => {
+        if (statusFilter === "live" && p.active === false) return false;
+        if (statusFilter === "unlisted" && p.active !== false) return false;
+        if (statusFilter === "needs-work") {
+          if (p.active === false) return false;
+          if (assessProduct(p).blockers.length === 0) return false;
+        }
+        if (categoryFilter !== "all" && p.categoryId !== categoryFilter) return false;
+        if (typeFilter !== "all" && (p.productType ?? "") !== typeFilter) return false;
+        return true;
+      }),
+    [sortedProducts, statusFilter, categoryFilter, typeFilter],
+  );
+  const filtersActive = statusFilter !== "all" || categoryFilter !== "all" || typeFilter !== "all";
   const [allDesigns, setAllDesigns] = useState<DesignAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ManagedProduct | null>(null);
@@ -1465,6 +1488,59 @@ export default function ProductManager({ categories }: Props) {
           <p className="text-xs text-foreground/80">
             Firestore is the master catalog — Square is payment-only
           </p>
+          <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-foreground/70">
+            <label className="inline-flex items-center gap-1">
+              show
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                className="px-1.5 py-0.5 rounded border border-primary/20 bg-white text-[11px] text-foreground"
+              >
+                <option value="all">All products</option>
+                <option value="live">Live only</option>
+                <option value="unlisted">Unlisted only</option>
+                <option value="needs-work">Needs work</option>
+              </select>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              category
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-1.5 py-0.5 rounded border border-primary/20 bg-white text-[11px] text-foreground max-w-[180px]"
+              >
+                <option value="all">Any category</option>
+                {categoryOptions.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="inline-flex items-center gap-1">
+              type
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-1.5 py-0.5 rounded border border-primary/20 bg-white text-[11px] text-foreground"
+              >
+                <option value="all">Any type</option>
+                {(siteConfig.catalog_options?.productTypes ?? []).map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </label>
+            <span>
+              showing <strong>{filteredProducts.length}</strong> of {products.length}
+            </span>
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={() => { setStatusFilter("all"); setCategoryFilter("all"); setTypeFilter("all"); }}
+                className="text-gold-deep hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
           <button
@@ -1911,7 +1987,7 @@ export default function ProductManager({ categories }: Props) {
 
       {products.length > 0 && !editing && (
         <div className="space-y-1">
-          {sortedProducts.map((p) => (
+          {filteredProducts.map((p) => (
             <div
               key={p.id}
               className="flex items-center gap-3 bg-warm-sand/30 rounded-xl px-4 py-3"

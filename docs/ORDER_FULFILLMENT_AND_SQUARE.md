@@ -235,3 +235,39 @@ notifications, or add an `onDocumentCreated` email trigger), **F-06** (no flatte
 
 Gate after this pass: tsc 0 · lint 0 · **351 tests / 23 suites** · build 25 pages · functions compile
 clean · deployed functions + hosting.
+
+---
+
+## 6. Fresh verification — 2026-11-18
+
+Re-checked the live site and current code against every gap in §3.
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| F-01 admin shows address + note | **Fixed** | `src/components/admin/order-fulfillment.tsx` renders `shippingLines(order.shipping)` and each item's `note`; "No shipping address on this record." fallback present. |
+| F-04 status frozen at PENDING | **Fixed** | Mirror now writes `status: paymentStatus === "COMPLETED" ? "PAID" : …` plus `paymentId`, `paymentStatus`, `squarePaymentId` (`functions/src/index.ts:543-547`). |
+| F-08 unvalidated design URL | **Fixed** | `isTrustedDesignUrl()` gates it in `pricing.ts:291` (hostname must be `firebasestorage.googleapis.com`). |
+| F-09 note length | **Fixed** | `clampNote()` with `MAX_SQUARE_NOTE`, applied to line notes and the customer note (`index.ts:185-189, 297, 364`). |
+| F-10 $0.00 modifiers as lines | Fixed per the release notes (`d8dde39`). |
+| F-11 admin list drops Firestore-only orders | **Fixed** | Admin now queries `collection(db, "orders")` directly with Square as enrichment (`admin/page.tsx:1265-1266`). |
+| F-03 confirmation email promise | **Fixed** | Copy now says a Square receipt arrives *if enabled*, and asks the customer to keep the reference; a bare URL no longer announces a confirmed order (`2441c76`). |
+| **F-05 address line 2** | **Half fixed** | The mirror now persists `shipping.line2`, **but `config/site.customer_fields` still has no address-2 field** (verified live: firstName, lastName, email, phone, address, city, state, zip). Customers still cannot enter an apartment/suite number. Add the field in Admin → Settings; the code already carries it. |
+| F-02 no order notification | **Open** | Deployed function list is unchanged — still no `onDocumentCreated` / email trigger. Orders are discoverable only by someone opening the admin. Interim: Square's own new-order notifications. |
+| F-06 no flattened print preview | **Open** | No canvas/`toDataURL` capture anywhere in `src/`. |
+| F-07 guest uploads require sign-in | **Open** | `file-upload.tsx:29-30` still refuses without a user. |
+
+### Payment is live
+
+The card form now initialises (the earlier blocker was a **transposed Application ID**:
+`QAzY**zF**…` vs the correct `QAzY**Fz**…`). Fresh headless run on `/checkout/`:
+
+```
+200 … main-iframe.html?applicationId=sq0idp-QAzYFzHiOcHrBmGfmdfGTQ
+200 … pci-connect.squareup.com/payments/hydrate?applicationId=sq0idp-QAzYFzHiOcHrBmGfmdfGTQ
+200 … single-card-element-iframe.html
+#card-container: has content · alerts: none · Pay $47.50 (disabled until the form is valid)
+```
+
+**The first real order can now happen.** Two things to do before it does: fix `.env.local` (still holds
+the transposed ID, so a local build would undo this — see `LIVE_SITE_AUDIT.md` §fresh check), and add
+the address-2 field (F-05).
