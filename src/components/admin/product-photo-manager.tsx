@@ -18,8 +18,10 @@ import {
 } from "@/types";
 import {
   blankPhotoSets,
+  coveredViews,
   filterPhotos,
   inferViewFromFilename,
+  missingViews,
   safePhotoName,
 } from "@/lib/product-photos";
 
@@ -83,6 +85,10 @@ export default function ProductPhotoManager() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Clicking Edit on a photo far down the page used to change a form the operator
+  // could not see. Scroll the editor into view and flash it while it is open.
+  const editorRef = useRef<HTMLElement>(null);
+  const [flashEditor, setFlashEditor] = useState(false);
 
   const colorOptions = siteConfig.catalog_options?.colors ?? [];
   const typeOptions = siteConfig.catalog_options?.productTypes ?? [];
@@ -249,6 +255,44 @@ export default function ProductPhotoManager() {
       tags: (photo.tags ?? []).join(", "),
     });
     if (fileInputRef.current) fileInputRef.current.value = "";
+    setFlashEditor(true);
+    window.setTimeout(() => {
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+    window.setTimeout(() => setFlashEditor(false), 1600);
+  };
+
+  /** Assign a view to a photo that has none — the reason a set reads 0 of 5. */
+  const assignView = async (photo: ProductPhoto, view: ProductPhotoView) => {
+    try {
+      await setDoc(doc(db, "product_photos", photo.id), stripUndefined({ view }), { merge: true });
+      notifyProductPhotosChanged();
+      await refresh();
+    } catch (err) {
+      setError("Could not set the view: " + (err instanceof Error ? err.message : "unknown error"));
+    }
+  };
+
+  /** Fill missing views from filenames ("hoodie-front.png" -> Front). */
+  const guessViews = async (blankName: string) => {
+    const candidates = photos.filter(
+      (p) => ((p.name ?? "").trim() || "Untitled blank") === blankName && !p.view,
+    );
+    let filled = 0;
+    for (const photo of candidates) {
+      const file = photo.image_url.split("?")[0].split("/").pop() ?? "";
+      const view = inferViewFromFilename(file);
+      if (!view) continue;
+      await setDoc(doc(db, "product_photos", photo.id), stripUndefined({ view }), { merge: true });
+      filled += 1;
+    }
+    notifyProductPhotosChanged();
+    await refresh();
+    setStatus(
+      filled > 0
+        ? `Filled ${filled} view${filled === 1 ? "" : "s"} from filenames in “${blankName}”.`
+        : "No filename in that blank named a view — set them by hand below.",
+    );
   };
 
   const handleFiles = (e: ChangeEvent<HTMLInputElement>) => {
@@ -270,19 +314,46 @@ export default function ProductPhotoManager() {
       </div>
 
       {/* ── Add / edit ── */}
-      <section className="bg-white rounded-2xl shadow-card border border-warm-sand p-5 space-y-4">
+      <section
+        ref={editorRef}
+        className={`bg-white rounded-2xl shadow-card border p-5 space-y-4 transition-all ${
+          flashEditor ? "border-gold ring-2 ring-gold/40" : "border-warm-sand"
+        }`}
+      >
         <h3 className="font-bold font-display text-sm">
           {editingId ? "Edit photo" : "Add photos"}
         </h3>
 
         {editingId && (
           <div className="flex items-center justify-between gap-3 rounded-xl bg-gold/10 border border-gold/40 px-3 py-2">
-            <p className="text-xs text-foreground">Editing an existing photo. Choose a file only to replace the image.</p>
+            <p className="text-xs text-foreground">
+              Editing <strong>{form.name || "this photo"}</strong>
+              {form.view ? " — " + PRODUCT_PHOTO_VIEW_LABELS[form.view] : ""}. The current image is
+              kept unless you choose a replacement.
+            </p>
             <button onClick={resetForm} className="text-xs font-medium text-gold-deep hover:underline">
               Cancel
             </button>
           </div>
         )}
+
+        {editingId && (() => {
+          const current = photos.find((p) => p.id === editingId);
+          return current?.image_url ? (
+            <div className="flex items-center gap-3">
+              <Image
+                src={current.image_url}
+                alt="Current photo"
+                width={80}
+                height={80}
+                className="rounded-lg object-cover border border-warm-sand"
+              />
+              <p className="text-[11px] text-foreground/70">
+                This is the current photo. Upload a file below only to replace it.
+              </p>
+            </div>
+          ) : null;
+        })()}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="sm:col-span-2 lg:col-span-1">
@@ -332,9 +403,14 @@ export default function ProductPhotoManager() {
               list="pp-color-options"
               value={form.color}
               onChange={(e) => set("color", e.target.value)}
-              placeholder="Leave blank for a tinted photo"
+              placeholder="e.g. Black"
               className="w-full px-3 py-2 rounded-lg border border-primary/20 focus:border-gold outline-none text-sm"
             />
+            <p className="text-[10px] text-foreground/70 mt-1">
+              Leave this <strong>blank</strong> for the garment&rsquo;s standard Front/Back/Sleeve
+              photos — that is what fills a product&rsquo;s mockups in one click. Set a colour only
+              when the photo shows that colour specifically.
+            </p>
             <datalist id="pp-color-options">
               {colorOptions.map((c) => (
                 <option key={c.name} value={c.name} />
@@ -503,19 +579,45 @@ export default function ProductPhotoManager() {
         )}
 
         {shownSets.map(({ set: blank, members }) => {
-          const missing = PRODUCT_PHOTO_VIEWS.filter((v) => !blank.byView[v]);
+          const covered = coveredViews(blank);
+          const missing = missingViews(blank);
+          const colours = Object.keys(blank.byColorView);
+          const modifiers = Object.keys(blank.byModifier);
+          const unplaced = blank.unplaced.length;
           return (
             <div key={blank.name} className="bg-white rounded-2xl shadow-card border border-warm-sand p-4">
               <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                 <div>
                   <h3 className="font-bold font-display text-sm">{blank.name}</h3>
                   <p className="text-xs text-foreground/70 mt-0.5">
-                    {members.length} photo{members.length === 1 ? "" : "s"} · covers{" "}
-                    {PRODUCT_PHOTO_VIEWS.filter((v) => blank.byView[v])
-                      .map((v) => PRODUCT_PHOTO_VIEW_LABELS[v])
-                      .join(", ") || "no views yet"}
-                    {missing.length > 0 && ` · missing ${missing.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")}`}
+                    {members.length} photo{members.length === 1 ? "" : "s"} ·{" "}
+                    {covered.length > 0
+                      ? `covers ${covered.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")}`
+                      : colours.length > 0
+                        ? "no base views yet"
+                        : "no views yet"}
+                    {missing.length > 0 &&
+                      ` · missing ${missing.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")}`}
+                    {colours.length > 0 && ` · ${colours.length} colour-specific`}
+                    {modifiers.length > 0 && ` · ${modifiers.length} modifier-specific`}
+                    {unplaced > 0 && ` · ${unplaced} with no view`}
                   </p>
+                  {covered.length === 0 && colours.length > 0 && (
+                    <p className="text-[11px] text-gold-deep mt-1 max-w-xl">
+                      These photos are tied to a <strong>colour</strong>, so they fill that colour&rsquo;s
+                      slots — not the product&rsquo;s base mockups. For the garment&rsquo;s standard
+                      Front/Back/Sleeve shots, upload them with the colour left blank.
+                    </p>
+                  )}
+                  {unplaced > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => guessViews(blank.name)}
+                      className="mt-1 text-[11px] font-medium text-gold-deep hover:underline"
+                    >
+                      Guess views from filenames
+                    </button>
+                  )}
                   {blank.productType && (
                     <span className="inline-block mt-1 mr-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium">
                       {typeOptions.find((t) => t.value === blank.productType)?.label ?? blank.productType}
@@ -547,6 +649,24 @@ export default function ProductPhotoManager() {
                       {photo.view ? PRODUCT_PHOTO_VIEW_LABELS[photo.view] : "no view"}
                       {photo.color ? ` · ${photo.color}` : ""}{photo.modifier ? ` · ${photo.modifier}` : ""}
                     </figcaption>
+                    {!photo.view && (
+                      <select
+                        aria-label={`Set a view for this ${photo.name} photo`}
+                        defaultValue=""
+                        onChange={(e) => {
+                          const view = e.target.value as ProductPhotoView;
+                          if (view) void assignView(photo, view);
+                        }}
+                        className="w-full px-1.5 py-1 rounded-md border border-primary/20 text-[10px] bg-white"
+                      >
+                        <option value="">Set view…</option>
+                        {PRODUCT_PHOTO_VIEWS.map((v) => (
+                          <option key={v} value={v}>
+                            {PRODUCT_PHOTO_VIEW_LABELS[v]}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <div className="flex gap-2 text-[10px]">
                       <button onClick={() => startEdit(photo)} className="text-primary hover:underline">
                         Edit

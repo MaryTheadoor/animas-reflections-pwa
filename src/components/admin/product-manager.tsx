@@ -30,7 +30,14 @@ import { importCatalogCsv, type ImportReport } from "@/lib/catalog-import";
 import { findDuplicateGroups, mergeGroup, type DuplicateGroup } from "@/lib/duplicate-products";
 import { buildModifiersForProduct, type SquareModifierList } from "@/lib/square-addons";
 import { useProductPhotos } from "@/hooks/useProductPhotos";
-import { applySetPatch, blankPhotoSets, filterPhotos, type BlankPhotoSet } from "@/lib/product-photos";
+import {
+  applySetPatch,
+  blankPhotoSets,
+  coveredViews,
+  filterPhotos,
+  missingViews,
+  type BlankPhotoSet,
+} from "@/lib/product-photos";
 import { PRODUCT_PHOTO_VIEWS, PRODUCT_PHOTO_VIEW_LABELS, type ProductPhotoView } from "@/types";
 import { designAssetLabel } from "@/lib/design-assets";
 import { designMatchesCategory } from "@/lib/design-category";
@@ -1590,7 +1597,7 @@ export default function ProductManager({ categories }: Props) {
                   <option value="">Choose a blank…</option>
                   {photoSets.map((set) => (
                     <option key={set.name} value={set.name}>
-                      {set.name} ({PRODUCT_PHOTO_VIEWS.filter((v) => set.byView[v]).length} of 5 views)
+                      {set.name} ({coveredViews(set).length} of 5 views)
                     </option>
                   ))}
                 </select>
@@ -2230,17 +2237,24 @@ export default function ProductManager({ categories }: Props) {
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {matchingSets.map((set) => {
-                    const covered = PRODUCT_PHOTO_VIEWS.filter((v) => set.byView[v]);
-                    const missing = PRODUCT_PHOTO_VIEWS.filter((v) => !set.byView[v]);
+                    // Colour-aware: a photo tied to a colour lands in byColorView,
+                    // so counting only byView reported "0 of 5" for every colour
+                    // set even though applying it does fill those colours.
+                    const covered = coveredViews(set);
+                    const missing = missingViews(set);
+                    const colours = Object.keys(set.byColorView).length;
+                    const modifiers = Object.keys(set.byModifier).length;
                     return (
                       <button
                         key={set.name}
                         type="button"
                         onClick={() => applyBlank(set)}
                         title={
-                          covered.length === 0
-                            ? "This blank has no photos assigned to a view yet"
-                            : `Fills: ${covered.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")}`
+                          covered.length === 0 && colours > 0
+                            ? `Colour-specific photos (${colours} colour${colours === 1 ? "" : "s"}): fills those colours, not the base views`
+                            : covered.length === 0
+                              ? "This blank has no photos assigned to a view yet"
+                              : `Fills: ${covered.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")}${colours ? ` · ${colours} colour-specific` : ""}`
                         }
                         className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-white border border-primary/20 text-foreground hover:border-gold hover:text-gold-deep transition-colors text-left"
                       >
@@ -2249,6 +2263,8 @@ export default function ProductManager({ categories }: Props) {
                           {covered.length}
                           {" of 5 views"}
                           {missing.length > 0 && ` · missing ${missing.length}`}
+                          {colours > 0 && ` · ${colours} colour${colours === 1 ? "" : "s"}`}
+                          {modifiers > 0 && ` · ${modifiers} modifier${modifiers === 1 ? "" : "s"}`}
                         </span>
                       </button>
                     );
