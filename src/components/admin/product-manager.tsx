@@ -387,6 +387,11 @@ export default function ProductManager({ categories }: Props) {
   const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
   const [galleryPicked, setGalleryPicked] = useState<string[]>([]);
   const [galleryQuery, setGalleryQuery] = useState("");
+  // Per-view "choose from the library" panel: which mockup slot is picking, and
+  // the search inside it. The gallery had a picker; the five mockup slots only
+  // had Upload, so reusing a saved photo meant typing a URL by hand.
+  const [mockupLibraryView, setMockupLibraryView] = useState<ProductPhotoView | null>(null);
+  const [mockupLibraryQuery, setMockupLibraryQuery] = useState("");
 
   const photoSets = useMemo(() => blankPhotoSets(libraryPhotos), [libraryPhotos]);
 
@@ -409,6 +414,25 @@ export default function ProductManager({ categories }: Props) {
       }),
     [libraryPhotos, galleryQuery, form.productType, form.categoryId],
   );
+
+  // Photos that can fill the mockup slot currently picking, filtered by the
+  // view the slot needs. A photo with a colour also fills that colour's slot.
+  const mockupLibraryPhotos = useMemo(() => {
+    if (!mockupLibraryView) return [];
+    const q = mockupLibraryQuery.trim().toLowerCase();
+    return libraryPhotos
+      .filter((p) => p.view === mockupLibraryView && p.image_url)
+      .filter(
+        (p) =>
+          !q ||
+          [p.name, p.color, p.modifier, ...(p.tags ?? [])]
+            .filter(Boolean)
+            .some((text) => (text as string).toLowerCase().includes(q)),
+      );
+  }, [libraryPhotos, mockupLibraryView, mockupLibraryQuery]);
+
+  const libraryCountFor = (view: ProductPhotoView) =>
+    libraryPhotos.filter((p) => p.view === view && p.image_url).length;
 
   /** Merge a blank's photos into the form. Only the views it has are touched. */
   const applyBlank = (set: BlankPhotoSet) => {
@@ -2286,6 +2310,17 @@ export default function ProductManager({ categories }: Props) {
                       }}
                     />
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMockupLibraryView(view);
+                      setMockupLibraryQuery("");
+                    }}
+                    className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] text-foreground/80 hover:text-gold-deep border border-dashed border-primary/20 rounded-lg"
+                  >
+                    🖼 Library
+                    {libraryCountFor(view) > 0 ? ` (${libraryCountFor(view)})` : ""}
+                  </button>
                   {form.mockupImages?.[view] && (
                     <Image
                       src={form.mockupImages[view]!}
@@ -2298,6 +2333,68 @@ export default function ProductManager({ categories }: Props) {
                 </div>
               ))}
             </div>
+
+            {/* Library picker for the slot that asked for it */}
+            {mockupLibraryView && (
+              <div className="mt-3 rounded-xl border border-primary/20 bg-warm-sand/20 p-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                  <span className="text-[11px] font-medium text-primary">
+                    Choose a {PRODUCT_PHOTO_VIEW_LABELS[mockupLibraryView]} photo from the library
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMockupLibraryView(null)}
+                    className="text-[10px] text-foreground/70 hover:text-gold-deep"
+                  >
+                    Close the library
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={mockupLibraryQuery}
+                  onChange={(e) => setMockupLibraryQuery(e.target.value)}
+                  placeholder="Search blanks, colours, tags…"
+                  className="w-full mb-2 px-2.5 py-1.5 rounded-lg border border-primary/20 text-xs"
+                />
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 max-h-64 overflow-auto">
+                  {mockupLibraryPhotos.map((photo) => (
+                    <button
+                      key={photo.id}
+                      type="button"
+                      onClick={() => {
+                        const current = form.mockupImages ?? {};
+                        updateField("mockupImages", { ...current, [mockupLibraryView]: photo.image_url });
+                        // A photo that names a colour also fills that colour's slot,
+                        // which is what the product page shows when the colour is picked.
+                        if (photo.color) {
+                          const byColor = { ...(form.mockupImagesByColor ?? {}) };
+                          byColor[photo.color] = { ...(byColor[photo.color] ?? {}), [mockupLibraryView]: photo.image_url };
+                          updateField("mockupImagesByColor", byColor);
+                        }
+                        setMockupLibraryView(null);
+                      }}
+                      className="text-left rounded-lg border border-transparent hover:border-gold bg-white p-1"
+                    >
+                      <Image
+                        src={photo.image_url}
+                        alt=""
+                        width={120}
+                        height={120}
+                        className="w-full h-20 object-cover rounded"
+                      />
+                      <span className="block text-[9px] text-foreground/80 mt-0.5 truncate">{photo.name}</span>
+                      {photo.color && <span className="block text-[9px] text-gold-deep truncate">{photo.color}</span>}
+                    </button>
+                  ))}
+                </div>
+                {mockupLibraryPhotos.length === 0 && (
+                  <p className="text-[11px] text-foreground/70">
+                    No library photos have this view yet. In <strong>Product Photos</strong>, give a photo the
+                    &ldquo;{PRODUCT_PHOTO_VIEW_LABELS[mockupLibraryView]}&rdquo; view and it appears here.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Print Zones — printable area coordinates per view (Phase 6) */}
