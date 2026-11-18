@@ -2462,3 +2462,30 @@ shipping rates cannot make `expectedTotal` diverge.
 - Live: `/shipping/` and `/returns/` 200 with correct titles and derived rates; footer links present; /login shows
   'Create your account' with name field and 'Sign up with Google'; admin shows the filter selects.
 - Not verified live: an actual account creation (writes a real Auth user) and a real-card purchase. Both remain.
+
+---
+
+## Session 41 — 2026-11-18 | Round 4: catalogue restored, reversible unlisting, address line 2
+
+### Incident and fix
+The strict Launch-readiness "Unlist" was run at 17:36 and took the shop from 231 products to 16. The tool
+had no record of what it hid, and its "Publish N ready" would have republished 143 products archived in
+October. Unlisting now writes `launchHiddenAt`; restore publishes only records carrying it and clears it;
+a dated one-off button restored the 215 pre-marker products. Catalogue is back to **231 live / 143
+archived**, verified on /shop/ (231 cards).
+
+### Also shipped
+- Checkout appends **Address line 2** after the street line when the configured fields do not already map
+  `address.addressLine2` (backend already forwarded and stored it).
+- Terms no longer list PayPal; they name cards plus Apple Pay / Google Pay / Cash App through Square.
+- Earlier in the day: footer no longer contradicts /returns, shop selects have accessible names, and
+  canonical/sitemap/OG use an env-driven origin defaulting to the serving host (`NEXT_PUBLIC_SITE_URL`
+  switches it at cutover). `/shipping` and `/returns` added; customer signup added.
+
+### Verification
+tsc 0 · lint 0 · 440 tests / 29 suites · 28-page build, `check-seo: OK — 28 pages, 18 sitemap URLs`.
+Live: 231 shop cards, checkout shows Address line 2, admin offers "Restore the 215 hidden on 18 Nov".
+
+### Still open
+Canary purchase; `.env.local` + GitHub Variable app ID; Square receipts/taxes; contact-page facts (street
+address, hours); customizer axe/touch targets; F-02 order notification; S2 mapping; F-06/F-07; photo pass.
