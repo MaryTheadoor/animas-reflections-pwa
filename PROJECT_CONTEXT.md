@@ -394,6 +394,8 @@ client questions live in `docs/STATUS_SWEEP.md` §5.
 - Two stale remote branches, both verified fully contained in `development` with no open PRs: `origin/fix/auth-storage-reuse` (PR #1 merged) and `origin/polish/p1`
 - Untracked 230 MB `animas-reflections-pwa.zip` in the repo root — the client's file, left alone by request
 - `docs/DEVELOPMENT.md` predates the reconciliation and the branch change; refreshed 2026-10-13 but its deeper content is older than the code
+- `docs/HANDOFF_2026-11-18.md` — the one-page current state: live status, verification gate, open items by owner
+- `docs/AI_ASSISTANT_FEASIBILITY.md` — admin assistant options, v1 spec, cost and risks
 - Older docs (`GAP_ANALYSIS.md`, `PROJECT_STATUS_REPORT.md`, `SCHEMA.md`, `MASTER*.md`, `SCOPE.md`) are dated Aug/Sep 2026 and are historical; treat `PROJECT_CONTEXT.md`, `docs/DEVLOG.md` and `docs/CATALOG_IMPORT.md` as current
 
 ### 15.4 Launch items (from STATUS_SWEEP §4.1, re-checked)
