@@ -30,7 +30,7 @@ pricing, admin durability, storefront fixes), gate green (lint 0, tsc 0, 380 tes
 - [x] Tax-aware order verification; Square buyer email on payments; checkout discloses that tax is added by Square
 - [x] Checkout blocks Pay until `config/site` resolves — paying against fallback shipping rates (stickers $3 vs live $1) would make `expectedTotal` diverge and the server would refuse the order
 - [x] `npm run verify`, `npm run build`, `cd functions && npm run build` — all green
-      (lint 0 · tsc 0 · **440 tests / 27 suites** · 28-page build, SEO gate OK · functions compile clean)
+      (lint 0 · tsc 0 · **440 tests / 29 suites** · 28-page build, SEO gate OK · functions compile clean)
 - [ ] Commit the change set on `development` and tag `rc-blackfriday-1` (owner: me, needs your go-ahead)
 - [ ] Client: fix the 9 unpriced active products (set a price or deactivate) — list in §5
 - [ ] Client: restock or accept the 10 zero-inventory items (§5)

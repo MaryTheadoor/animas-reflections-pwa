@@ -306,7 +306,7 @@ Full plan: `docs/PRODUCT_MODIFIER_AUDIT.md`. Session log: `docs/DEVLOG.md` Sessi
    (`GITHUB_PUBLISH_REF` in functions/src/index.ts). The old `master` was deleted on 2026-10-13 after verifying every
    commit on it was an ancestor of `development`; do not recreate a second "main" branch, because two branches looking
    authoritative is exactly how the work diverged in the first place.
-7. Every deploy MUST pass: lint (0 errors), `tsc --noEmit` (0 errors), build (28 pages), tests (440/440, 27 suites),
+7. Every deploy MUST pass: lint (0 errors), `tsc --noEmit` (0 errors), build (28 pages), tests (440/440, 29 suites),
    and a visual check. **Note this is a rule, not an enforced gate** — as of 2026-10-13 no release path runs lint or
    tests: `.github/workflows/rebuild.yml` runs only `npm run build`, and `npm run publish` is build + deploy. Tracked
    as an open item in §15.

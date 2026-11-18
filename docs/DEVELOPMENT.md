@@ -34,7 +34,7 @@ The durable fix is `winget install OpenJS.NodeJS.LTS`.
 1. `npm run lint` — 0 errors
 2. `npx tsc --noEmit` — 0 errors (a running `npm run dev` can make this fail on its own generated
    `.next/dev/types/validator.ts`; stop the server first — Known Issue #55)
-3. `npm test` — 440 tests, 27 suites, all passing
+3. `npm test` — 440 tests, 29 suites, all passing
 4. `npm run build` — 28 pages, and the SEO gate (`check-seo`) runs automatically afterwards
 5. `cd functions && npm run build` — must compile clean
 6. `firebase deploy --only firestore:rules,storage` **first** if any rules changed, then
