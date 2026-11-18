@@ -19,11 +19,16 @@ import {
   formatModifierDelta,
   groupModifiers,
   hasGenericVariants,
+  withoutVariantDuplicates,
   modifierSelectedOptions,
   modifierTotal,
 } from "@/lib/modifier-selection";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
+
+/** Chips shown per modifier group before "Show all". A patch-background set can
+ *  hold 14 options and design sets 50+, which made the page several screens long. */
+const MODIFIER_GROUP_CAP = 8;
 
 function ProductJsonLd({
   name,
@@ -100,6 +105,10 @@ function ProductContent() {
   // Modifier choices (sizes, colours, add-ons) for products whose variants are
   // placeholders — see usesModifierGroups below.
   const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>([]);
+  // Groups with many design options (a patch background set can have 14, design
+  // sets 50+) made the page several screens long. Cap the visible chips and let
+  // the operator open the rest; a selected option is always shown.
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [modifierInputs, setModifierInputs] = useState<Record<string, string>>({});
   // Design thumbnails beside modifier options (PROJECT_CONTEXT §15.6 S1). Read-only:
   // the library is matched by option name, nothing is written.
@@ -187,8 +196,13 @@ function ProductContent() {
   // groups instead; a product whose variant names are real and distinct already
   // expresses choice through the picker and keeps today's behaviour.
   const modifiers = product.modifiers ?? [];
-  const usesModifierGroups = hasGenericVariants(product) && modifiers.length > 0;
-  const modifierGroups = usesModifierGroups ? groupModifiers(modifiers) : [];
+  // Any product with modifiers shows them. Groups that merely repeat the variant
+  // picker are filtered out, but a variant-driven product can also have real
+  // modifier choices (the snapback has colour variants AND patch options).
+  const usesModifierGroups = modifiers.length > 0;
+  const modifierGroups = usesModifierGroups
+    ? withoutVariantDuplicates(groupModifiers(modifiers), variants)
+    : [];
   const selectedModifierIdsInUse = usesModifierGroups ? selectedModifierIds : [];
   const selectedModifiers = modifiers.filter((m) => selectedModifierIdsInUse.includes(m.id));
   // Dollars added by the selected modifiers, resolved against THIS variant's
@@ -198,8 +212,22 @@ function ProductContent() {
   // The displayed color falls back to the product's first color until the
   // customer picks one. Selections reset on product change (see the effect
   // above), so a stale color can only survive for a single render.
+  // Which colour the photo should follow. An explicit swatch wins; otherwise a
+  // selected VARIANT often names the colour ("Grey", {Color: "Black"}), and a
+  // per-colour photo keyed by that name should show. Without this, a variant-
+  // driven product (the Yupoong snapback) kept one photo no matter which colour
+  // was picked, even once per-colour photos exist.
+  const variantColorName =
+    variant?.options?.Color ||
+    variant?.options?.Colour ||
+    variant?.options?.color ||
+    (colors.length === 0 ? variant?.name : undefined);
   const effectiveColor =
-    product && selectedColor && colors.includes(selectedColor) ? selectedColor : colors[0];
+    product && selectedColor && colors.includes(selectedColor)
+      ? selectedColor
+      : variantColorName && product?.mockupImagesByColor?.[variantColorName]
+        ? variantColorName
+        : colors[0];
   // Dynamic image: when a color is selected, show its per-color image if one
   // is configured. Falls back to the front mockup, then the primary gallery image.
   const colorImage = effectiveColor
@@ -372,7 +400,7 @@ function ProductContent() {
             {/* Variant Picker — only for products whose variants are real,
                 distinguishable options. A product whose variants are placeholders
                 (five identical "Regular" rows) names its choices in modifiers. */}
-            {variants.length > 1 && !usesModifierGroups && (
+            {variants.length > 1 && !hasGenericVariants(product) && (
               <div className="mb-6">
                 <span className="text-xs font-medium text-primary block mb-2">Style / Size</span>
                 <div className="flex flex-wrap gap-2">
@@ -403,7 +431,14 @@ function ProductContent() {
                   <fieldset key={group.name} className="mb-4 last:mb-0">
                     <legend className="text-xs font-medium text-primary mb-2">{group.name}</legend>
                     <div className="flex flex-wrap gap-2">
-                      {group.modifiers.map((mod) => {
+                      {group.modifiers
+                        .filter(
+                          (mod, index) =>
+                            index < MODIFIER_GROUP_CAP ||
+                            expandedGroups.includes(group.name) ||
+                            selectedModifierIdsInUse.includes(mod.id),
+                        )
+                        .map((mod) => {
                         const active = selectedModifierIdsInUse.includes(mod.id);
                         const delta = formatModifierDelta(mod);
                         // Explicit admin assignment wins; otherwise the design whose
@@ -443,6 +478,23 @@ function ProductContent() {
                           </button>
                         );
                       })}
+                      {group.modifiers.length > MODIFIER_GROUP_CAP && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedGroups((prev) =>
+                              prev.includes(group.name)
+                                ? prev.filter((g) => g !== group.name)
+                                : [...prev, group.name],
+                            )
+                          }
+                          className="self-center px-2.5 py-1.5 rounded-xl text-xs font-medium text-gold-deep border border-gold/30 hover:bg-gold/10 transition-colors"
+                        >
+                          {expandedGroups.includes(group.name)
+                            ? "Show fewer"
+                            : `Show all ${group.modifiers.length}`}
+                        </button>
+                      )}
                     </div>
                     {/* Text and file modifiers collect their value once selected.
                         Artwork upload stays in the customizer, which owns the

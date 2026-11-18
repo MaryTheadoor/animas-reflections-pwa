@@ -12,6 +12,7 @@
 
 import type { CartAddon, ModifierInput, ProductModifier, SelectedOption } from "@/types";
 import { resolveAddonPrice } from "@/types";
+import { categoryKey } from "@/lib/design-category";
 
 /** Variant names the catalog uses as a placeholder instead of a real option. */
 const PLACEHOLDER_VARIANT_NAMES = new Set(["regular", "price", "one size", "default", ""]);
@@ -69,6 +70,33 @@ export function groupModifiers(
     group.modifiers.push(mod);
   }
   return groups;
+}
+
+/**
+ * Drop groups whose every option is already a variant name.
+ *
+ * A product can legitimately have BOTH real variants and meaningful modifiers —
+ * the Yupoong snapback has four colour variants plus "Patch Shape" and
+ * "Background Color For Patch". The old rule rendered modifiers only when the
+ * variants were placeholders, so those 17 patch options were invisible. Render
+ * the groups, but suppress one that merely repeats the variant picker (a "Size"
+ * modifier set on a product whose variants are S/M/L), so the shopper never sees
+ * the same choice twice.
+ */
+export function withoutVariantDuplicates(
+  groups: readonly ModifierGroup[],
+  variants: readonly { name?: string }[] | null | undefined,
+): ModifierGroup[] {
+  const variantNames = new Set(
+    (variants ?? []).map((v) => categoryKey(v.name)).filter(Boolean),
+  );
+  if (variantNames.size === 0) return [...groups];
+  return groups
+    .map((group) => ({
+      ...group,
+      modifiers: group.modifiers.filter((m) => !variantNames.has(categoryKey(m.name))),
+    }))
+    .filter((group) => group.modifiers.length > 0);
 }
 
 /** The price delta to show beside a modifier: `+$3.00`, `+10%`, or `""` when

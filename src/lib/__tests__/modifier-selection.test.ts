@@ -16,6 +16,7 @@ import {
   isPlaceholderVariantName,
   modifierSelectedOptions,
   modifierTotal,
+  withoutVariantDuplicates,
 } from "@/lib/modifier-selection";
 import type { ProductModifier } from "@/types";
 
@@ -215,5 +216,26 @@ describe("captureModifierInputs", () => {
   it("skips a blank or unselected input", () => {
     expect(captureModifierInputs(MODIFIERS, ["name"], { name: "  " })).toEqual([]);
     expect(captureModifierInputs(MODIFIERS, [], { name: "SMITH 42" })).toEqual([]);
+  });
+});
+
+describe("withoutVariantDuplicates", () => {
+  const groups = [
+    { name: "Adult Size", modifiers: [{ id: "s1", name: "Large", priceType: "fixed", price: 0 }, { id: "s2", name: "XL", priceType: "fixed", price: 0 }] },
+    { name: "Patch Shape", modifiers: [{ id: "p1", name: "Circle", priceType: "fixed", price: 0 }, { id: "p2", name: "Rectangle", priceType: "fixed", price: 0 }] },
+  ] as never;
+
+  it("drops a group that only repeats the variant names", () => {
+    const out = withoutVariantDuplicates(groups, [{ name: "Large" }, { name: "XL" }]);
+    expect(out.map((g: { name: string }) => g.name)).toEqual(["Patch Shape"]);
+  });
+
+  it("keeps groups that add a choice the variants do not express", () => {
+    const out = withoutVariantDuplicates(groups, [{ name: "Grey" }, { name: "Black" }]);
+    expect(out.map((g: { name: string }) => g.name)).toEqual(["Adult Size", "Patch Shape"]);
+  });
+
+  it("keeps everything when there are no variants", () => {
+    expect(withoutVariantDuplicates(groups, [])).toHaveLength(2);
   });
 });
