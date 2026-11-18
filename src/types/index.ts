@@ -264,6 +264,12 @@ export interface ManagedProduct {
   variants: ManagedVariant[];
   active: boolean;
   featured: boolean;
+  /**
+   * Set when the Launch-readiness tool unlisted this product, cleared when it is
+   * restored. It records PROVENANCE — "hidden by the tool", not "archived by a
+   * person" — so restoring cannot resurrect products someone retired deliberately.
+   */
+  launchHiddenAt?: string;
   createdAt: string;
   updatedAt: string;
   squareItemIds?: string[];

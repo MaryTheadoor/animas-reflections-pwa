@@ -258,7 +258,7 @@ export const TERMS_OF_SALE = {
     },
     {
       title: "2. Pricing and Payment",
-      body: `All prices are listed in U.S. dollars (USD) and are subject to change without notice. Prices do not include taxes, shipping, or handling fees unless expressly stated. Applicable sales tax will be calculated at checkout based on delivery location and current tax laws. Payment in full is required at the time of purchase. Accepted payment methods are those displayed on our online checkout page (including major credit/debit cards, PayPal, or other approved processors). Animas Reflections reserves the right to cancel or refuse any order if payment cannot be verified or is suspected of fraud.`,
+      body: `All prices are listed in U.S. dollars (USD) and are subject to change without notice. Prices do not include taxes, shipping, or handling fees unless expressly stated. Applicable sales tax will be calculated at checkout based on delivery location and current tax laws. Payment in full is required at the time of purchase. Accepted payment methods are those displayed on our online checkout page: major credit and debit cards, plus Apple Pay, Google Pay and Cash App where available. Card payments are processed by Square; we never see or store your full card number. Animas Reflections reserves the right to cancel or refuse any order if payment cannot be verified or is suspected of fraud.`,
     },
     {
       title: "3. Order Processing and Acceptance",

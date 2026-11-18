@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,6 +27,7 @@ const FALLBACK_CUSTOMER_FIELDS: CustomerField[] = [
   { id: "email", label: "Email", type: "email", required: true, squareMapping: "email" },
   { id: "phone", label: "Phone", type: "tel", required: false, squareMapping: "phone" },
   { id: "address", label: "Street Address", type: "text", required: true, squareMapping: "address.addressLine1" },
+  { id: "address2", label: "Address line 2 (optional)", type: "text", required: false, squareMapping: "address.addressLine2" },
   { id: "city", label: "City", type: "text", required: true, squareMapping: "address.locality" },
   { id: "state", label: "State", type: "text", required: false, squareMapping: "address.administrativeDistrictLevel1" },
   { id: "zip", label: "ZIP Code", type: "text", required: true, squareMapping: "address.postalCode" },
@@ -54,8 +55,27 @@ export default function CheckoutPage() {
   const siteConfigLoading = useSiteConfigLoading();
   // Customer fields come from site config (admin-managed); fall back to the
   // standard shipping form when config has none.
-  const customerFields: CustomerField[] =
+  const fields: CustomerField[] =
     siteConfig.customer_fields?.length ? siteConfig.customer_fields : FALLBACK_CUSTOMER_FIELDS;
+  // Address line 2 is optional everywhere and is what keeps "Apt 4B" out of the
+  // street line — the kind of detail that produces an undeliverable parcel. The
+  // live config/site field list predates it, so append it after the street line
+  // unless an operator has already mapped one. Inserting it in code means the
+  // field appears without an admin edit, and removing it is one config change.
+  const customerFields = useMemo<CustomerField[]>(() => {
+    const hasLine2 = fields.some((f) => (f.squareMapping ?? "").endsWith("address.addressLine2"));
+    if (hasLine2) return fields;
+    const afterStreet = fields.findIndex((f) => (f.squareMapping ?? "").endsWith("address.addressLine1"));
+    if (afterStreet === -1) return fields;
+    const line2: CustomerField = {
+      id: "address2",
+      label: "Address line 2 (optional)",
+      type: "text",
+      required: false,
+      squareMapping: "address.addressLine2",
+    };
+    return [...fields.slice(0, afterStreet + 1), line2, ...fields.slice(afterStreet + 1)];
+  }, [fields]);
 
   // Customer values keyed by field id.
   const [customer, setCustomer] = useState<Record<string, string>>({});

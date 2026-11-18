@@ -11,7 +11,7 @@
  * bulk hide can silently do nothing (Known Issue #61).
  */
 import { useMemo, useState } from "react";
-import { collection, doc, getDocsFromServer, setDoc } from "firebase/firestore";
+import { collection, deleteField, doc, getDocsFromServer, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { ManagedProduct } from "@/types";
 import {
@@ -63,19 +63,39 @@ export default function ReadinessPanel({
     [products, mode],
   );
 
-  const toRelist = useMemo(
-    () =>
-      products
-        .filter((p) => p.active === false)
-        .map((p) => ({ product: p, result: assessProduct(p) }))
-        .filter(({ result }) => blockersFor(result, mode).length === 0),
-    [products, mode],
+  // Restore is by PROVENANCE, never by readiness: only products this tool hid are
+  // eligible. Publishing "everything that now passes the rule" would also revive
+  // products someone archived deliberately — which is exactly how the catalogue
+  // went from 231 live to 16 on 2026-11-18.
+  const toolHidden = useMemo(
+    () => products.filter((p) => p.active === false && Boolean(p.launchHiddenAt)),
+    [products],
   );
 
-  const apply = async (targets: ManagedProduct[], active: boolean) => {
+  // One-off: the 2026-11-18 strict unlist happened before provenance was
+  // recorded. These are the products it hid, identified by that write's
+  // timestamp bucket. Shown only while they exist, and labelled as what it is.
+  const LEGACY_UNLIST_PREFIX = "2026-11-18T17:3";
+  const legacyHidden = useMemo(
+    () =>
+      products.filter(
+        (p) =>
+          p.active === false &&
+          !p.launchHiddenAt &&
+          (p.updatedAt ?? "").startsWith(LEGACY_UNLIST_PREFIX),
+      ),
+    [products],
+  );
+
+  const apply = async (targets: ManagedProduct[], active: boolean, legacy = false) => {
     if (!targets.length) return;
-    const verb = active ? "Publish" : "Unlist";
-    if (!window.confirm(`${verb} ${targets.length} product${targets.length === 1 ? "" : "s"}? You can reverse this with the other button.`)) {
+    const verb = active ? "Restore" : "Unlist";
+    if (
+      !window.confirm(
+        `${verb} ${targets.length} product${targets.length === 1 ? "" : "s"}?` +
+          (active ? " Only products this tool hid are restored." : " This is reversible with the Restore button."),
+      )
+    ) {
       return;
     }
     setBusy(true);
@@ -83,7 +103,13 @@ export default function ReadinessPanel({
     try {
       const now = new Date().toISOString();
       for (const p of targets) {
-        await setDoc(doc(db, "products", p.id), { active, updatedAt: now }, { merge: true });
+        await setDoc(
+          doc(db, "products", p.id),
+          active
+            ? { active: true, launchHiddenAt: deleteField(), updatedAt: now }
+            : { active: false, launchHiddenAt: now, updatedAt: now },
+          { merge: true },
+        );
       }
       // Confirm against the server rather than trusting the local cache.
       const snap = await getDocsFromServer(collection(db, "products"));
@@ -91,7 +117,7 @@ export default function ReadinessPanel({
       const wrong = snap.docs.filter((d) => wanted.has(d.id) && d.data().active !== active).length;
       setNote(
         wrong === 0
-          ? `${targets.length} product${targets.length === 1 ? "" : "s"} ${active ? "published" : "unlisted"} — confirmed by the server.`
+          ? `${targets.length} product${targets.length === 1 ? "" : "s"} ${active ? "restored" : "unlisted"}${legacy ? " (pre-tracking batch)" : ""} — confirmed by the server.`
           : `${targets.length - wrong} of ${targets.length} confirmed; ${wrong} did not stick. Check your connection and retry.`,
       );
       onChanged();
@@ -166,12 +192,23 @@ export default function ReadinessPanel({
         </button>
         <button
           type="button"
-          disabled={busy || toRelist.length === 0}
-          onClick={() => apply(toRelist.map((t) => t.product), true)}
+          disabled={busy || toolHidden.length === 0}
+          onClick={() => apply(toolHidden, true)}
           className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-medium disabled:opacity-40"
         >
-          {busy ? "Working…" : `Publish ${toRelist.length} ready`}
+          {busy ? "Working…" : `Restore ${toolHidden.length} hidden by this tool`}
         </button>
+        {legacyHidden.length > 0 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => apply(legacyHidden, true, true)}
+            className="px-3 py-1.5 rounded-lg bg-gold/15 text-gold-deep text-xs font-medium disabled:opacity-40"
+            title="Products hidden by the strict unlist on 18 Nov, before this tool started recording provenance."
+          >
+            Restore the {legacyHidden.length} hidden on 18 Nov
+          </button>
+        )}
       </div>
 
       {note && <p className="text-xs mt-3 text-foreground/80">{note}</p>}
