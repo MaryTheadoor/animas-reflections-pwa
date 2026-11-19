@@ -1,0 +1,38 @@
+# Animas Reflections
+
+> Custom apparel, merchandise and embroidery in Durango, Colorado. Screen printing, embroidery,
+> sublimation and small-batch goods, produced to order. The shop runs on a static Next.js storefront
+> with Firebase and Square (payment only).
+
+## What we do
+
+- Custom screen printing, embroidery and sublimation on apparel and merchandise
+- Design help: upload artwork or describe an idea, and we refine placement and sizing with you
+- Fundraising programs for teams, schools and organisations
+- Sub-brands: Biscuit Hockey, I'M OK R U
+
+## Key pages
+
+- Shop: https://animas-reflections-pwa.web.app/shop/
+- Customizer: https://animas-reflections-pwa.web.app/customizer/
+- Services: https://animas-reflections-pwa.web.app/services/
+- Shipping (rates, timing, tracking): https://animas-reflections-pwa.web.app/shipping/
+- Returns and exchanges: https://animas-reflections-pwa.web.app/returns/
+- FAQ: https://animas-reflections-pwa.web.app/faq/
+- Contact: https://animas-reflections-pwa.web.app/contact/
+- Terms of sale: https://animas-reflections-pwa.web.app/terms/
+- Privacy policy: https://animas-reflections-pwa.web.app/privacy/
+
+## Notes for automated agents
+
+- Prices, availability and shipping rates are rendered from live data; the shipping page states the
+  same rates checkout charges.
+- Product pages use a query string (`/product/?id=…`); canonicals are per product.
+- Ordering requires a card through Square. The site never stores card numbers.
+- For quotes on bulk or corporate orders, use the contact page rather than a product listing.
+
+## Contact
+
+- Phone: 970-769-2779
+- Email: AnimasReflections@gmail.com
+- Location: Durango, Colorado, United States

@@ -10,6 +10,7 @@ import ModifierPicker from "@/components/product/modifier-picker";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useDesignLibrary } from "@/hooks/useDesignLibrary";
+import { SITE_NAME } from "@/lib/seo";
 import { buildDesignIndex, modifierThumbnail } from "@/lib/modifier-design-match";
 import { sanitizeHTML, stripTags } from "@/lib/html-utils";
 import { useCart } from "@/context/cart-context";
@@ -125,6 +126,46 @@ function ProductContent() {
     setSelectedModifierIds([]);
     setModifierInputs({});
   }, [productId]);
+
+  // Per-product head metadata. The static export has ONE /product/ document, so
+  // the baked title and canonical cannot describe a product. Set them from the
+  // data once it arrives. The canonical keeps the ?id= — pointing every product
+  // at the bare URL would tell Google the whole catalog is one page. Removed on
+  // unmount so a client-side navigation does not carry it to another route.
+  useEffect(() => {
+    if (!product) return;
+    const url = `${window.location.origin}/product/?id=${encodeURIComponent(product.id)}`;
+    const title = `${product.seoTitle || product.name} | ${SITE_NAME}`;
+    const description = stripTags(product.seoDescription || product.description || "").slice(0, 155);
+    const setMeta = (key: string, value: string, attr: "name" | "property" = "name") => {
+      let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", value);
+    };
+    let canonical = document.getElementById("product-canonical") as HTMLLinkElement | null;
+    const createdCanonical = !canonical;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.id = "product-canonical";
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = url;
+    document.title = title;
+    setMeta("description", description);
+    setMeta("og:title", title, "property");
+    setMeta("og:description", description, "property");
+    setMeta("og:url", url, "property");
+    setMeta("twitter:title", title);
+    setMeta("twitter:description", description);
+    return () => {
+      if (createdCanonical) canonical?.remove();
+    };
+  }, [product]);
 
   const variants = product?.variants ?? [];
   const colors = product?.colors ?? [];
@@ -599,10 +640,11 @@ function ProductContent() {
             {/* Custom Text — gated by personalization add-on presence */}
             {showPersonalization && (
             <div className="mb-6">
-              <label className="text-xs font-medium text-primary block mb-1">
+              <label htmlFor="product-custom-text" className="text-xs font-medium text-primary block mb-1">
                 Name / Number (optional)
               </label>
               <input
+                id="product-custom-text"
                 type="text"
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value)}

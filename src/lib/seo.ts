@@ -231,6 +231,20 @@ export function metadataFor(path: string) {
     ...(page.canonical === false
       ? {}
       : { alternates: { canonical: SITE_URL + page.path } }),
+    openGraph: {
+      type: "website",
+      siteName: SITE_NAME,
+      title: pageTitle(title),
+      description: clip(description, DESCRIPTION_MAX),
+      url: SITE_URL + page.path,
+      images: [{ url: SITE_URL + "/og-image.png", width: 1200, height: 630, alt: SITE_NAME }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: pageTitle(title),
+      description: clip(description, DESCRIPTION_MAX),
+      images: [SITE_URL + "/og-image.png"],
+    },
     ...(page.indexable ? {} : { robots: { index: false, follow: true } }),
   };
 }

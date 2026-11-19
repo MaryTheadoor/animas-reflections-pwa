@@ -505,11 +505,12 @@ export default function Customizer({
         {/* Text Input — hidden for single-design products (image only) */}
         {!hideTextTool && (
         <div>
-          <label className="block text-sm font-medium text-primary mb-1">
+          <label htmlFor="design-text" className="block text-sm font-medium text-primary mb-1">
             Name / Number
           </label>
           <div className="flex gap-2 mb-2">
             <input
+              id="design-text"
               type="text"
               value={designText ?? ""}
               onChange={(e) => onTextChange(e.target.value || undefined)}
@@ -518,6 +519,7 @@ export default function Customizer({
             />
             <input
               type="color"
+              aria-label="Text colour"
               value={textColor}
               onChange={(e) => onTextColorChange(e.target.value)}
               className="w-10 h-10 rounded-lg border border-primary/20 cursor-pointer shrink-0"
@@ -527,6 +529,7 @@ export default function Customizer({
           <div className="flex items-center gap-2">
             <span className="text-xs text-foreground/80 w-8">Font</span>
             <select
+              aria-label="Font"
               value={textFont}
               onChange={(e) => onTextFontChange(e.target.value)}
               className="flex-1 px-3 py-1.5 rounded-lg border border-primary/20 bg-white text-xs text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"

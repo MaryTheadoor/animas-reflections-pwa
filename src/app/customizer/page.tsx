@@ -776,6 +776,7 @@ function CustomizerContent() {
                                 {selectedAddons.has(mod.id) && mod.inputType === "text" && (
                                   <input
                                     type="text"
+                                    aria-label={mod.inputLabel ?? mod.name}
                                     value={modifierInputs[mod.id] ?? ""}
                                     onChange={(e) => setModifierInputs((prev) => ({ ...prev, [mod.id]: e.target.value }))}
                                     placeholder={mod.inputLabel ?? "Enter text"}

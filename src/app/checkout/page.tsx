@@ -324,11 +324,12 @@ export default function CheckoutPage() {
               const wide = field.type === "email" || field.type === "tel" || field.id === "address" || field.squareMapping?.startsWith("address.addressLine1");
               return (
                 <div key={field.id} className={wide ? "sm:col-span-2" : ""}>
-                  <label className="text-xs font-medium text-primary block mb-1">
+                  <label htmlFor={`field-${field.id}`} className="text-xs font-medium text-primary block mb-1">
                     {field.label}{field.required ? " *" : ""}
                   </label>
                   {field.type === "select" ? (
                     <select
+                      id={`field-${field.id}`}
                       value={customer[field.id] ?? ""}
                       onChange={(e) => updateCustomer(field.id, e.target.value)}
                       className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"
@@ -343,6 +344,7 @@ export default function CheckoutPage() {
                     <input
                       type={field.type}
                       placeholder={field.placeholder ?? field.label}
+                      id={`field-${field.id}`}
                       value={customer[field.id] ?? ""}
                       onChange={(e) => updateCustomer(field.id, e.target.value)}
                       className="w-full px-4 py-2 rounded-xl border border-primary/20 focus:border-gold focus:ring-1 focus:ring-gold outline-none text-sm"

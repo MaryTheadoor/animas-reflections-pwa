@@ -161,3 +161,33 @@ No missing-`alt` images anywhere. Home's `hero-bg.jpg` uses `alt=""` (decorative
 - Agent view (a11y tree + controls): `.tmp-animas-audit/agent-view.json`
 - Screenshots: `.tmp-animas-audit/shots/{home,shop,product,checkout}-{desktop,mobile}.png`
 - Perf probe (resource counts; paint metrics unreliable from bfcache): `.tmp-animas-audit/perf.json`
+
+---
+
+## Fix pass — 2026-11-19
+
+| Finding | State |
+| --- | --- |
+| **FE-1 / DATA** shop at 231 products, 17 with images | **Explained, decision made.** The 231 is deliberate: the 16-product state was an unintended strict unlisting on 18 Nov, reversed the same day with a provenance-based restore (see `PROJECT_CONTEXT` #65). The 214 imageless products are the photo backlog, not a regression. Cindy's decision (keep all visible until photographed) is recorded in `docs/HANDOFF_2026-11-18.md`. |
+| **FE-2 / AG-1** 9 unnamed checkout inputs | **FIXED** — every field now has `id` + `htmlFor` (including the new Address line 2). Verified in a real browser: `el.labels` returns the visible label for all nine. |
+| **FE-3 / AG-2** unnamed customizer controls | **FIXED** — the Name/Number input is label-associated, the colour swatch has `aria-label="Text colour"`, the font select has `aria-label="Font"`. Verified: **zero** unnamed interactive controls on `/customizer/`. |
+| **CW-2** OG tags defaulted to the homepage | **FIXED** — `metadataFor()` now emits `openGraph` (title, description, **url**, image) and `twitter` per route. Verified in raw HTML: `/shop/` carries its own `og:url`, `/customizer/` and `/search/` likewise. |
+| **CW-3** product pages had no canonical and one generic title | **FIXED for JS-rendering clients, partial for raw HTML.** The product page now sets a per-product `<title>`, description, `og:title`/`og:description`/`og:url` and a **canonical carrying `?id=`**, removed on unmount. Verified live: `Bella + Canvas Unisex Jersey T-Shirt`, canonical `…/product/?id=07db885e…`. The raw shell still has the generic title because the export emits one `/product/` document; the durable fix is a static page per product (post-BF, see §6). |
+| **CW-4** HTML cached for an hour | **FIXED** — the catch-all `**` rule in `firebase.json` sets `max-age=0, must-revalidate`; verified `/` and `/shop/`. |
+| **CW-7** no `llms.txt` | **FIXED** — `public/llms.txt` summarises the business, the key pages and the ordering/contact facts; served 200. |
+| **FE-4 / CW-1** imageless cards, client-only catalog shell | **OPEN — deferred by decision.** Prerendering the catalog/product data is a build-architecture change (a product snapshot at build time, like `config/seo`), not a launch-week edit. Scope is written up in §6; the AR-03 card redesign is the cheaper mitigation in the meantime. |
+| **CW-5** soft 404 on unknown product ids | **Noted** — structural for a query-param product route; solved by static product pages. |
+
+### §6 · Deferred: making the catalog visible without JavaScript
+
+Two independent pieces, both worth doing after Black Friday:
+
+1. **Static product pages.** A build script fetches products (public read), writes `products.generated.ts`,
+   and `generateStaticParams` emits `/product/<id>/` pages with per-product title, canonical, OG and
+   Product JSON-LD in the HTML. `/product/?id=` then redirects (or canonicalises) to the static URL.
+   This fixes CW-1, CW-3 and CW-5 together.
+2. **Shop shell with real content.** Prerender the first page of products into `/shop/` as a semantic
+   list (the client hydration replaces it with the filterable grid). Even a "Browse 231 products" list of
+   names and links would give crawlers and simple agents something to read.
+
+Neither is required for revenue; both matter for organic discovery.
