@@ -1047,6 +1047,18 @@ export const getCustomerAddresses = onCall(
   }
 );
 
+/** Cap free-text values a signed-in customer can store. Addresses and profile
+ *  fields are auth-scoped, but without a cap a loop can write megabyte strings
+ *  into their own namespace repeatedly — cheap for them, billable for us. */
+const MAX_CUSTOMER_FIELD = 200;
+function assertShortStrings(values: Record<string, unknown>, max = MAX_CUSTOMER_FIELD): void {
+  for (const [field, value] of Object.entries(values)) {
+    if (typeof value === "string" && value.length > max) {
+      throw new HttpsError("invalid-argument", `${field} is too long (max ${max} characters)`);
+    }
+  }
+}
+
 export const saveCustomerAddress = onCall(
   { cors: true, region: "us-central1" },
   async (request) => {
@@ -1063,6 +1075,14 @@ export const saveCustomerAddress = onCall(
       zip: string;
       isDefault?: boolean;
     };
+    assertShortStrings({
+      label: data.label,
+      line1: data.line1,
+      line2: data.line2,
+      city: data.city,
+      state: data.state,
+      zip: data.zip,
+    });
 
     const db = getFirestore();
     const addressId = data.id || crypto.randomUUID();
@@ -1151,6 +1171,11 @@ export const saveCustomerProfile = onCall(
       lastName: string;
       phone?: string;
     };
+    assertShortStrings({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      phone: data.phone,
+    });
 
     const db = getFirestore();
     await db.collection("customers").doc(auth.uid).set(

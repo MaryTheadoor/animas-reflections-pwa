@@ -102,3 +102,24 @@ Storage REST against `firebasestorage.googleapis.com`; callable POSTs of
 `<script src>` from `/`, `/checkout/`, `/admin/` and greps for
 `EAAA…`/PAT/private-key/API-key patterns. Session artifacts:
 `C:\Users\AmosA\Projects\.tmp-animas-security\` (not committed).
+
+---
+
+## Fix pass — 2026-11-19
+
+Independent re-probe of F-1 confirmed it exactly: `createSquareOrderAndPay` answers an anonymous POST
+with Google's **403 HTML**, while a sibling callable returns `{"error":{"message":"Authentication
+required","status":"PERMISSION_DENIED"}}`. It is an IAM/invoker problem, not application code.
+
+| Finding | State |
+| --- | --- |
+| **F-1** `createSquareOrderAndPay` invoker binding | **OPEN — needs the project owner.** `gcloud` is not installed on this machine and the IAM change requires an authenticated owner. Run:<br>`gcloud functions add-invoker-policy-binding createSquareOrderAndPay --region=us-central1 --member=allUsers`<br>(Console alternative: Cloud Functions → createSquareOrderAndPay → Permissions → add `allUsers` as Cloud Functions Invoker.) Re-probe: an anonymous POST must return the callable JSON error, not HTML. |
+| **F-2** missing security headers / CSP | **FIXED** — `firebase.json` now serves `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` that disables camera/mic/geolocation/payment/usb, and `Content-Security-Policy-Report-Only` covering self, Square's SDK/PCI hosts, Google APIs and Firebase Storage. Verified live on `/` and `/shop/`. |
+| **F-3** homepage cached for an hour | **FIXED** — a catch-all `**` rule sets `public, max-age=0, must-revalidate`, so `/` and every directory URL are included. Verified live: `/` now returns `max-age=0, must-revalidate`. |
+| **F-4** `squareDiagnostics` open to anonymous callers | **FIXED** — the endpoint now verifies a Firebase ID token (`Authorization: Bearer …`), requires a verified email and accepts only the `admin` claim, a `config/admin` entry or the bootstrap address. Verified live: anonymous → `403 {"error":"Admin access required"}`. |
+| **F-5** unbounded customer strings | **FIXED** — `saveCustomerAddress` and `saveCustomerProfile` reject any string field over 200 characters. |
+| **F-6** admin email in the bundle | **Accepted** — it gates UI only; every real check is server-side. Dropping it is a later tidy-up, not a launch item. |
+| **F-7** dependency backlog | **IMPROVED** — `npm audit fix` in both trees: root **8 → 4 high, no criticals**; `functions/` **17 → 11 moderate, no criticals**. The remainder requires breaking upgrades (`next`, `firebase`, `axios`, `grpc-js`); schedule that after Black Friday with a full gate, not during freeze. |
+
+Gate after the pass: tsc 0 · lint 0 · 440 tests / 29 suites · 28-page build, SEO OK · functions compile clean.
+Deployed: functions + hosting.

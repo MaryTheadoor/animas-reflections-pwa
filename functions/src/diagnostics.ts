@@ -18,17 +18,51 @@
  * It returns booleans, a count, and ONE location id (location ids are already
  * public — they are inlined into the storefront bundle). No merchant data, no
  * tokens, no prices.
+ *
+ * ACCESS: admin only. Each call performs a live Square request with the
+ * production token, so an anonymous caller could burn quota and invocations even
+ * though nothing confidential leaks. The caller must present a Firebase ID token
+ * (`Authorization: Bearer …`) belonging to a verified admin — the same rule as
+ * requireAdmin, applied by hand because onRequest has no auth context.
  */
 import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import { defineString } from "firebase-functions/params";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 
 const squareAccessToken = defineString("SQUARE_ACCESS_TOKEN");
 const squareEnvironment = defineString("SQUARE_ENVIRONMENT", { default: "sandbox" });
+const bootstrapAdminEmail = defineString("BOOTSTRAP_ADMIN_EMAIL", {
+  default: "mary.theadoor.doctor@gmail.com",
+});
+
+/** Verified email, admin claim, config/admin list or the bootstrap address. */
+async function isAdminCaller(req: { headers: Record<string, unknown> }): Promise<boolean> {
+  const header = req.headers.authorization;
+  if (typeof header !== "string" || !header.startsWith("Bearer ")) return false;
+  try {
+    const decoded = await getAuth().verifyIdToken(header.slice(7));
+    const email = (decoded.email ?? "").toLowerCase().trim();
+    if (!email || decoded.email_verified !== true) return false;
+    if (decoded.admin === true) return true;
+    if (email === bootstrapAdminEmail.value().toLowerCase().trim()) return true;
+    const snap = await getFirestore().collection("config").doc("admin").get();
+    const emails = (snap.data()?.emails as unknown) ?? [];
+    return Array.isArray(emails) && emails.map((e) => String(e).toLowerCase().trim()).includes(email);
+  } catch {
+    return false;
+  }
+}
 
 export const squareDiagnostics = onRequest(
   { cors: true, region: "us-central1" },
   async (req, res) => {
+    if (!(await isAdminCaller(req))) {
+      logger.warn("squareDiagnostics denied a non-admin caller");
+      res.status(403).json({ error: "Admin access required" });
+      return;
+    }
     const asked = typeof req.query.locationId === "string" ? req.query.locationId : "";
     const base = {
       environment: squareEnvironment.value(),
