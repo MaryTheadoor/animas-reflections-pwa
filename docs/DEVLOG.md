@@ -2489,3 +2489,33 @@ Live: 231 shop cards, checkout shows Address line 2, admin offers "Restore the 2
 ### Still open
 Canary purchase; `.env.local` + GitHub Variable app ID; Square receipts/taxes; contact-page facts (street
 address, hours); customizer axe/touch targets; F-02 order notification; S2 mapping; F-06/F-07; photo pass.
+
+---
+
+## Session 42 — 2026-11-19 | Security audit: deployed-rules probes, payment IAM finding
+
+Full method, evidence, and findings in `docs/SECURITY_AUDIT.md`. No code changed.
+
+### What ran
+Anonymous REST probes against the **deployed** Firestore rules (13/13 pass), Storage rules (6/6 pass,
+via `firebasestorage.googleapis.com` — the `firestoraged` host and `.appspot.com` bucket both 404),
+admin-callable gating (5/5 pass), auth email-enumeration (protection ON), deployed-bundle secret scan
+(clean — only the web key, Square App ID and Location ID ship), tracked-file secret scan (clean), hosting
+header/404 checks, money-path code review, and `npm audit` (root + functions).
+
+### Findings
+- **F-1 HIGH (functional):** `createSquareOrderAndPay` is deployed without the `allUsers` invoker, so
+  guests get Google's frontend 403 — an independent second checkout blocker behind the Square card-form 401.
+  Fix is an IAM binding (or redeploy answering "allow unauthenticated"), then re-probe for the callable JSON error.
+- **F-2 MEDIUM:** no CSP/X-Frame-Options/nosniff/Referrer-Policy/Permissions-Policy on hosting — add a
+  `headers` block to `firebase.json`.
+- **F-3 LOW:** `/` is served with `max-age=3600` (the `**/*.@(html|json)` glob misses the extension-less URL).
+- **F-4 LOW:** `squareDiagnostics` is an unauthenticated paid-API trigger; consider admin-gating.
+- **F-5 LOW:** `saveCustomerAddress` has no field-length caps.
+- **F-6 INFO:** `NEXT_PUBLIC_ADMIN_EMAIL` ships in the client bundle (UI gate only; phishing vector).
+- **F-7 INFO:** dependency backlog — dompurify/next criticals are N/A here (default-mode sanitize; static
+  export), but `npm audit fix` is due in both trees.
+
+### Verification
+Read-only audit — lint/tsc/tests/build untouched and still expected at the Session-41 numbers.
+

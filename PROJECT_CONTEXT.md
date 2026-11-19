@@ -478,3 +478,20 @@ END OF CONTEXT FILE
 3. **Per-variant photos.** Not supported: `ManagedVariant` has no image field. Photos are
    per colour (`mockupImagesByColor`) and per modifier (`mockupImagesByModifier`).
    Only worth building if she needs a specific size × colour image.
+
+### 15.7 Security audit — 2026-11-19
+
+Full report: `docs/SECURITY_AUDIT.md`. It was a read-only review of the live site +
+repo; no source code changed, so the verification gate stays at Session-41 levels.
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| F-1 | HIGH | `createSquareOrderAndPay` is not invokable by unauthenticated guests (missing `allUsers` IAM binding), so guest checkout returns a Google frontend 403 | **OPEN** — fix is IAM binding or redeploy with `invoker: "public"` |
+| F-2 | MEDIUM | Security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) are absent from `firebase.json` | **OPEN** |
+| F-3 | LOW | Homepage `/` is served with `max-age=3600` because the `firebase.json` cache glob `**/*.html` misses the bare path | **OPEN** |
+| F-4 | LOW | `squareDiagnostics` is a public callable that triggers paid Square API calls | **OPEN** — consider `requireAdmin` or removing |
+| F-5 | LOW | `saveCustomerAddress` accepts unlimited field lengths | **OPEN** — add server-side length caps |
+| F-6 | INFO | `NEXT_PUBLIC_ADMIN_EMAIL` is exposed in the client bundle | **ACCEPTED** — it is only a UI gate |
+| F-7 | INFO | `npm audit` shows upstream criticals in `dompurify` and `next`; none are exploitable in this static-export use | **ACCEPTED** / track upstream |
+
+Probe scripts (session artifacts only, not committed): `C:\Users\AmosA\Projects\.tmp-animas-security\`.
