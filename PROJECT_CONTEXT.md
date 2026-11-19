@@ -495,3 +495,24 @@ repo; no source code changed, so the verification gate stays at Session-41 level
 | F-7 | INFO | `npm audit` shows upstream criticals in `dompurify` and `next`; none are exploitable in this static-export use | **ACCEPTED** / track upstream |
 
 Probe scripts (session artifacts only, not committed): `C:\Users\AmosA\Projects\.tmp-animas-security\`.
+
+### 15.8 Front-end / crawler / agent audit — 2026-11-19
+
+Full report: `docs/FRONTEND_CRAWLER_AGENT_AUDIT.md`. Read-only (three lenses: rendered
+Chrome, raw-HTTP Googlebot crawl, accessibility-tree/agent view); no source changed, so the
+verification gate stays at Session-41 levels.
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| FE-1 | HIGH (DATA) | Shop is **231 products, 17 with images** again — the 2026-11-18 readiness unlisting (16 active) is undone in Firestore | **OPEN** — deliberate decision needed |
+| FE-2 / AG-1 | MEDIUM | All 9 checkout inputs have placeholders + nearby `<label>`s but none are associated — unnamed to screen readers | **OPEN** |
+| FE-3 / AG-2 | MEDIUM | Customizer still has 2 unnamed controls (design-text input + a select) | **OPEN** |
+| CW-1 | HIGH | Catalog pages are client-only shells: raw `/shop/` is 120 words vs 5,521 rendered; Product JSON-LD only appears after JS | **OPEN** |
+| CW-2 | HIGH | OG tags default to the homepage on every route in raw HTML; runtime SEO fixes `og:title` but `og:url` stays homepage even rendered | **OPEN** |
+| CW-3 | HIGH | Every product URL shares the generic title "Product Details \| Animas Reflections" and has no canonical (231 indexable duplicates) | **OPEN** |
+| CW-4 | MEDIUM | HTML served `max-age=3600` including `/` (same as security F-3) | **OPEN** |
+| CW-6 | INFO | Canonical/sitemap now self-host — U-16's `www.animasreflections.com` canonicals are gone; real 404 | **FIXED** |
+| AG-3 | INFO | Shop/search selects now carry `aria-label`s — the earlier `select-name` axe finding is closed | **FIXED** |
+
+Probe scripts and screenshots (session artifacts only, not committed):
+`C:\Users\AmosA\Projects\.tmp-animas-audit\` (JSON probes + `shots/`).

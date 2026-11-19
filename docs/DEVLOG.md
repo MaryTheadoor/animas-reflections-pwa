@@ -2519,3 +2519,28 @@ header/404 checks, money-path code review, and `npm audit` (root + functions).
 ### Verification
 Read-only audit — lint/tsc/tests/build untouched and still expected at the Session-41 numbers.
 
+---
+
+## Session 43 — 2026-11-19 | Front-end / crawler / agent audit (three lenses)
+
+Full method, evidence tables, and findings in `docs/FRONTEND_CRAWLER_AGENT_AUDIT.md`. No code changed.
+
+### What ran
+Three lenses against the live deploy (hosting `Last-Modified` 2026-11-18 23:29 UTC):
+- **Rendered front end** — real Chrome via the browser bridge (admin session, dark mode, 1440×900 and 390×844): DOM/a11y probes on 10 routes, screenshots of home/shop/product/checkout at both viewports.
+- **Crawler view** — raw HTTP with a Googlebot UA, no JavaScript, 28 URLs (18 sitemap + 10 noindex/probe), extracting title/description/canonical/OG/JSON-LD/headings/word counts per route.
+- **Agent view** — accessibility-tree snapshots plus DOM semantics (accessible names, landmarks, headings, alt text) on 6 routes, and the AI-crawler surface (`robots.txt`, `llms.txt`, structured data).
+
+### Findings
+- **FE-1 HIGH (DATA):** the shop is **231 products, 17 with images** again — the 2026-11-18 readiness unlisting (16 active) is no longer in effect. Needs a deliberate decision, not code.
+- **FE-2/AG-1 MEDIUM:** all 9 checkout inputs have visible placeholders and nearby `<label>`s, but none are programmatically associated — unnamed to screen readers on the revenue page.
+- **FE-3/AG-2 MEDIUM:** the customizer still has 2 unnamed controls (design-text input + a select).
+- **CW-1 HIGH:** catalog pages are client-only shells — raw `/shop/` is 120 words vs 5,521 rendered; Product JSON-LD appears only after JS.
+- **CW-2 HIGH:** OG tags default to the homepage on every route in raw HTML; runtime SEO fixes `og:title` but `og:url` stays the homepage even rendered.
+- **CW-3 HIGH:** every product URL shares the generic title "Product Details | Animas Reflections" and has no canonical (231 indexable duplicates).
+- **CW-6 INFO (fixed):** canonical/sitemap now self-host — U-16's `www.animasreflections.com` canonicals are gone; 404 is a real 404.
+- **AG-3 INFO (fixed):** shop/search selects now carry `aria-label`s — the earlier `select-name` finding is closed on this deploy.
+
+### Verification
+Read-only audit — lint/tsc/tests/build untouched and still expected at the Session-41 numbers.
+
