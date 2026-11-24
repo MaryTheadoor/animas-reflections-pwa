@@ -104,9 +104,23 @@ export function blankPhotoSets(photos: readonly ProductPhoto[]): BlankPhotoSet[]
   );
 }
 
-/** How many of the five mockup slots this set can fill. */
-export function coveredViews(set: BlankPhotoSet): ProductPhotoView[] {
+/** Base views — photos on the blank itself, shared by every colour. */
+export function baseViews(set: BlankPhotoSet): ProductPhotoView[] {
   return PRODUCT_PHOTO_VIEWS.filter((view) => Boolean(set.byView[view]));
+}
+
+/**
+ * How many of the five mockup slots this set can fill.
+ *
+ * Counts colour-specific photos too, because applying the set does fill them: a set whose
+ * photos are all tied to colours contributes nothing to `byView`, so counting only that
+ * reported "0 of 5" for exactly the sets that work. `coveredViews` and `missingViews` must
+ * always add up to the five slots.
+ */
+export function coveredViews(set: BlankPhotoSet): ProductPhotoView[] {
+  return PRODUCT_PHOTO_VIEWS.filter(
+    (view) => Boolean(set.byView[view]) || hasColorView(set, view),
+  );
 }
 
 /** Which of the five slots it CANNOT fill — the operator should know before applying. */

@@ -53,6 +53,30 @@ describe("blankPhotoSets", () => {
     expect(missingViews(sets[0])).toEqual(["back", "sleeve", "sideL", "sideR"]);
   });
 
+  it("counts a colour-only set as covering its views", () => {
+    // No base photos at all: every photo is tied to a colour. Applying this set does
+    // fill those views for those colours, so reporting "0 of 5" was wrong.
+    const sets = blankPhotoSets([
+      photo({ id: "cf", view: "front", color: "Black" }),
+      photo({ id: "cb", view: "back", color: "Black" }),
+      photo({ id: "cg", view: "front", color: "Grey" }),
+    ]);
+    expect(sets[0].byView).toEqual({});
+    expect(coveredViews(sets[0])).toEqual(["front", "back"]);
+    expect(missingViews(sets[0])).toEqual(["sleeve", "sideL", "sideR"]);
+  });
+
+  it("always splits the five slots between covered and missing", () => {
+    const sets = blankPhotoSets([
+      photo({ id: "f", view: "front" }),
+      photo({ id: "cb", view: "back", color: "Black" }),
+      photo({ id: "u" }),
+    ]);
+    for (const set of sets) {
+      expect(coveredViews(set).length + missingViews(set).length).toBe(5);
+    }
+  });
+
   it("keeps unplaced photos out of the mockup map", () => {
     const sets = blankPhotoSets([photo({ id: "loose" })]);
     expect(sets[0].unplaced.map((p) => p.id)).toEqual(["loose"]);

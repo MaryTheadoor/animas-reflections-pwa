@@ -32,6 +32,7 @@ import { buildModifiersForProduct, type SquareModifierList } from "@/lib/square-
 import { useProductPhotos } from "@/hooks/useProductPhotos";
 import {
   applySetPatch,
+  baseViews,
   blankPhotoSets,
   coveredViews,
   filterPhotos,
@@ -2328,24 +2329,26 @@ export default function ProductManager({ categories }: Props) {
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {matchingSets.map((set) => {
-                    // Colour-aware: a photo tied to a colour lands in byColorView,
-                    // so counting only byView reported "0 of 5" for every colour
-                    // set even though applying it does fill those colours.
+                    // Colour-aware: a photo tied to a colour lands in byColorView, so
+                    // counting only byView reported "0 of 5" for every colour set even
+                    // though applying it does fill those colours.
                     const covered = coveredViews(set);
+                    const base = baseViews(set);
                     const missing = missingViews(set);
                     const colours = Object.keys(set.byColorView).length;
                     const modifiers = Object.keys(set.byModifier).length;
+                    const colourOnly = base.length === 0 && colours > 0;
                     return (
                       <button
                         key={set.name}
                         type="button"
                         onClick={() => applyBlank(set)}
                         title={
-                          covered.length === 0 && colours > 0
-                            ? `Colour-specific photos (${colours} colour${colours === 1 ? "" : "s"}): fills those colours, not the base views`
+                          colourOnly
+                            ? `Colour-specific photos only (${colours} colour${colours === 1 ? "" : "s"}): fills ${covered.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")} for those colours, and leaves the base views untouched`
                             : covered.length === 0
                               ? "This blank has no photos assigned to a view yet"
-                              : `Fills: ${covered.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")}${colours ? ` · ${colours} colour-specific` : ""}`
+                              : `Fills: ${base.map((v) => PRODUCT_PHOTO_VIEW_LABELS[v]).join(", ")}${colourOnly ? "" : colours ? ` · plus ${colours} colour-specific` : ""}`
                         }
                         className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-white border border-primary/20 text-foreground hover:border-gold hover:text-gold-deep transition-colors text-left"
                       >
