@@ -67,6 +67,16 @@ export default function PageLayout({
             <p className="text-xs text-foreground/80 mt-3">
               We accept: {PAYMENT_METHODS.join(", ")}
             </p>
+            <p className="text-xs text-foreground/80 mt-2">
+              Something not working, or a question about an order?{" "}
+              <a
+                href={`mailto:${SITE.email}?subject=${encodeURIComponent("Website feedback")}`}
+                className="underline hover:text-gold-deep"
+              >
+                Tell us
+              </a>{" "}
+              and we will sort it out.
+            </p>
             <div className="flex gap-3 mt-3">
               <a
                 href={SITE.socials.instagram}
