@@ -7,6 +7,8 @@ import Link from "next/link";
 import PlaceholderImage from "@/components/ui/placeholder-image";
 import ModifierThumb from "@/components/ui/modifier-thumb";
 import ModifierPicker from "@/components/product/modifier-picker";
+import DesignPicker from "@/components/product/design-picker";
+import { designAssetLabel } from "@/lib/design-assets";
 import { useCatalog, getProductImageUrl } from "@/hooks/useCatalog";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useDesignLibrary } from "@/hooks/useDesignLibrary";
@@ -606,29 +608,13 @@ function ProductContent() {
             {(product.designAssets?.length ?? 0) > 0 && (
               <div className="mb-6">
                 <span className="text-xs font-medium text-primary block mb-2">
-                  Design{selectedDesign ? ` — ${selectedDesign.name}` : ""}
+                  Design{selectedDesign ? ` — ${designAssetLabel(selectedDesign)}` : ""}
                 </span>
-                <div className="flex flex-wrap gap-2">
-                  {product.designAssets!.map((d) => {
-                    const active = selectedDesign?.id === d.id;
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => setSelectedDesign(active ? null : d)}
-                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                          active
-                            ? "bg-gold/10 border-gold/40 text-gold-deep"
-                            : "bg-warm-sand/30 border-transparent text-foreground hover:border-primary/20"
-                        }`}
-                      >
-                        <Image src={d.image_url} alt={d.name} width={28} height={28} className="rounded object-cover shrink-0" />
-                        {d.name}
-                      </button>
-                    );
-                  })}
-                </div>
+                <DesignPicker
+                  assets={product.designAssets!}
+                  selected={selectedDesign}
+                  onSelect={setSelectedDesign}
+                />
                 {selectedDesign && (
                   <p className="text-[11px] text-foreground/70 mt-1.5">
                     This design will be printed on the {effectiveColor ?? "default"} background. Use “Customize This” if you want to move or resize it.
