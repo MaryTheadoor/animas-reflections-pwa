@@ -2603,3 +2603,25 @@ Verified live in the real admin, not just in the bundle: the same two blanks tha
 `check-seo: OK — 28 pages, 18 sitemap URLs`. Hosting deployed, pushed to `origin/development`
 at `d82b86b`. Live chunks contain the new tooltip strings; `/`, `/shop/`, `/checkout/` and
 `/health` all 200.
+
+### The 97-design snapback — the long list AND the identical labels
+Both halves of the report were real and still live. `src/app/product/page.tsx` rendered
+`design.name` in a `flex-wrap` grid, and **100 of the design records carry
+`name: "Little Stranger Logos"`** with the actual title in `description` — so the snapback
+showed 97 identical chips that each said "Little Stranger Logos", several screens long.
+
+`designAssetLabel` already solved exactly this for the admin grids (its own comment names the
+97-tile problem); the public page was simply never updated to use it.
+
+New `src/components/product/design-picker.tsx`: chips up to eight designs, one button and a
+searchable panel above that, matching the `ModifierPicker` idiom already used for large option
+groups. Selection stays single and the cart path is untouched.
+
+Verified against the deployed site:
+- The snapback page held 3,817 characters of text and **97** "Little Stranger Logos" strings
+  before; now 1,706 characters and **zero**, with one "Choose from 97 designs" button.
+- The panel opens with 97 tiles labelled Shrooming Stranger, Colosso He's A Villian,
+  Super Stranger 1, Christmas Lights, LS SP CO, LS Logo Rasta, LS Martian, Graffiti Style…
+- Picking one closes the panel, sets the heading to "Design — Shrooming Stranger" and shows a
+  removable chip.
+- The small-set path still renders chips: the 3-design sun shirt shows three, named.
