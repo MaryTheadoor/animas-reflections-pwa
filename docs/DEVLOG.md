@@ -2544,3 +2544,62 @@ Three lenses against the live deploy (hosting `Last-Modified` 2026-11-18 23:29 U
 ### Verification
 Read-only audit — lint/tsc/tests/build untouched and still expected at the Session-41 numbers.
 
+
+---
+
+## Session 44 — 2026-11-24 | Payment endpoint unblocked; colour-only photo sets counted
+
+### F-1 closed — `createSquareOrderAndPay` is invoker-public
+The last revenue blocker was an IAM one, not a code one. Anonymous POST returned a Google
+**403 HTML** page while sibling callables answered JSON `PERMISSION_DENIED`, which is the
+signature of Cloud Run requiring authentication. Redeploying the function — full and single
+— did **not** fix it, because a fresh deploy preserves the existing IAM policy.
+
+Fixed on the Cloud Run service itself, `us-central1/createsquareorderandpay`, Security tab:
+`Require authentication` → `Allow public access`, then `View diff & redeploy` → `Deploy
+changes`. Verified afterwards by probe:
+
+```
+POST .../createSquareOrderAndPay {"data":{"lineItems":[],...}}
+→ 400 application/json  {"error":{"message":"Order must contain at least one line item"}}
+```
+
+A JSON `INVALID_ARGUMENT` means the function executed, so the payment path is reachable.
+`fetchCustomerOrders` still answers `403 PERMISSION_DENIED` — correct, it is a callable that
+authenticates the caller itself.
+
+**The canary purchase is still unrun.** Reaching the endpoint is not the same as taking money.
+
+### The "0 of 5 views" report
+Cindy's "the blank product image sets always list as having zero" was a real counting bug in
+`src/lib/product-photos.ts`. `applySetPatch` and `bulk-apply` both treat a view as filled when
+a **colour-specific** photo covers it, and `missingViews` does too — but `coveredViews` read
+only `byView`. A blank whose photos are all tied to colours therefore put nothing in `byView`
+and displayed "0 of 5 views · missing 4", which cannot add to five.
+
+`coveredViews` now counts colour-covered views, `baseViews` is exported so the button tooltip
+can still distinguish "fills these base views" from "fills these colours only", and two tests
+pin the invariant that `coveredViews + missingViews = 5`.
+
+Verified live in the real admin, not just in the bundle: the same two blanks that read
+"0 of 5 views · missing 4" now read "1 of 5 views · missing 4".
+
+### Found, not fixed — recorded for after the launch
+- **Duplicate detection misses near-duplicates.** `findDuplicateGroups` needs an identical
+  name *and* variant signature, so `Find duplicates` reports "No duplicates found" against a
+  catalogue holding three live pairs — the 15 oz coffee cup, the UPF 44+ hooded sun shirt, and
+  the 4-in-1 speaker cooler. The coffee cup pair is the "different picture on the homepage than
+  the product page" report: two records, one with 1 photo and one with 5. Merging them with the
+  current button would be unsafe, because `mergeGroup` keeps only the keeper's variants.
+- **Six active products carry category ids that do not exist** — `cat_animas_reflections`,
+  `cat_dunphy_stock_fam`, `cat_durango_hockey`, `cat_durango_roller_girls`,
+  `cat_jordan_branch_music`, `cat_wood_signs`, all with underscores where the category
+  documents use hyphens. Those products match no category filter.
+- **214 of 231 active products have no photo.** Unchanged since FE-1 and still a deliberate
+  decision, not a defect to fix in code.
+
+### Verification
+`npm run verify` — lint 0, tsc 0, **442 tests / 29 suites**. `npm run build` — 28 pages,
+`check-seo: OK — 28 pages, 18 sitemap URLs`. Hosting deployed, pushed to `origin/development`
+at `d82b86b`. Live chunks contain the new tooltip strings; `/`, `/shop/`, `/checkout/` and
+`/health` all 200.
