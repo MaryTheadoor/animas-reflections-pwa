@@ -2293,7 +2293,15 @@ export default function ProductManager({ categories }: Props) {
 
           {/* Mockup Images */}
           <div>
-            <label className="block text-xs font-medium text-primary mb-2">Mockup Images (blank product shots for customizer)</label>
+            <div className="flex items-center gap-1.5 mb-2">
+              <label className="block text-xs font-medium text-primary">Mockup Images (blank product shots for customizer)</label>
+              <AdminTooltip
+                content="Three ways to fill these five views: upload a file per view; use the Library button to pick a saved photo for one view; or click a saved blank above to fill every view it has in one action. A blank whose photos carry a colour fills that colour's slots instead of the base views — leave colour blank on photos that are the garment's standard shots."
+                dismissKey="mockup-images"
+              >
+                <span className="sr-only">Help with mockup images</span>
+              </AdminTooltip>
+            </div>
 
             {/* Apply a saved blank from the Product Photos library: fills every
                 view the blank has, in one click, and says what is still missing. */}
@@ -2302,6 +2310,13 @@ export default function ProductManager({ categories }: Props) {
                 <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
                   <span className="text-[11px] font-medium text-primary">
                     Apply a saved blank product — fills every view it has
+                    <AdminTooltip
+                      content="A blank is the plain garment, for example a Gildan 18500 Hoodie. Photos sharing that blank name form one set; one click copies every view the set has into this product and leaves the rest untouched. The count says how many of the five views it can fill and how many colours or modifiers it carries. Nothing is saved until you press Update or Create Product."
+                      dismissKey="apply-blank"
+                      side="bottom"
+                    >
+                      <span className="sr-only">Help with applying a saved blank</span>
+                    </AdminTooltip>
                   </span>
                   <button
                     type="button"
@@ -2408,6 +2423,8 @@ export default function ProductManager({ categories }: Props) {
                       setMockupLibraryView(view);
                       setMockupLibraryQuery("");
                     }}
+                    title={`Pick a saved ${view === "sideL" ? "left side" : view === "sideR" ? "right side" : view} photo from the Product Photos library`}
+                    aria-label={`Choose a saved ${view} photo from the library`}
                     className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-[10px] text-foreground/80 hover:text-gold-deep border border-dashed border-primary/20 rounded-lg"
                   >
                     🖼 Library
