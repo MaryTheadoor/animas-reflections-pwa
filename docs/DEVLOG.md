@@ -2625,3 +2625,47 @@ Verified against the deployed site:
 - Picking one closes the panel, sets the heading to "Design — Shrooming Stranger" and shows a
   removable chip.
 - The small-set path still renders chips: the 3-design sun shirt shows three, named.
+
+### The catalogue was re-unlisted, this time with a record of it
+
+Reported as "I thought we had hidden most of the products, but 214 are visible now". The history
+is traceable and it was not a regression:
+
+- **2026-11-18, 17:36** — the strict Launch-readiness *Unlist* ran and took the shop from 231
+  products to 16. The tool had no provenance then, so it recorded nothing about what it hid.
+- **Session 41, same day** — `launchHiddenAt` was added, restore was made provenance-only (the
+  old "Publish N ready" would have republished 143 products archived in October), and a dated
+  one-off button, *Restore the 215 hidden on 18 Nov*, was created to undo that batch.
+  **That button was then used**, returning the catalogue to 231 live and verified at 231 shop
+  cards. So the products came back because the hide was deliberately reversed, and Session 41
+  says so.
+- Corroboration in the data: no product carried `launchHiddenAt`, and **220 products shared an
+  `updatedAt` of 2026-11-18** — the restore's write.
+
+Re-run today in strict mode: **231 → 16 listed**, 215 unlisted, and all 215 now carry
+`launchHiddenAt = 2026-11-25T01:45Z`. The panel confirms it server-side ("215 products unlisted
+— confirmed by the server") and offers "Restore 215 hidden by this tool". 143 products remain
+archived from October, untouched, with no provenance — they are not restorable by that button
+and should not be.
+
+Blocker breakdown at the time of the sweep: no photo 214 · no category 250 · thin description 47
+· $1 design record 55 · no price 9 · out-of-stock 10 · duplicate-looking name 2.
+
+**The 16 that stayed listed** are 14 Little Stranger items plus `4 Inch Slaps` (Women In
+Aviation), `15 oz Coffee Mug` (Jordan Branch Music), `Custom Flag` (Design Your Own) and
+`Drink Huggers`.
+
+### Consequence of unlisting: the shop advertised 13 empty categories
+The category filter is built from the `categories` collection, which has no idea how many
+products are listed. With the catalogue unlisted it offered 18 categories, 13 of which resolved
+to an empty page. `categoriesWithProducts` (`src/lib/visible-categories.ts`) keeps a category
+only while a listed product carries it and always keeps the selected one, and both `/shop/` and
+`/search/` use it. Verified live: the filter now reads All Products (16), Design Your Own,
+Drink Huggers, Jordan Branch Music, Little Stranger, Women In Aviation.
+
+### One duplicate still listed, deliberately not touched
+`Adult Lightweight Hooded Sun Shirt UPF 44+` exists twice among the 16: `305b0533` (4 photos,
+four variants all named "Regular" at $40) and `47d5c0c5` (5 photos, real XS–XXXL variants with
+surcharges). `305b0533` is the weaker record and is the one whose sizes are unselectable, but
+which copy to keep is a catalogue decision — the admin's Find-duplicates tool cannot see the
+pair (Known Issue #67), so unlisting one by hand is the available move.

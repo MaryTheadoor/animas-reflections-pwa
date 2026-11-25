@@ -21,7 +21,7 @@ functions, and the live Firestore catalogue.
 | Card form fails to initialise | **Fixed.** The Application ID was transposed in the repo (`sq0idp-QAzYzF…` for `sq0idp-QAzYFzF…`); corrected in `src/lib/constants.ts` and the rebuild workflow. Checkout card iframe now attaches in a real browser. |
 | Security findings F-2…F-7 | **Fixed.** Headers + CSP Report-Only, cache fix, `squareDiagnostics` admin-gated, 200-char caps, `npm audit` down to 4 high root / 0 critical. See `docs/SECURITY_AUDIT.md`. |
 | Tax and receipts | **Still client-side.** `health` reports `squareEnvironment: production` and `squareConfigured: true`, but whether the location has **taxes on** and **receipts on** cannot be settled from the code. Confirm in the Square Dashboard. |
-| Products are sellable | **Partly.** All 231 active products carry a variant price, but **214 of the 231 have no photo** and 3 pairs are duplicates (§ new). The 9 unpriced and 10 zero-inventory items from §5 no longer appear as such — inventory is not stored per variant in the live schema. |
+| Products are sellable | **Done — catalogue unlisted for launch.** 231 listed became **16 listed / 358 unlisted** on 2026-11-24 (strict Launch readiness, all 215 written with `launchHiddenAt` provenance, confirmed by the server). The 16 are 14 Little Stranger items plus `4 Inch Slaps`, `15 oz Coffee Mug`, `Custom Flag` and `Drink Huggers`. Reversible in Admin → Products → "Restore 215 hidden by this tool". The shop and search filters now only offer categories that hold a listed product. See the DEVLOG Session 44 note for why an earlier hide was reversed on 18 Nov. |
 | Admin can sign in after the security change | **Verified.** `mary.theadoor.doctor@gmail.com` signs in and the product editor saves with server read-back. |
 
 Gate at this commit: **442 tests / 29 suites**, lint 0, tsc 0, 28-page build, `check-seo: OK — 28 pages, 18 sitemap URLs`.
@@ -30,18 +30,23 @@ Gate at this commit: **442 tests / 29 suites**, lint 0, tsc 0, 28-page build, `c
 checkout → real card → confirm the order in the Square Dashboard *and* Admin → Orders (ship-to,
 notes, `paymentId`) → refund in the Dashboard.
 
-### New this pass — duplicates the merge tool cannot see
+### Duplicates the merge tool cannot see
 
 `Find duplicates` reports "No duplicates found" against the live catalogue, and it is wrong.
-`findDuplicateGroups` requires an identical **name and variant signature**, so three pairs of
-near-identical products stay live and split their photos, which is the "different picture on the
-homepage than the product page" report:
+`findDuplicateGroups` requires an identical **name and variant signature**, so near-identical
+products go unnoticed — the "different picture on the homepage than the product page" report.
 
-| Product | Live copies | Photos |
+After the 2026-11-24 unlist only **one** pair is still listed:
+
+| Product | Listed copies | Photos |
 |---|---|---|
-| Coffee Cup 15 oz / 15 oz Coffee Mug | 2 (+1 unlisted "Coffee Mugs 15 oz") | 1 vs 5 |
-| Adult Lightweight Hooded Sun Shirt UPF 44+ | 2 | 4 vs 5 |
-| 4 in 1 Bluetooth Speaker Can Cooler | 2 | 0 vs 6 |
+| Adult Lightweight Hooded Sun Shirt UPF 44+ | 2 (`305b0533`, `47d5c0c5`) | 4 vs 5 |
+
+`305b0533` has four variants all named "Regular" at $40, so a size cannot be chosen there;
+`47d5c0c5` has real XS–XXXL variants with surcharges. Unlisting `305b0533` by hand is the move
+available today. Two further pairs exist but are now unlisted: `Coffee Cup 15 oz` / `15 oz Coffee
+Mug` (different design collections — check before treating as duplicates) and
+`4 in 1 Bluetooth Speaker Can Cooler`.
 
 Do not merge these with the existing button: `mergeGroup` keeps only the **keeper's** variants, so a
 pair whose variants differ would lose the other copy's variants. Fix the detector (name-level
@@ -84,8 +89,8 @@ category filter. Reassign them in Admin; it is a data fix, not a code change.
       (lint 0 · tsc 0 · **442 tests / 29 suites** · 28-page build, SEO gate OK · functions compile clean)
 - [x] Commit the change set on `development` and tag `rc-blackfriday-1`
 - [x] Client: fix the 9 unpriced active products — every active product now carries a variant price
-- [ ] Client: decide the 214 photo-less active products (unlist, or photograph) — the shop shows
-      all 231 today, so 214 cards render without an image
+- [x] Client: decide the 214 photo-less active products — **decided 2026-11-24: unlist them.**
+      231 listed became 16; 215 carry `launchHiddenAt` provenance and are one click from restore
 - [ ] Client: confirm Square location has **taxes on**, **receipts on**, and that the access token in
       `functions/.env` is the **production** token (`SQUARE_ENVIRONMENT=production`)
 
@@ -176,7 +181,7 @@ Tracked inventory at 0 (show as out of stock): 7 resin/jewelry pendants, 2 lanya
 
 - **Nov 23 (Mon):** final freeze. No deploys except a hotfix.
 - **Nov 24 (Tue, today):** canary purchase + refund; confirm Square taxes and receipts are on;
-  decide the 214 photo-less products; re-run the smoke list; print the cutoffs.
+  catalogue unlisted to 16 ready products (done); re-run the smoke list; print the cutoffs.
 - **Nov 25 (Wed):** Black Friday prices in Admin (there are no coupon codes), announcement bar
   copy, first invite wave to the early-access list, mobile pass on a real phone.
 - **Nov 26 (Thu):** quiet. No deploys after the morning.
