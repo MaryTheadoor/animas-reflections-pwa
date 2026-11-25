@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useEffect } from "react";
+import { Suspense, useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCatalog } from "@/hooks/useCatalog";
 import { useProductSearch, type SearchFilters, type SortMode } from "@/hooks/useSearch";
@@ -8,6 +8,7 @@ import SearchBar from "@/components/search/search-bar";
 import ProductCard from "@/components/product/product-card";
 import PageLayout from "@/components/layout/page-layout";
 import DensityPicker, { DENSITY_CLASSES, type Density } from "@/components/product/density-picker";
+import { categoriesWithProducts } from "@/lib/visible-categories";
 
 const SORT_MODES: SortMode[] = ["relevance", "price-asc", "price-desc", "name-asc"];
 
@@ -49,6 +50,13 @@ function SearchContent() {
   );
 
   const results = useProductSearch(products, filters, sort);
+
+  // Only advertise categories that have a listed product, so the filter cannot
+  // offer a category that resolves to an empty result set.
+  const visibleCategories = useMemo(
+    () => categoriesWithProducts(categories, products, filters.categoryId ?? undefined),
+    [categories, products, filters.categoryId],
+  );
 
   const handleSearch = useCallback(
     (newFilters: SearchFilters, newSort: SortMode) => {
@@ -94,7 +102,7 @@ function SearchContent() {
 
         <div className="max-w-2xl mx-auto mb-8">
           <SearchBar
-            categories={categories}
+            categories={visibleCategories}
             filters={filters}
             sort={sort}
             onSearch={handleSearch}

@@ -11,6 +11,7 @@ import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { stripTags } from "@/lib/html-utils";
 import DensityPicker, { DENSITY_CLASSES, type Density } from "@/components/product/density-picker";
 import { compareByPrice } from "@/hooks/useSearch";
+import { categoriesWithProducts } from "@/lib/visible-categories";
 
 type SortMode = "default" | "price-asc" | "price-desc" | "name-asc";
 type BrowseMode = "design" | "type";
@@ -143,6 +144,18 @@ function ShopContent() {
     return options;
   }, [siteConfig.catalog_options?.productTypes, products]);
 
+  /**
+   * Categories that actually have something to show.
+   *
+   * The category list comes from the `categories` collection, which does not know how many
+   * products are listed — so an unlisted catalogue left the shop advertising a dozen empty
+   * categories, and picking one produced a blank page.
+   */
+  const visibleCategories = useMemo(
+    () => categoriesWithProducts(categories, products, activeCategory),
+    [categories, products, activeCategory],
+  );
+
   const activeLabel =
     browseMode === "type"
       ? activeType === "All"
@@ -224,7 +237,7 @@ function ShopContent() {
                 className="sm:hidden w-full px-4 py-2.5 rounded-xl border border-primary/20 bg-white text-sm text-primary focus:border-gold focus:ring-1 focus:ring-gold outline-none"
               >
                 <option value="All">All Products ({products.length})</option>
-                {categories.map((cat) => (
+                {visibleCategories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
@@ -260,7 +273,7 @@ function ShopContent() {
           {/* Desktop pills — design categories or product types per mode */}
           <div className="hidden sm:flex flex-wrap gap-1.5">
             {browseMode === "design"
-              ? categories.map((cat) => (
+              ? visibleCategories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id === activeCategory ? "All" : cat.id)}
