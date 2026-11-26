@@ -14,6 +14,7 @@ import ProductPicker from "@/components/customizer/product-picker";
 import CustomizerCartButton from "@/components/customizer/customizer-cart-button";
 import { designAssetLabel, filterDesignAssets } from "@/lib/design-assets";
 import { buildDesignIndex, modifierThumbnail } from "@/lib/modifier-design-match";
+import { groupModifiers, toggleSelection } from "@/lib/modifier-selection";
 import ModifierThumb from "@/components/ui/modifier-thumb";
 import { SITE_NAME } from "@/lib/constants";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
@@ -189,6 +190,10 @@ function CustomizerContent() {
             inputLabel: a.id === "personalization" ? "Enter name/number" : undefined,
           }));
 
+  // Groups carry whether a choice is single or multiple (see ModifierGroup.selectionType),
+  // so the add-on list below can render radios for a choice and checkboxes for an add-on.
+  const modifierGroups = useMemo(() => groupModifiers(effectiveModifiers), [effectiveModifiers]);
+
   // Customer inputs for text/file modifiers, keyed by modifier id.
   const [modifierInputs, setModifierInputs] = useState<Record<string, string>>({});
 
@@ -260,9 +265,11 @@ function CustomizerContent() {
 
   const handleToggleAddon = (id: string) => {
     setSelectedAddons((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+      // A group that names a choice (Patch Shape, Color, Design…) takes one answer;
+      // an add-on group keeps all of them. The rule lives in modifier-selection so
+      // the customizer and the product page cannot disagree about it.
+      const next = toggleSelection(Array.from(prev), id, modifierGroups);
+      return new Set(next);
     });
   };
 
@@ -282,7 +289,7 @@ function CustomizerContent() {
     setSelectedAddons(new Set());
     setModifierInputs({});
     setDesignUrl(undefined);
-    // Default to the product's first color so the mockup tints immediately.
+    // Default to the product's first color so a per-colour photo shows immediately.
     setSelectedColor(product?.colors?.[0]);
     // Single-design products hide the text tool — clear any text from a prior
     // product so it can't leak into the cart while the input is hidden.
@@ -398,8 +405,8 @@ function CustomizerContent() {
 
   const productViews = getProductViews(selectedProduct);
   const currentView = productViews.find((v) => v.key === activeView) ?? productViews[0];
-  // Color-variant mockup: prefer a real per-color photo if one exists, otherwise
-  // tint the default base image with the selected color's overlay.
+  // Color-variant mockup: a real per-color photo when one exists. There is no tint
+  // fallback — see the note on effectiveBaseImage.
   const colorMockup = selectedColor
     ? selectedProduct?.mockupImagesByColor?.[selectedColor]?.[activeView as "front" | "back" | "sleeve" | "sideL" | "sideR"]
     : undefined;
@@ -417,7 +424,9 @@ function CustomizerContent() {
     )
     .find((url) => url);
   const effectiveBaseImage = modifierMockup ?? colorMockup ?? currentView.baseImage;
-  const tintColor = !colorMockup && selectedColor ? selectedProduct?.colorTints?.[selectedColor] : undefined;
+  // No colour tint overlay: a full-bleed multiply of the garment hex tinted the whole
+  // photograph — background included — so a black hoodie became a black rectangle. A
+  // colour is shown by its own photo (mockupImagesByColor) or not at all.
   // undefined = the catalog carries no price for this variant → not orderable
   // online (checkout rejects it as "has no price configured").
   const variantPrice = getProductPrice(selectedProduct, variantIndex);
@@ -478,7 +487,6 @@ function CustomizerContent() {
           <div className="lg:col-span-2">
             <Customizer
               baseImage={effectiveBaseImage}
-              tintColor={tintColor}
               viewName={currentView.label}
               views={productViews}
               activeView={activeView}
@@ -538,15 +546,18 @@ function CustomizerContent() {
                     </div>
                   )}
 
-                  {/* Color Picker — tints the mockup to the chosen garment color */}
+                  {/* Color Picker — chooses the garment colour. The swatch dot is what
+                      communicates the colour; the mockup itself changes only when that
+                      colour has its own photo. */}
                   {selectedProduct && (selectedProduct.colors ?? []).length > 0 && (
                     <div className="mt-3">
                       <span className="text-xs font-medium text-primary block mb-1">Color</span>
                       <div className="flex flex-wrap gap-2">
                         {(selectedProduct.colors ?? []).map((color) => {
                           const tint = selectedProduct.colorTints?.[color];
-                          // Always show a swatch: the tint, the hex when the color
-                          // key is itself a hex, or a neutral gray placeholder.
+                          // Always show a swatch: the hex set in Admin → Color Images,
+                          // the hex when the colour key is itself a hex, or a neutral
+                          // gray placeholder.
                           const swatch = tint || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
                           const isActive = selectedColor === color;
                           return (
@@ -736,26 +747,26 @@ function CustomizerContent() {
               <div className="space-y-2">
                 {useModifiersForCost
                   ? (() => {
-                      const groups = new Map<string, (typeof effectiveModifiers)[number][]>();
-                      for (const mod of effectiveModifiers) {
-                        const g = (mod.group || "Add-ons").trim();
-                        if (!groups.has(g)) groups.set(g, []);
-                        groups.get(g)!.push(mod);
-                      }
-                      const showHeaders = groups.size > 1 || !groups.has("Add-ons");
-                      return Array.from(groups.entries()).map(([groupName, mods]) => (
-                        <div key={groupName}>
+                      const showHeaders = modifierGroups.length > 1 || modifierGroups[0]?.name !== "Add-ons";
+                      return modifierGroups.map((group) => {
+                        const single = group.selectionType === "single";
+                        return (
+                        <div key={group.name}>
                           {showHeaders && (
                             <h3 className="text-[11px] font-semibold uppercase tracking-wide text-foreground/60 mt-3 mb-1.5 first:mt-0">
-                              {groupName}
+                              {group.name}
+                              {single && group.modifiers.length > 1 && (
+                                <span className="ml-1 normal-case font-normal">— choose one</span>
+                              )}
                             </h3>
                           )}
                           <div className="space-y-2">
-                            {mods.map((mod) => (
+                            {group.modifiers.map((mod) => (
                               <div key={mod.id} className="p-2 rounded-xl hover:bg-warm-sand/50 transition-colors">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                   <input
-                                    type="checkbox"
+                                    type={single ? "radio" : "checkbox"}
+                                    name={single ? `addon-group-${group.name}` : undefined}
                                     checked={selectedAddons.has(mod.id)}
                                     onChange={() => handleToggleAddon(mod.id)}
                                     className="accent-gold w-4 h-4"
@@ -799,7 +810,8 @@ function CustomizerContent() {
                             ))}
                           </div>
                         </div>
-                      ));
+                        );
+                      });
                     })()
                   : effectiveAddons.map((addon) => (
                       <label

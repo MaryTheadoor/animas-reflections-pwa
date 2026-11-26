@@ -2863,3 +2863,43 @@ filters, so a category with nothing in it said "Browse 14 products" above an emp
 reads `Showing X of Y products` when a filter is active, and the empty state gained a
 **Show all 14 products** button — a filtered dead-end previously said "No products match your
 filters" and offered no way out. Verified live: `Showing 0 of 14 products` + the reset button.
+
+### Customizer: the tint is gone, and a choice is a choice
+
+**The overlay tint was removed.** `Customizer` drew a full-bleed `mix-blend-mode: multiply` div of
+the garment hex over the whole mockup, so a black colour turned the *entire photograph* — background
+and shading included — into a black rectangle. Verified live before removal: a `rgb(0,0,0)` blend
+layer covering the canvas. It could not have worked on a product photo with a background; it only
+ever looked right on a transparent PNG of a flat garment.
+
+Removed: the `tintColor` prop and its overlay, the calculation in the customizer page, and three
+comments plus two help entries that still told the shop the mockup "gets tinted per colour". A colour
+is now shown by its own photo (`mockupImagesByColor`) or not at all. `colorTints` survives for what
+the admin already documented it as — the **swatch dot colour** in Admin → Color Images.
+
+**The customizer still let one "choose one" group take several answers.** It rendered every modifier
+as a `type="checkbox"` and grouped them with its own inline `Map`, so it never saw
+`ModifierGroup.selectionType` — the fix that went into the product page had not reached it. It now
+uses `groupModifiers` + `toggleSelection`, reads its groups from the same helper, and renders radios
+with a "choose one" hint. Verified live on the snapback: 17 radios, 0 checkboxes; clicking Circle,
+then Oblong, then Rectangle leaves **only Rectangle** checked.
+
+### Customizer sweep — what was exercised and what works
+
+| Control | Result |
+|---|---|
+| Product / view tabs (Front, Back) | switch; the base image follows the view |
+| Design library | opens inline, 98 designs, tiles labelled by `designAssetLabel` |
+| Picking a design | enables Add to Cart (button is disabled until a design or text exists) |
+| Add-ons (radio groups) | one per group; the chosen option reaches the cart |
+| Add to Cart | line carries name, variant, colour, design URL and `addons: [{label:"Circle"}]` |
+| Print zone guide, size/rotate controls | render and respond |
+
+**Found, not fixed — a data problem with a code symptom.** The snapback shows *two* colour
+choosers: a variant picker listing Grey / Black / Blue / Red, and a "Color" row listing
+Black / Red / Blue / Gray. They are independent, so the cart line came out with
+`variant: "Grey"` **and** `selected_color: "black"` — two answers to one question. The same
+duplication is on the product page. It is imported data (Square carried both a colour variant and a
+colour swatch list), and which one to keep is a per-product merchandising decision, not something
+code should guess: hiding the swatch row whenever real variants exist would also hide it on a
+product whose variants are *sizes*.
