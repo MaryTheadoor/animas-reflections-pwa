@@ -2814,3 +2814,32 @@ indistinguishable, nameless pages. Products live in Firestore and the sitemap is
 which is why. Fixing it means prerendering the product pages at build time from a Firestore read —
 a real piece of work, not a one-line change, and the last structural gap before this is properly
 indexable.
+
+### Product pages are now discoverable
+
+The last structural gap: `sitemap.xml` carried 18 route entries and **zero products**, so a crawler
+had no reason to visit any of them. The gate's own comment explained why — "/product/ serves every
+product from one static URL via ?id=, and there is nothing useful to list without enumerating the
+catalog."
+
+So it now enumerates the catalog at build time, using the pattern already established for SEO copy:
+
+- `scripts/fetch-listed-products.mjs` runs on `prebuild`, reads the **listed** products from
+  Firestore (public REST, 15 s timeout, paginated), and snapshots `id` + `name` into a committed
+  `src/lib/products.generated.ts`. Same contract as `fetch-seo-config.mjs`: written only when it
+  changes, and if Firestore is unreachable the committed snapshot is kept, so a build never needs
+  the network and a fresh clone still builds. An empty read is treated as a transient fault, not as
+  a shop with nothing for sale.
+- `src/app/sitemap.ts` appends `/product/?id=<id>` for each. Only `active` products are carried, so
+  an unlisted product is never advertised.
+- `scripts/check-seo.mjs` resolves a sitemap URL to a page file after stripping `?`/`#`, because a
+  query string selects within a page rather than naming another file. Without that it reported 14
+  failures for URLs that do serve correctly.
+
+Verified live: `sitemap.xml` is **32 URLs, 14 of them products**; the 14 match the snapshot exactly;
+and a product page's runtime canonical is the identical `?id=` URL with a per-product title
+(`15 oz Coffee Mug | Animas Reflections`).
+
+**Still open:** the *raw* HTML of every product page is the same generic document, so a crawler that
+does not execute JS — or a link-preview bot — still sees "Product Details" with no product name.
+Fixing that means prerendering each product at build time, which is the next step, not this one.

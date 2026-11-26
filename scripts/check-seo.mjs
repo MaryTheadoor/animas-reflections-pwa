@@ -199,7 +199,11 @@ for (const loc of sitemapLocs) {
     errors.push("sitemap.xml: " + loc + " is not on " + ORIGIN);
     continue;
   }
-  const rel = loc.slice(ORIGIN.length).replace(/^\//, "");
+  // A query string selects within one page, it does not name another file.
+  // /product/?id=<id> is served by product/index.html for every product, which is
+  // how the static export serves a catalog that lives in Firestore — the URL must
+  // be listed for the product to be discoverable, and it does resolve.
+  const rel = loc.slice(ORIGIN.length).replace(/^\//, "").split(/[?#]/)[0];
   const target = rel === "" ? join(OUT, "index.html") : join(OUT, rel, "index.html");
   if (!existsSync(target)) errors.push("sitemap.xml: " + loc + " has no page at " + relative(OUT, target));
 }
