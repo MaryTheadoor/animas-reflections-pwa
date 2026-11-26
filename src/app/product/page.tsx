@@ -179,6 +179,15 @@ function ProductContent() {
   const hasSellableVariant = variant != null && variant.price > 0;
   const pricedVariantPrices = variants.map((v) => v.price).filter((p) => Number.isFinite(p) && p > 0);
   const minVariantPrice = pricedVariantPrices.length ? Math.min(...pricedVariantPrices) : 0;
+  /**
+   * Whether the customer can actually change variant.
+   *
+   * Same rule the picker below uses. Anything that quotes a price other than the selected
+   * variant's must ask this first: on a product whose variants are placeholders ("Regular"
+   * five times) the picker is hidden, so quoting "Starting at $5.00" next to a $20 button
+   * advertises a price no customer can reach.
+   */
+  const variantPickerShown = variants.length > 1 && !hasGenericVariants(product);
   // Schema.org availability mirrors the card's stock-badge logic.
   const hasInventory = variants.some((v) => v.inventory !== undefined);
   const totalStock = variants.reduce((sum, v) => sum + (v.inventory ?? 0), 0);
@@ -246,6 +255,18 @@ function ProductContent() {
     : [];
   const selectedModifierIdsInUse = usesModifierGroups ? selectedModifierIds : [];
   const selectedModifiers = modifiers.filter((m) => selectedModifierIdsInUse.includes(m.id));
+  /**
+   * Single-choice groups the shopper has not answered yet.
+   *
+   * Deliberately NOT enforced. The data carries no "required" flag, so a group we cannot
+   * prove is mandatory must never block a sale — a blocked sale is worse than a note on the
+   * order. But naming them is the difference between an order with a colour and a design on
+   * it and one that arrives with nothing chosen.
+   */
+  const unchosenGroups = modifierGroups
+    .filter((g) => g.selectionType === "single" && g.modifiers.length > 1)
+    .filter((g) => !g.modifiers.some((m) => selectedModifierIdsInUse.includes(m.id)))
+    .map((g) => g.name);
   // Dollars added by the selected modifiers, resolved against THIS variant's
   // price (a percentage modifier applies to the base price, as in the cart).
   const modifierCost = modifierTotal(modifiers, selectedModifierIdsInUse, price);
@@ -423,7 +444,7 @@ function ProductContent() {
             <div className="mb-6">
               <p className="text-3xl font-bold text-gold-deep">
                 {price > 0 ? `$${unitPrice.toFixed(2)}` : "Contact us for pricing"}
-                {variants.length > 1 && minVariantPrice > 0 && price > 0 && (
+                {variantPickerShown && minVariantPrice > 0 && price > 0 && minVariantPrice !== price && (
                   <span className="text-sm font-normal text-foreground ml-2">
                     Starting at ${minVariantPrice.toFixed(2)}
                   </span>
@@ -439,7 +460,7 @@ function ProductContent() {
             {/* Variant Picker — only for products whose variants are real,
                 distinguishable options. A product whose variants are placeholders
                 (five identical "Regular" rows) names its choices in modifiers. */}
-            {variants.length > 1 && !hasGenericVariants(product) && (
+            {variantPickerShown && (
               <div className="mb-6">
                 <span className="text-xs font-medium text-primary block mb-2">Style / Size</span>
                 <div className="flex flex-wrap gap-2">
@@ -592,10 +613,18 @@ function ProductContent() {
                       (c) => c.name.toLowerCase() === color.toLowerCase(),
                     )?.hex;
                     const swatch = tint || catalogHex || (/^#[0-9a-f]{6}$/i.test(color) ? color : "#cccccc");
-                    const isActive = effectiveColor === color;
+                    // Only claim a swatch is chosen when the shopper (or a colour-named
+                    // variant) actually chose one. `effectiveColor` falls back to colors[0]
+                    // so the photo has something to show, and using it here marked the first
+                    // swatch as selected on load — a choice nobody made.
+                    const isActive =
+                      effectiveColor === color && (selectedColor !== null || Boolean(variantColorName));
                     return (
                       <button
                         key={color}
+                        type="button"
+                        aria-pressed={isActive}
+                        aria-label={`${color}${isActive ? " (selected)" : ""}`}
                         onClick={() => setSelectedColor(color)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium capitalize transition-all ${
                           isActive
@@ -753,6 +782,11 @@ function ProductContent() {
               )}
             </div>
 
+            {canAddToCart && unchosenGroups.length > 0 && (
+              <p className="text-xs text-gold-deep mt-3">
+                Not chosen yet: {unchosenGroups.join(" · ")}. You can add it as it is.
+              </p>
+            )}
             {!hasSellableVariant && (
               <p className="text-xs text-foreground/80 mt-3">
                 This item is not orderable online — contact us for pricing.

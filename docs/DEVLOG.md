@@ -2733,3 +2733,33 @@ Full findings and the roadmap for the other 300 products: `docs/PRODUCT_CONFIG_A
 short version is that the remaining problems are data — overlapping design/logo groups, the same
 dimension offered twice, placeholder variants named "Regular"/"Price"/"Base Price", and price tiers
 stored as variants.
+
+### Debug pass 2 — the product page lied about prices and pre-selected a colour
+
+Two more code defects, both found by loading the live product pages rather than by tests.
+
+**A price the customer could not reach.** The price line showed "Starting at $5.00" whenever a
+product had more than one variant, gated on a different condition than the variant picker. On
+`15 oz Coffee Mug` — three variants all named "Regular", priced $20 / $5 / $20 — the picker is
+hidden because the names are placeholders, the first variant is selected at $20, and the page
+advertised "Starting at $5.00" beside a $20 button. Both conditions now come from one
+`variantPickerShown`, and "Starting at" is suppressed when the cheapest variant costs the same as
+the selected one (it read "Starting at $35.00" next to "$35.00" on the snapback).
+
+**A selection nobody made.** Colour swatches were styled active from `effectiveColor`, which falls
+back to `colors[0]` so the photo has something to show — so the first swatch appeared chosen on
+load. Active now requires an explicit choice (or a colour-named variant), and each swatch carries
+`aria-pressed` and a label, which it had neither of.
+
+**An order with nothing on it.** `canAddToCart` never looked at the option groups, so the
+Bella + Canvas tee could be added with no size, colour, design or logo — the cart stored
+`addons: []`. Now deliberately **not** blocked (the data carries no "required" flag, and a blocked
+sale is worse than a note), but named: "Not chosen yet: Adult Size · Please Select Color ·
+Please Select Design · Logo Options · Please Select Logo Design."
+
+Verified live: the mug reads "$20.00" with no phantom "Starting at"; no option is marked pressed on
+load; the snapback still shows its variant picker; and adding the mug to the cart now produces
+exactly one colour and one design on the line (`addons: ["Blue","Area 51"]`).
+
+That last check also produced the evidence for the audit: a tee sitting in the cart with no options
+at all is what prompted the notice.
