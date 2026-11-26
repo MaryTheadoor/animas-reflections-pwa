@@ -2,7 +2,7 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-utils";
 import { csvToProducts } from "@/lib/csv";
-import type { ManagedCategory, ManagedProduct } from "@/types";
+import type { ManagedCategory, ManagedProduct, ProductPhoto } from "@/types";
 
 export interface ImportReport {
   created: number;
@@ -58,6 +58,8 @@ export async function importCatalogCsv(
   categories: ManagedCategory[] = [],
   existingProducts: ExistingProductRef[] = [],
   createCategories = false,
+  photos: ProductPhoto[] = [],
+  autoApplyMockups = false,
 ): Promise<ImportReport> {
   const categoryMap = new Map<string, string>();
   for (const c of categories) {
@@ -87,6 +89,8 @@ export async function importCatalogCsv(
     categoryMap,
     existingByName,
     createCategories,
+    photos,
+    autoApplyMockups,
   });
 
   // Create categories the sheet references but we do not have, when the operator asked for

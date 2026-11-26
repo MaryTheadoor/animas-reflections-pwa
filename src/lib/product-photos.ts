@@ -123,6 +123,34 @@ export function coveredViews(set: BlankPhotoSet): ProductPhotoView[] {
   );
 }
 
+/**
+ * The blank sets that suit a product: same product type, and either the set names no
+ * category or it names the product's category.
+ *
+ * Shared with the import so a bulk-created product is filled from the same set the editor
+ * would have offered by hand, rather than a second rule that drifts.
+ */
+export function setsForProduct(
+  sets: readonly BlankPhotoSet[],
+  product: { productType?: ProductType; categoryId?: string },
+): BlankPhotoSet[] {
+  return sets.filter((set) => {
+    if (set.productType && set.productType !== product.productType) return false;
+    if (set.categoryIds.length > 0 && !set.categoryIds.includes(product.categoryId ?? "")) return false;
+    return true;
+  });
+}
+
+/** The best set for a product: the one that fills the most views, or undefined. */
+export function bestSetForProduct(
+  sets: readonly BlankPhotoSet[],
+  product: { productType?: ProductType; categoryId?: string },
+): BlankPhotoSet | undefined {
+  const candidates = setsForProduct(sets, product);
+  if (candidates.length === 0) return undefined;
+  return [...candidates].sort((a, b) => coveredViews(b).length - coveredViews(a).length)[0];
+}
+
 /** Which of the five slots it CANNOT fill — the operator should know before applying. */
 export function missingViews(set: BlankPhotoSet): ProductPhotoView[] {
   return PRODUCT_PHOTO_VIEWS.filter((view) => !set.byView[view] && !hasColorView(set, view));

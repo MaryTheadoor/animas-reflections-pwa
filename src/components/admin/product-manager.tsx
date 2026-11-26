@@ -182,6 +182,10 @@ export default function ProductManager({ categories }: Props) {
   const [csvBusy, setCsvBusy] = useState(false);
   const [csvResult, setCsvResult] = useState<ImportReport | null>(null);
   const [createCategories, setCreateCategories] = useState(false);
+  const [autoApplyMockups, setAutoApplyMockups] = useState(false);
+  // Declared up here because the CSV import uses it: a sheet can name a blank from the
+  // library instead of carrying image files, so the import needs the library in scope.
+  const { photos: libraryPhotos } = useProductPhotos();
   const csvInputRef = useRef<HTMLInputElement | null>(null);
 
   // Square add-ons. The item export records WHICH modifier sets an item uses; the choices
@@ -340,6 +344,8 @@ export default function ProductManager({ categories }: Props) {
         categories,
         products.map((p) => ({ id: p.id, name: p.name })),
         createCategories,
+        libraryPhotos,
+        autoApplyMockups,
       );
       setCsvResult(res);
       loadProducts();
@@ -360,10 +366,10 @@ export default function ProductManager({ categories }: Props) {
 
   const downloadCsvTemplate = () => {
     const template = [
-      "name,variant,price,sku,inventory,colors,category,productType,description,active,featured,image",
-      "Tee,L,20.00,TEE-L,5,Black;White,Apparel,apparel,Classic tee,true,false,https://example.com/tee-front.png",
-      "Tee,M,20.00,TEE-M,3,Black;White,Apparel,apparel,Classic tee,true,false,https://example.com/tee-front.png",
-      "Hat,One Size,15.00,HAT-1,0,Red,Accessory,accessory,Adjustable hat,true,true,https://example.com/hat.png",
+      "name,variant,price,sku,inventory,colors,category,productType,description,active,featured,image,mockup",
+      "Tee,L,20.00,TEE-L,5,Black;White,Apparel,apparel,Classic tee,true,false,https://example.com/tee-front.png,",
+      "Tee,M,20.00,TEE-M,3,Black;White,Apparel,apparel,Classic tee,true,false,https://example.com/tee-front.png,",
+      "Hat,One Size,15.00,HAT-1,0,Red,Accessory,accessory,Adjustable hat,true,true,,Gildan 18500 Hoodie",
     ].join("\n");
     const blob = new Blob([template], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -412,7 +418,6 @@ export default function ProductManager({ categories }: Props) {
      all — and it reports the views it could NOT fill rather than leaving that to
      be discovered in the customizer later.
      ──────────────────────────────────────────────────────────────────────── */
-  const { photos: libraryPhotos } = useProductPhotos();
   const [showAllBlanks, setShowAllBlanks] = useState(false);
   const [blankNote, setBlankNote] = useState<string | null>(null);
   const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
@@ -1579,6 +1584,21 @@ export default function ProductManager({ categories }: Props) {
             />
             Create missing categories
           </label>
+          <AdminTooltip
+            content="Fills any imported product that arrives without a picture from the best blank in the Product Photos library — same product type, and the set's category when it names one. A sheet can also name a blank itself in its 'mockup' column. Nothing is filled in when the library has no matching blank."
+            dismissKey="csv-auto-mockups"
+            side="bottom"
+          >
+            <label className="flex items-center gap-1.5 text-[11px] text-foreground/80 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoApplyMockups}
+                onChange={(e) => setAutoApplyMockups(e.target.checked)}
+                className="accent-gold"
+              />
+              Use library photos for products with none
+            </label>
+          </AdminTooltip>
           <AdminTooltip
             content="The Square item export says which modifier sets each item uses, but not what is inside them — Square keeps the choices and prices separately. This pulls those sets from the Square Catalog API and attaches them as grouped add-ons."
             dismissKey="square-addons"

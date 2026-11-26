@@ -304,3 +304,62 @@ describe("csvToProducts — Square export columns", () => {
     expect(products[0].squareModifierRefs).toBeUndefined();
   });
 });
+
+describe("import + product photo library", () => {
+  const photos = [
+    { id: "p1", name: "Gildan 18500 Hoodie", image_url: "https://lib.test/hoodie-front.png", view: "front", productType: "apparel", created_at: "" },
+    { id: "p2", name: "Gildan 18500 Hoodie", image_url: "https://lib.test/hoodie-back.png", view: "back", productType: "apparel", created_at: "" },
+    { id: "p3", name: "Mug Wrap", image_url: "https://lib.test/mug.png", view: "front", productType: "accessory", created_at: "" },
+  ] as never;
+
+  it("applies the blank named in the mockup column", () => {
+    const csv = "name,price,productType,mockup\nHoodie,45,apparel,Gildan 18500 Hoodie";
+    const { products, warnings } = csvToProducts(csv, { photos });
+    expect(products[0].mockupImages).toEqual({
+      front: "https://lib.test/hoodie-front.png",
+      back: "https://lib.test/hoodie-back.png",
+    });
+    expect(warnings.some((w) => w.includes("Applied the blank"))).toBe(true);
+  });
+
+  it("does not apply a blank the library does not have, and says so", () => {
+    const csv = "name,price,productType,mockup\nHoodie,45,apparel,Nonexistent Blank";
+    const { products, warnings } = csvToProducts(csv, { photos });
+    expect(products[0].mockupImages).toBeUndefined();
+    expect(warnings.some((w) => w.includes("Nonexistent Blank"))).toBe(true);
+  });
+
+  it("fills a photo-less product from the best matching blank when asked", () => {
+    const csv = "name,price,productType\nHoodie,45,apparel";
+    const { products, warnings } = csvToProducts(csv, { photos, autoApplyMockups: true });
+    expect(products[0].mockupImages?.front).toBe("https://lib.test/hoodie-front.png");
+    expect(warnings.some((w) => w.includes("had no photo"))).toBe(true);
+  });
+
+  it("leaves a product that already has a photo alone", () => {
+    const csv = "name,price,productType,image\nHoodie,45,apparel,https://example.com/real.jpg";
+    const { products } = csvToProducts(csv, { photos, autoApplyMockups: true });
+    expect(products[0].images).toEqual(["https://example.com/real.jpg"]);
+    expect(products[0].mockupImages).toBeUndefined();
+  });
+
+  it("does not match a blank from a different product type", () => {
+    const csv = "name,price,productType\nHoodie,45,wood-sign";
+    const { products } = csvToProducts(csv, { photos, autoApplyMockups: true });
+    expect(products[0].mockupImages).toBeUndefined();
+  });
+
+  it("resolves an image cell that names a library photo instead of a URL", () => {
+    const csv = "name,price,productType,image\nHoodie,45,apparel,Mug Wrap";
+    const { products, warnings } = csvToProducts(csv, { photos });
+    expect(products[0].images).toEqual(["https://lib.test/mug.png"]);
+    expect(warnings.some((w) => w.includes("Matched 1 image name"))).toBe(true);
+  });
+
+  it("keeps an unknown image cell as written and reports it", () => {
+    const csv = "name,price,productType,image\nHoodie,45,apparel,not-a-url-and-not-a-photo";
+    const { products, warnings } = csvToProducts(csv, { photos });
+    expect(products[0].images).toEqual(["not-a-url-and-not-a-photo"]);
+    expect(warnings.some((w) => w.includes("neither a URL"))).toBe(true);
+  });
+});

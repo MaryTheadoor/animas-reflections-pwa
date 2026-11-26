@@ -1,10 +1,16 @@
-import type { ManagedProduct, ProductType } from "@/types";
+import type { ManagedProduct, ProductPhoto, ProductType } from "@/types";
 import {
   deriveOptionValues,
   detectBrand,
   detectProductType,
   extractTags,
 } from "@/lib/catalog-heuristics";
+import {
+  applySetPatch,
+  blankPhotoSets,
+  bestSetForProduct,
+  type BlankPhotoSet,
+} from "@/lib/product-photos";
 
 /**
  * CSV catalog import — one row per product variant; rows are grouped into one
@@ -31,6 +37,8 @@ export interface CatalogCsvRow {
   active?: boolean;
   featured?: boolean;
   images: string[];
+  /** Blank-product name from the photo library, or a `Blank#view` reference. */
+  mockup?: string;
   weightOz?: number;
   /** Square modifier sets applied to this item (the "Modifier Set - X" = Y columns).
    *  `squareListId` is set when Square disambiguated a duplicated name with an id. */
@@ -127,6 +135,7 @@ const FIELD_ALIASES: Record<string, string[]> = {
   image: ["image", "imageurl", "images", "image1"],
   image2: ["image2"],
   image3: ["image3"],
+  mockup: ["mockup", "mockupimage", "blank", "blankproduct"],
   weight: ["weightlb", "weightoz", "weight"],
   seoTitle: ["seotitle", "metatitle"],
   seoDescription: ["seodescription", "metadescription"],
@@ -207,6 +216,18 @@ export interface ImportOptions {
    * `csvToProducts` is pure and never writes — it just reports what would be created.
    */
   createCategories?: boolean;
+  /**
+   * The Product Photos library. When given, an image cell that is **not** a URL is read as a
+   * reference to a photo already in the library, and the `mockup` column names a blank whose
+   * views are applied in one go — so a sheet can be reused without re-uploading files.
+   */
+  photos?: ProductPhoto[];
+  /**
+   * Fill products that carry no images from the best blank that suits them (same product type,
+   * and the set's category if it names one). This is what makes a plain name-and-price sheet
+   * produce cards that show a picture.
+   */
+  autoApplyMockups?: boolean;
 }
 
 /** Index every header by the canonical field it resolves to (a field may have several). */
@@ -313,6 +334,7 @@ export function mapCatalogRow(headers: string[], cells: string[]): CatalogCsvRow
     images: splitList(get("image"))
       .concat(splitList(get("image2")))
       .concat(splitList(get("image3"))),
+    mockup: get("mockup") || undefined,
     weightOz,
     modifierRefs: modifierRefs.length > 0 ? modifierRefs : undefined,
     seoTitle: get("seoTitle") || undefined,
@@ -384,6 +406,26 @@ function resolveCategory(
 }
 
 /**
+ * Spread one blank set onto a product.
+ *
+ * Merges rather than replaces, exactly like the editor's "apply this blank": a set that fills
+ * front and back must not wipe a sleeve photo the sheet or the operator already supplied.
+ */
+function applyBlank(product: ManagedProduct, set: BlankPhotoSet): void {
+  const patch = applySetPatch(set);
+  if (patch.mockupImages) {
+    product.mockupImages = { ...(product.mockupImages ?? {}), ...patch.mockupImages };
+  }
+  if (patch.mockupImagesByColor) {
+    const merged = { ...(product.mockupImagesByColor ?? {}) };
+    for (const [colour, views] of Object.entries(patch.mockupImagesByColor)) {
+      merged[colour] = { ...(merged[colour] ?? {}), ...views };
+    }
+    product.mockupImagesByColor = merged;
+  }
+}
+
+/**
  * Group mapped rows into products (one product per unique id/name, with all its variants).
  *
  * The product id is **deterministic** — the sheet's `id` when present, otherwise a slug
@@ -399,6 +441,9 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
   const unresolvedNames = new Set<string>();
   let inferredTypeCount = 0;
   const noOptions: string[] = [];
+  // productId → the blank named in the sheet's `mockup` column, applied in the post-pass once
+  // every row for that product has been seen.
+  const mockupByProduct = new Map<string, string>();
 
   for (const row of rows) {
     // Identity, in order of authority: the sheet's own id, then an existing product of
@@ -445,6 +490,7 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
 
     // A later row can carry the weight even when the first did not.
     if (product.weightOz === undefined && row.weightOz !== undefined) product.weightOz = row.weightOz;
+    if (row.mockup) mockupByProduct.set(productId, row.mockup);
 
     // Modifier-set associations accumulate across the product's rows. A ref is unique by
     // (name, id) so the same set listed on several rows is not duplicated.
@@ -505,6 +551,67 @@ export function rowsToProducts(rows: CatalogCsvRow[], opts: ImportOptions = {}) 
   }
 
   // ── Post-pass: fill what can only be known once the whole product is grouped ──
+  // Blank-product photos, from the library rather than from files. Runs FIRST so a product
+  // filled this way already counts as illustrated for anything that checks later.
+  if (opts.photos?.length) {
+    const sets: BlankPhotoSet[] = blankPhotoSets(opts.photos);
+    const byName = new Map(sets.map((s) => [s.name.trim().toLowerCase(), s]));
+    let named = 0;
+    let auto = 0;
+    const unknownBlanks = new Set<string>();
+    for (const product of byKey.values()) {
+      const asked = mockupByProduct.get(product.id)?.trim();
+      if (asked) {
+        const set = byName.get(asked.toLowerCase());
+        if (set) {
+          applyBlank(product, set);
+          named++;
+        } else {
+          unknownBlanks.add(asked);
+        }
+        continue;
+      }
+      if (opts.autoApplyMockups && (product.images ?? []).length === 0 && !product.mockupImages?.front) {
+        const set = bestSetForProduct(sets, product);
+        if (set) {
+          applyBlank(product, set);
+          auto++;
+        }
+      }
+    }
+    if (named > 0) warnings.push(`Applied the blank named in the mockup column to ${named} product${named === 1 ? "" : "s"}.`);
+    if (auto > 0) warnings.push(`Filled ${auto} product${auto === 1 ? "" : "s"} that had no photo from the best matching blank in the library.`);
+    if (unknownBlanks.size > 0) {
+      warnings.push(
+        `The mockup column named ${unknownBlanks.size === 1 ? "a blank" : "blanks"} the photo library does not have, so it was ignored: ${[...unknownBlanks].join(", ")}. Check the name against Admin → Product Photos.`,
+      );
+    }
+
+    // An image cell that is not a URL is a reference to a photo already in the library, so a
+    // sheet stays readable ("Hoodie Front.png") instead of carrying long storage URLs.
+    const photoByName = new Map(opts.photos.map((p) => [p.name.trim().toLowerCase(), p.image_url]));
+    let resolved = 0;
+    const unknownPhotos = new Set<string>();
+    for (const product of byKey.values()) {
+      product.images = (product.images ?? []).map((cell) => {
+        if (/^https?:\/\//i.test(cell)) return cell;
+        const hit = photoByName.get(cell.trim().toLowerCase());
+        if (hit) {
+          resolved++;
+          return hit;
+        }
+        unknownPhotos.add(cell);
+        return cell;
+      });
+    }
+    if (resolved > 0) warnings.push(`Matched ${resolved} image name${resolved === 1 ? "" : "s"} in the sheet to photos in the library.`);
+    if (unknownPhotos.size > 0) {
+      warnings.push(
+        `These image cells are neither a URL nor a photo in the library, so they were kept as written: ${[...unknownPhotos].slice(0, 10).join(", ")}${unknownPhotos.size > 10 ? ` (+${unknownPhotos.size - 10} more)` : ""}.`,
+      );
+    }
+  }
+
   for (const product of byKey.values()) {
     // 1. Brand → category, but only when the sheet did not name one. The brand patterns
     //    mirror the live category names, so this resolves through the same map and a miss
