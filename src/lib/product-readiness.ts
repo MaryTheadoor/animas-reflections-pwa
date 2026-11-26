@@ -20,6 +20,7 @@ export type ReadinessIssue =
   | "no-image"
   | "thin-description"
   | "design-record-price"
+  | "low-default-price"
   | "duplicate-name"
   | "out-of-stock"
   | "price-anomaly"
@@ -83,6 +84,27 @@ export function assessProduct(product: ManagedProduct): ReadinessResult {
   if ((product.description ?? "").trim().length < SHORT_DESCRIPTION) blockers.push("thin-description");
 
   if (maxPrice > 0 && maxPrice <= DESIGN_RECORD_CEILING) blockers.push("design-record-price");
+
+  /**
+   * The variant the page will PRESELECT is priced like a design record while the product
+   * carries real prices.
+   *
+   * `design-record-price` above compares the product's highest price, so it cannot see this:
+   * LITTLE STRANGER has four unnamed variants at $1 / $5 / $15 / $25, its max is a real $25,
+   * and the page preselects the first — so the shop button offered **$1** for a $25 product.
+   * Deliberately only the first variant: a bulk sheet whose unit price is under $1.01 is
+   * legitimate (4 Inch Slaps), and its default variant is not the cheap one.
+   */
+  const defaultVariant = variants[0];
+  if (
+    defaultVariant &&
+    Number.isFinite(defaultVariant.price) &&
+    defaultVariant.price > 0 &&
+    defaultVariant.price <= DESIGN_RECORD_CEILING &&
+    maxPrice > DESIGN_RECORD_CEILING
+  ) {
+    blockers.push("low-default-price");
+  }
 
   if (looksDuplicated(product.name ?? "")) blockers.push("duplicate-name");
 

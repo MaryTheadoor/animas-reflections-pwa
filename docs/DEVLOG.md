@@ -2763,3 +2763,54 @@ exactly one colour and one design on the line (`addons: ["Blue","Area 51"]`).
 
 That last check also produced the evidence for the audit: a tee sitting in the cart with no options
 at all is what prompted the notice.
+
+### Debug pass 3 — every listed product, end to end
+
+Method: a script drove a real browser over all 16 listed product pages, read each rendered option
+group out of the DOM, clicked **Add to Cart** with the page defaults, and read back what the cart
+actually stored. Results in `.audit.json` at the time; findings here.
+
+**Clean across all 16:** no page errored, none rendered a broken image, no product was wrongly
+marked out of stock, every one produced an add-to-cart button with a price matching the price line,
+and every cart line carried the right product and variant. Cart lines using placeholder variant
+names ("Price", "Regular") are stored that way but already filtered out by the cart drawer and
+checkout (`isPlaceholderVariantName`), so nothing reaches the customer.
+
+**One live pricing defect, found and fixed.** `LITTLE STRANGER` was listed with four **unnamed**
+variants at **$1 / $5 / $15 / $25** and four different SKUs. The page preselects the first variant,
+so a shopper saw `Add to Cart — $1.00` for a product whose real price is $25. The readiness rule
+missed it because `design-record-price` compares the product's **highest** price (a real $25), not
+the one the page will default to.
+
+New blocker `low-default-price`: the **first** variant is at or below the $1.01 design-record
+ceiling while the product carries higher prices. Deliberately narrow — a bulk sheet whose unit
+price is under $1.01 is legitimate, and `4 Inch Slaps` (default $6, units from $0.71) must not be
+caught, which a test pins.
+
+Two products were then unlisted by the strict rule, server-confirmed: `LITTLE STRANGER`
+(low-default-price) and `Drink Huggers` (**empty `images` array** — it has been showing a
+placeholder on the shop). Shop is now **14 products**.
+
+### Architecture verdict for public traffic
+
+**Sound, and verified rather than assumed:**
+
+- **Pricing is server-authoritative.** `functions/src/pricing.ts` re-derives the variant price from
+  the Firestore document, ignores the client's `price` entirely, rejects a variant with no catalog
+  price, rejects an unrecognised add-on, and rejects a client that under-declares an add-on price.
+  A crafted checkout cannot name its own price.
+- **Rules**: products, designs, photo library and `config/site` are public-read; `orders`,
+  `config/admin` and uploads are not. `config/{docId}` is a single-segment match specifically so it
+  cannot re-open `config/admin` (verified anonymously: 403).
+- **Deep links work on the static export** — `/product/?id=…`, `/customize/`, `/shop/` all 200 on a
+  cold load, and a bad id renders a real "Product Not Found" page with a route back to the shop.
+- No product page threw, and the add-to-cart → cart contract holds for all 14 listed products.
+
+**One gap that is architectural, not a bug:** the sitemap contains **0 product URLs** (18 routes,
+all static), and the raw HTML of every product page is identical — `<title>Product Details</title>`,
+no canonical, and the product name appears **zero** times. Per-product title/description/OG are set
+by JavaScript at runtime (verified), so a crawler or link-preview bot that does not run JS sees 14
+indistinguishable, nameless pages. Products live in Firestore and the sitemap is built statically,
+which is why. Fixing it means prerendering the product pages at build time from a Firestore read —
+a real piece of work, not a one-line change, and the last structural gap before this is properly
+indexable.

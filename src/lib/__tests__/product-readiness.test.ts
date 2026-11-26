@@ -118,3 +118,38 @@ describe("summarise", () => {
     expect(loose.toUnlist).toBe(1);
   });
 });
+
+describe("a product that preselects a $1 variant", () => {
+  it("blocks a real product whose first variant is a design-record price", () => {
+    // LITTLE STRANGER, as found live: four unnamed variants at $1 / $5 / $15 / $25.
+    // The max-price rule could not see it, because the max is a real $25.
+    const p = product({
+      variants: [
+        { id: "v1", name: "Regular", price: 1, sku: "920601F" },
+        { id: "v2", name: "Regular", price: 5, sku: "1543873" },
+        { id: "v3", name: "Regular", price: 15, sku: "142976T" },
+        { id: "v4", name: "Regular", price: 25, sku: "2280102" },
+      ],
+    });
+    const r = assessProduct(p);
+    expect(r.blockers).toContain("low-default-price");
+    expect(r.ready).toBe(false);
+  });
+
+  it("leaves a bulk product alone when its default variant is the real price", () => {
+    // 4 Inch Slaps is legitimately priced per unit, starting at $0.71 — the cheap
+    // variant is not the one the page preselects.
+    const p = product({
+      variants: [
+        { id: "v1", name: "4 Inch Slaps 1 - 25 Unit Price", price: 6, sku: "A" },
+        { id: "v2", name: "4 Inch Slaps 26 - 50 Unit Price", price: 0.71, sku: "B" },
+      ],
+    });
+    expect(assessProduct(p).blockers).not.toContain("low-default-price");
+  });
+
+  it("leaves a cheap product alone when every variant is cheap", () => {
+    const p = product({ variants: [{ id: "v1", name: "Sticker", price: 0.75, sku: "C" }] });
+    expect(assessProduct(p).blockers).not.toContain("low-default-price");
+  });
+});

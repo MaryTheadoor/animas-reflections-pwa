@@ -28,6 +28,7 @@ const ISSUE_LABELS: Record<ReadinessIssue, string> = {
   "no-image": "no photo",
   "thin-description": "little or no description",
   "design-record-price": "$1 design record",
+  "low-default-price": "defaults to a $1 variant",
   "duplicate-name": "duplicate-looking name",
   "out-of-stock": "out of stock",
   "price-anomaly": "implausible size surcharge",
