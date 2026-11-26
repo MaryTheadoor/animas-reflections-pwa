@@ -26,6 +26,7 @@ import {
   withoutVariantDuplicates,
   modifierSelectedOptions,
   modifierTotal,
+  toggleSelection,
 } from "@/lib/modifier-selection";
 import PageLayout from "@/components/layout/page-layout";
 import { BreadcrumbJsonLd } from "@/components/layout/json-ld";
@@ -305,9 +306,7 @@ function ProductContent() {
       : "";
 
   const toggleModifier = (id: string) => {
-    setSelectedModifierIds((prev) =>
-      prev.includes(id) ? prev.filter((selected) => selected !== id) : [...prev, id],
-    );
+    setSelectedModifierIds((prev) => toggleSelection(prev, id, modifierGroups));
   };
 
 
@@ -462,14 +461,21 @@ function ProductContent() {
               </div>
             )}
 
-            {/* Modifier groups — the real size/colour/add-on choices. Every group
-                is multi-select, exactly as the customizer renders it, because a
-                toggle is what the cart can express as an add-on. */}
+            {/* Modifier groups — the real size/colour/add-on choices. A group that names a
+                choice (Size, Color, Design…) is SINGLE: picking a second option replaces the
+                first. Add-on groups stay multi-select, because a toggle is what the cart
+                expresses as an add-on. Rendering every group as a checkbox let a shopper order
+                "Color: Black, Red". */}
             {usesModifierGroups && (
               <div className="mb-6">
-                {modifierGroups.map((group) => (
+                {modifierGroups.map((group) => {
+                  const single = group.selectionType === "single";
+                  return (
                   <fieldset key={group.name} className="mb-4 last:mb-0">
-                    <legend className="text-xs font-medium text-primary mb-2">{group.name}</legend>
+                    <legend className="text-xs font-medium text-primary mb-2">
+                      {group.name}
+                      {single && <span className="ml-1.5 font-normal text-foreground/60">choose one</span>}
+                    </legend>
                     {group.modifiers.length > MODIFIER_GROUP_CAP ? (
                       // A design set can hold 50+ options; chips made the page
                       // several screens long. Big groups collapse to one button
@@ -509,14 +515,18 @@ function ProductContent() {
                               {thumbnail && <ModifierThumb src={thumbnail} />}
                               <span
                                 aria-hidden="true"
-                                className={`flex items-center justify-center w-3.5 h-3.5 rounded border shrink-0 ${
-                                  active ? "bg-white border-white" : "border-primary/30"
-                                }`}
+                                className={`flex items-center justify-center w-3.5 h-3.5 border shrink-0 ${
+                                  single ? "rounded-full" : "rounded"
+                                } ${active ? "bg-white border-white" : "border-primary/30"}`}
                               >
                                 {active && (
+                                  single ? (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                  ) : (
                                   <svg className="w-3 h-3 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                   </svg>
+                                  )
                                 )}
                               </span>
                               {mod.name}
@@ -563,7 +573,8 @@ function ProductContent() {
                         ),
                       )}
                   </fieldset>
-                ))}
+                  );
+                })}
               </div>
             )}
 

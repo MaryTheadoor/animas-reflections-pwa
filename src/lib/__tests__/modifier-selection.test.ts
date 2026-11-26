@@ -16,6 +16,7 @@ import {
   isPlaceholderVariantName,
   modifierSelectedOptions,
   modifierTotal,
+  toggleSelection,
   withoutVariantDuplicates,
 } from "@/lib/modifier-selection";
 import type { ProductModifier } from "@/types";
@@ -237,5 +238,70 @@ describe("withoutVariantDuplicates", () => {
 
   it("keeps everything when there are no variants", () => {
     expect(withoutVariantDuplicates(groups, [])).toHaveLength(2);
+  });
+});
+
+describe("single vs multiple choice groups", () => {
+  const mod = (id: string, name: string, group: string) => ({
+    id,
+    name,
+    group,
+    priceType: "fixed" as const,
+    price: 0,
+  });
+
+  const modifiers = [
+    mod("c1", "Black", "Please Select Color"),
+    mod("c2", "Red", "Please Select Color"),
+    mod("s1", "Large", "Adult Size"),
+    mod("a1", "Gift wrap", "Add-ons"),
+    mod("a2", "Rush", "Add-ons"),
+  ];
+
+  it("treats a choice group as single and an add-on group as multiple", () => {
+    const groups = groupModifiers(modifiers);
+    const byName = new Map(groups.map((g) => [g.name, g.selectionType]));
+    expect(byName.get("Please Select Color")).toBe("single");
+    expect(byName.get("Adult Size")).toBe("single");
+    expect(byName.get("Add-ons")).toBe("multiple");
+  });
+
+  it("replaces the previous choice inside a single group", () => {
+    const groups = groupModifiers(modifiers);
+    let sel = toggleSelection([], "c1", groups);
+    expect(sel).toEqual(["c1"]);
+    sel = toggleSelection(sel, "c2", groups);
+    expect(sel).toEqual(["c2"]);
+  });
+
+  it("keeps choices in different single groups side by side", () => {
+    const groups = groupModifiers(modifiers);
+    let sel = toggleSelection([], "c1", groups);
+    sel = toggleSelection(sel, "s1", groups);
+    expect(sel).toEqual(["c1", "s1"]);
+  });
+
+  it("adds freely inside a multiple group", () => {
+    const groups = groupModifiers(modifiers);
+    let sel = toggleSelection([], "a1", groups);
+    sel = toggleSelection(sel, "a2", groups);
+    expect(sel).toEqual(["a1", "a2"]);
+  });
+
+  it("deselecting removes, in both kinds of group", () => {
+    const groups = groupModifiers(modifiers);
+    expect(toggleSelection(["c1"], "c1", groups)).toEqual([]);
+    expect(toggleSelection(["a1", "a2"], "a1", groups)).toEqual(["a2"]);
+  });
+
+  it("does not knock out another group's choice when replacing", () => {
+    const groups = groupModifiers(modifiers);
+    // Red replaces Black; the size and the add-on survive.
+    expect(toggleSelection(["c1", "s1", "a1"], "c2", groups)).toEqual(["s1", "a1", "c2"]);
+  });
+
+  it("defaults an unknown group name to multiple, so nothing is hidden", () => {
+    const groups = groupModifiers([mod("x", "Mystery option", "Weird Group")]);
+    expect(groups[0].selectionType).toBe("multiple");
   });
 });

@@ -50,6 +50,47 @@ export function hasGenericVariants(
 export interface ModifierGroup {
   name: string;
   modifiers: ProductModifier[];
+  /**
+   * Whether the customer may pick more than one option from this group.
+   *
+   * Square encodes this per modifier list (`selection_type: SINGLE | MULTIPLE`) but the
+   * import never carried it, so every group rendered as a checkbox and a shopper could
+   * order "Please Select Color: Black, Red". A choice of colour, size, design or shape is
+   * one choice; an add-on group is not. `singleSelectByName` decides the default, and an
+   * explicit `selectionType` on the group wins.
+   */
+  selectionType: "single" | "multiple";
+}
+
+/**
+ * Group names that mean "choose one".
+ *
+ * Deliberately name-based: the data has no flag to read (see `ModifierGroup.selectionType`),
+ * and the live groups are named for the reader — "Please Select Color", "Adult Size",
+ * "Logo Options", "Please Select Design". Anything not recognised stays multiple, which is
+ * the existing behaviour, so this can only narrow a choice, never widen one.
+ */
+const SINGLE_SELECT_HINTS = [
+  "size",
+  "color",
+  "colour",
+  "design",
+  "logo",
+  "shape",
+  "style",
+  "placement",
+  "option below",
+  "background",
+  "patch",
+  "fit",
+  "material",
+  "length",
+];
+
+export function singleSelectByName(name: string): boolean {
+  const n = (name ?? "").toLowerCase();
+  if (!n.trim()) return false;
+  return SINGLE_SELECT_HINTS.some((hint) => n.includes(hint));
 }
 
 /** Group modifiers by `mod.group` (default `Add-ons`), preserving catalog order
@@ -63,13 +104,35 @@ export function groupModifiers(
     const name = (mod.group ?? "").trim() || DEFAULT_MODIFIER_GROUP;
     let group = byName.get(name);
     if (!group) {
-      group = { name, modifiers: [] };
+      group = { name, modifiers: [], selectionType: singleSelectByName(name) ? "single" : "multiple" };
       byName.set(name, group);
       groups.push(group);
     }
     group.modifiers.push(mod);
   }
   return groups;
+}
+
+/**
+ * Toggle one option and return the next selection, honouring the group's rule.
+ *
+ * In a single-select group, choosing a second option **replaces** the first rather than
+ * adding to it — that is what stops "Color: Black, Red". Deselecting always removes.
+ */
+export function toggleSelection(
+  selectedIds: readonly string[],
+  modifierId: string,
+  groups: readonly ModifierGroup[],
+): string[] {
+  const group = groups.find((g) => g.modifiers.some((m) => m.id === modifierId));
+  if (selectedIds.includes(modifierId)) {
+    return selectedIds.filter((id) => id !== modifierId);
+  }
+  if (!group || group.selectionType === "multiple") {
+    return [...selectedIds, modifierId];
+  }
+  const inGroup = new Set(group.modifiers.map((m) => m.id));
+  return [...selectedIds.filter((id) => !inGroup.has(id)), modifierId];
 }
 
 /**

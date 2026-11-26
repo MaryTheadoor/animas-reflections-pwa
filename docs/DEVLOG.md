@@ -2715,3 +2715,21 @@ guessed, and that a product that already has a photo is left alone.
 
 **Not verified:** a real CSV uploaded through the admin. The logic is pure and covered by tests, but
 the write path has not been exercised end to end — do that before relying on it for a bulk import.
+
+### Single-choice option groups (Session 45, continuing)
+
+The owner tried a live purchase and found colour allowing several selections. That was code: the
+product page rendered **every** modifier group as a checkbox list, with the comment "Every group is
+multi-select… because a toggle is what the cart can express as an add-on" — true for an add-on,
+wrong for a choice. Square records `selection_type` per modifier list; the import never carried it.
+
+`ModifierGroup.selectionType` is now derived by `singleSelectByName` (size, colour, design, logo,
+shape, style, placement, background, patch, fit, material, length → single) and `toggleSelection`
+replaces within a single group. Unknown names stay multiple, so the change can only narrow a choice.
+Radio rendering and "choose one" in the legend. Verified live on `15 oz Coffee Mug`: Blue then Red
+leaves only Red. 7 new tests. Gate: **461 tests / 30 suites**.
+
+Full findings and the roadmap for the other 300 products: `docs/PRODUCT_CONFIG_AUDIT.md`. The
+short version is that the remaining problems are data — overlapping design/logo groups, the same
+dimension offered twice, placeholder variants named "Regular"/"Price"/"Base Price", and price tiers
+stored as variants.

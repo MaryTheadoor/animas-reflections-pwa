@@ -27,6 +27,7 @@ export default function ModifierPicker({
   thumbnailFor: (modifier: ProductModifier) => string | undefined;
   selectedLabelFor?: (modifier: ProductModifier) => string | undefined;
 }) {
+  const single = group.selectionType === "single";
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -69,7 +70,7 @@ export default function ModifierPicker({
         >
           {selected.length > 0
             ? `${selected.length} selected — change`
-            : `Choose ${group.modifiers.length} ${group.name.toLowerCase()}`}
+            : `${single ? "Choose one" : "Choose"} from ${group.modifiers.length} ${group.name.toLowerCase()}`}
         </button>
         {selected.slice(0, 3).map((mod) => (
           <span
@@ -137,7 +138,9 @@ export default function ModifierPicker({
                 className="w-full px-3 py-2 rounded-lg border border-primary/20 text-sm focus:border-gold outline-none"
               />
               <p className="text-[11px] text-foreground/70">
-                Choose as many as you like — each one is added to the order with its own price.
+                {single
+                  ? "Choose one — picking a different option replaces this one."
+                  : "Choose as many as you like — each one is added to the order with its own price."}
               </p>
             </div>
 
@@ -151,7 +154,11 @@ export default function ModifierPicker({
                     key={mod.id}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => onToggle(mod.id)}
+                    onClick={() => {
+                      onToggle(mod.id);
+                      // A single choice is complete once made, so close the panel.
+                      if (single && !active) setOpen(false);
+                    }}
                     className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-colors ${
                       active
                         ? "border-gold bg-gold/10"
