@@ -172,7 +172,9 @@ function ShopContent() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold font-display mb-3">Shop All Products</h1>
           <p className="text-foreground max-w-xl mx-auto">
-            Browse {products.length} products. Click any item to view details and choose options.
+            {filteredProducts.length === products.length
+              ? `Browse ${products.length} products. Click any item to view details and choose options.`
+              : `Showing ${filteredProducts.length} of ${products.length} products. Click any item to view details and choose options.`}
           </p>
         </div>
 
@@ -322,6 +324,15 @@ function ShopContent() {
         {!loading && !error && filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <p className="text-foreground">{search || (browseMode === "design" ? activeCategory : activeType) !== "All" ? "No products match your filters." : "No products available yet."}</p>
+            {(search || (browseMode === "design" ? activeCategory : activeType) !== "All") && (
+              <button
+                type="button"
+                onClick={() => { setSearch(""); setActiveCategory("All"); setActiveType("All"); }}
+                className="mt-3 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                Show all {products.length} products
+              </button>
+            )}
           </div>
         )}
 

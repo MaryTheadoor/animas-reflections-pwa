@@ -2843,3 +2843,23 @@ and a product page's runtime canonical is the identical `?id=` URL with a per-pr
 **Still open:** the *raw* HTML of every product page is the same generic document, so a crawler that
 does not execute JS — or a link-preview bot — still sees "Product Details" with no product name.
 Fixing that means prerendering each product at build time, which is the next step, not this one.
+
+### Debug pass 4 — the rest of the customer path
+
+Exercised every hop from search to the card form with a script driving a real browser.
+
+| Hop | Result |
+|---|---|
+| Search `/search/?q=mug` | 4 cards, the mug found, no false "no results" |
+| Category filter | returns only that category; no dead categories offered |
+| Empty cart → `/checkout/` | no Pay button offered |
+| Two products added (mug $20 + ornament $15) | 2 cart lines, base sum $35 correct |
+| Cart → checkout | both lines present, **card iframe attached**, `Pay $42.50`, Pay disabled until the form is filled, Address line 2 and the terms line present |
+| `/customizer/?product=…&color=black` | loads with the product, Print Area toolbar present |
+| `/product/?id=<bad>` | real "Product Not Found" page with a route back |
+
+**One defect found and fixed.** The shop header read `Browse {total} products` regardless of the
+filters, so a category with nothing in it said "Browse 14 products" above an empty grid. It now
+reads `Showing X of Y products` when a filter is active, and the empty state gained a
+**Show all 14 products** button — a filtered dead-end previously said "No products match your
+filters" and offered no way out. Verified live: `Showing 0 of 14 products` + the reset button.
