@@ -157,3 +157,53 @@ bug, not a model bug — fix the source text and the answer improves.
 - Do **not** give the assistant write access to Firestore or Square in v1. Advice-only first.
 - Do **not** put the whole DEVLOG in the prompt. It is 42k tokens of history that mostly does not help
   an operator; retrieval or nothing.
+
+---
+
+## On-site logging (added 2026-11-26)
+
+The matching half of the assistant: when Cindy says "it won't save", a log of what actually happened
+is worth more than any answer the assistant can give. Today a failure leaves the browser console,
+which nobody on the shop side will open.
+
+### What is worth recording
+
+Only three things, because each adds privacy surface:
+
+| Kind | Example | Why |
+|---|---|---|
+| **Client error** | `TypeError: cannot read 'images' of undefined` + route + build hash | the class of bug that is invisible until a real customer hits it |
+| **Failed write** | which collection, which operation, the Firestore code (`permission-denied`, `unavailable`) | "it didn't save" becomes a specific cause |
+| **Checkout failure** | Square SDK message, order step reached, cart total in cents | revenue path only — the highest-value log in the app |
+
+Deliberately **not** recorded: page views, clicks, and anything a customer types. No addresses, no
+emails, no names, no card data — Square's iframe means card data never reaches our code anyway, and
+the others would turn the collection into PII storage for no debugging benefit.
+
+### Shape
+
+1. **`logClientEvent` callable** — `{ kind, message, route, build, detail }`, capped at 2 KB per
+   field and 20 events per session. A callable rather than a direct Firestore write so the rules do
+   not have to allow anonymous `create` on a collection, and so the cap and the scrubbing live in one
+   place the client cannot bypass.
+2. **Scrub before write** — strip anything matching an email, a phone number, a postal code or a
+   long digit run; drop `detail` entirely if it still looks like PII. The safe default is to lose a
+   log line rather than store a customer's address.
+3. **`client_logs`** — `{ kind, message, route, build, detail, uid?, createdAt }`, admin-read only,
+   with a 30-day TTL field (`expiresAt`) so the collection cannot grow without bound.
+4. **Admin → Logs tab** — newest first, filter by kind and by build, group identical messages with a
+   count (so one broken renderer reads as "×47", not 47 rows), and a Copy button for a stack trace.
+5. **A "Report a problem" button** next to the existing footer feedback link — attaches the last few
+   events plus the build hash, so a customer report arrives with evidence instead of a description.
+
+### Why this order
+
+The callable and the scrubber are the parts that must be right; the admin tab is a table over them.
+Ship 1–3 first and read `client_logs` by hand in the console during launch week, then build the tab.
+Recording nothing because the UI is not ready would be the wrong trade.
+
+### Privacy note for the policy
+
+`/privacy` must gain a line saying diagnostics (page route, error text, build version) are collected
+to fix faults, that no form contents are recorded, and how to ask for deletion. That is a copy change
+and should land with the feature, not after it.

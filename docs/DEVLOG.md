@@ -2669,3 +2669,49 @@ four variants all named "Regular" at $40) and `47d5c0c5` (5 photos, real XS–XX
 surcharges). `305b0533` is the weaker record and is the one whose sizes are unselectable, but
 which copy to keep is a catalogue decision — the admin's Find-duplicates tool cannot see the
 pair (Known Issue #67), so unlisting one by hand is the available move.
+
+---
+
+## Session 45 — 2026-11-26 | Square parity, and a sheet that can carry photos
+
+Launch moved from Black Friday to **Cyber Monday (Nov 30)**, which bought the room to answer the
+question "are we launching with at least what Square sells today?" properly.
+
+### The parity answer: the catalogue is there, the photography is not
+
+Full report in `docs/SQUARE_PARITY.md`, one row per Square product in
+`docs/square-parity-2026-11-26.csv`.
+
+- Square's sitemap: 452 product URLs, **334 unique products** (44 slugs appear under several ids).
+- **320 of the 334 already exist in Firestore** (288 by exact slug). Prices, variants,
+  descriptions and Square variation ids are all present.
+- **309 of those 320 have no photo**, which is why only 16 are listed. The blocker was never
+  missing product data.
+- **14 have no counterpart**; checked by name, 7 are covered under another name or are a size or
+  colour variant, and about 6 are real gaps — no poster, no dugout kit. Listed in the report.
+
+Photo recovery: every Square product page carries an `og:image`, so the pictures already exist
+publicly. The crawl is rate-limited though — 8 concurrent requests drew **375 HTTP 429s of 452**,
+and a polite sequential retry stalled. The recommendation is the **Square Dashboard item export**,
+which carries image URLs without scraping. Recorded as route 1 in the report; a slow crawl is
+route 2.
+
+### Import can now fill products from the photo library
+
+This is the piece that made 300 products × 1 photo each a manual job. See the commit for detail;
+in short, a `mockup` column names a saved blank and applies every view it has, an `image` cell that
+is not a URL resolves to a photo in the library by name, and a checkbox fills any imported product
+that arrives without a picture from the best blank that suits it. `setsForProduct` /
+`bestSetForProduct` were extracted so the editor and the import cannot drift apart.
+
+Seven new tests; help content and the CSV template updated. Gate: **454 tests / 30 suites**, lint 0,
+tsc 0, 28-page build, SEO OK. Deployed to hosting, pushed to `origin/development` at `ea505a7`.
+
+### Verified, and not verified
+
+Verified live: the "Use library photos for products with none" control renders in Admin → Products.
+Verified by test: the resolution rules, including that an unknown blank name is reported rather than
+guessed, and that a product that already has a photo is left alone.
+
+**Not verified:** a real CSV uploaded through the admin. The logic is pure and covered by tests, but
+the write path has not been exercised end to end — do that before relying on it for a bulk import.
